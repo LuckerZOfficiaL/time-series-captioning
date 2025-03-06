@@ -2,38 +2,54 @@ import requests
 import random 
 import numpy as np 
 import pandas as pd
+import openai
 
 
 
 def get_response(prompt: str,
-                 system_prompt="You are a helpful assistant and you have to generate a time series description given the information.",
-                 model="GPT-4o-Aug",
+                 system_prompt="You are a helpful assistant and you have to generate text on my request.",
+                 model="GPT-4o-Aug", #"Gemini-1.5-Pro"
                  temperature=0.45,  # Controls randomness (0 = deterministic, 1 = max randomness)
                  top_p=.95,  # Nucleus sampling (0.0 to 1.0, lower = more focused sampling)
                  top_k=40,  # Filters to the top-k highest probability tokens (if supported)
-                 max_tokens=150  # Maximum number of tokens in response
+                 max_tokens=150,  # Maximum number of tokens in response,
+                 use_openAI = False,
                  ):
-    data = {
-        "model": model,
-        "messages": [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": prompt}
-        ],
-        "temperature": temperature,
-        "top_p": top_p,
-        "max_tokens": max_tokens,
-    }
+    if use_openAI: # if I am using OpenAI's API key
+      pass
 
-    if top_k is not None:  # Some APIs support top_k, but not all
-        data["top_k"] = top_k
 
-    response = requests.post(API_ENDPOINT, headers=headers, json=data)
+    else:  
+      data = {
+          "model": model,
+          "messages": [
+              {"role": "system", "content": system_prompt},
+              {"role": "user", "content": prompt}
+          ],
+          "temperature": temperature,
+          "top_p": top_p,
+          "max_tokens": max_tokens,
+      }
 
-    if response.status_code == 200:
-        result = response.json()
-        return result["choices"][0]["message"]["content"]
-    else:
-        print("Error:", response.status_code, response.text)
+      API_KEY = "NoBed0fRoses"
+      API_ENDPOINT = "https://backend.zzhou.info/v1/chat/completions"
+
+      headers = {
+          "Authorization": f"Bearer {API_KEY}",
+          "Content-Type": "application/json"
+      }
+
+
+      if top_k is not None:  # Some APIs support top_k, but not all
+          data["top_k"] = top_k
+
+      response = requests.post(API_ENDPOINT, headers=headers, json=data)
+
+      if response.status_code == 200:
+          result = response.json()
+          return result["choices"][0]["message"]["content"]
+      else:
+          print("Error:", response.status_code, response.text)
 
 
 def rank_responses(responses_list: list) -> list: # takes a list of texts, returns a ranking of the indices
@@ -53,16 +69,18 @@ def rank_responses(responses_list: list) -> list: # takes a list of texts, retur
 
 #rank_responses(["The time series started from 5.2 and dropped to 2.9", "The time series is declining", "The time series describes the daily temperatures of Paris, dropping from 5.2 to 2.9 in 10 days."])
 
-
-def get_sample(dataset_name: str, series_len: int): # returns the metadata and the time series
+def get_sample(dataset_name: str, json_data, series_len = None, start_idx = None): # returns the metadata and the time series
   if dataset_name == "air quality":
-    id = random.choice(list(aq_data.keys()))
-    measure = random.choice(list(aq_data[id].keys())[1:])
-    start_idx = random.randint(0, len(aq_data[id][measure]) - series_len)
-    ts = aq_data[id][measure][start_idx:start_idx+series_len]
+    id = random.choice(list(json_data.keys()))
+    measure = random.choice(list(json_data[id].keys())[1:])
+    if series_len is None:
+      series_len = random.randint(5, min(100, int(len(json_data[id][measure])/8)))
+    if start_idx is None:
+      start_idx = random.randint(0, len(json_data[id][measure]) - series_len)
+    ts = json_data[id][measure][start_idx:start_idx+series_len]
     ts = [round(x, 2) for x in ts]
 
-    metadata = aq_data[id]["metadata"].copy()
+    metadata = json_data[id]["metadata"].copy()
     metadata_cpy = metadata.copy()
 
     attributes_to_keep = ['state', 'city', 'station_location','start_month','start_year','mean','std','min','max','starting time']
@@ -93,14 +111,17 @@ def get_sample(dataset_name: str, series_len: int): # returns the metadata and t
 
 
   elif dataset_name == "crime":
-    town = random.choice(list(crime_dict.keys()))
-    metadata = crime_dict[town]['metadata'].copy()
+    town = random.choice(list(json_data.keys()))
+    metadata = json_data[town]['metadata'].copy()
+    if series_len is None:
+      series_len = random.randint(5, min(100, int(len(json_data[town]["data"])/8)))
+    if start_idx is None:
+      start_idx = random.randint(0, len(json_data[town]["data"]) - series_len)
 
-    start_idx = random.randint(0, len(crime_dict[town]['data']) - series_len)
-    ts = crime_dict[town]['data'][start_idx:start_idx + series_len]
+    ts = json_data[town]['data'][start_idx:start_idx + series_len]
     ts = [round(x, 2) for x in ts]
 
-    metadata["start date"] = crime_dict[town]['metadata']['start date'][:-9]
+    metadata["start date"] = json_data[town]['metadata']['start date'][:-9]
     date = pd.to_datetime(metadata["start date"])
     start_date = date + pd.DateOffset(days=start_idx)
     end_date = start_date + pd.DateOffset(days=series_len)
@@ -109,10 +130,10 @@ def get_sample(dataset_name: str, series_len: int): # returns the metadata and t
 
     metadata["sampling frequency"] = "daily"
     metadata['series length'] = series_len
-    metadata["general mean in the history of this town"] = round(crime_dict[town]['metadata']['mean'], 2)
-    metadata["general std in the history of this town"] = round(crime_dict[town]['metadata']['std'], 2)
-    metadata["general min in the history of this town"] = round(crime_dict[town]['metadata']['min'], 2)
-    metadata["general max in the history of this town"] = round(crime_dict[town]['metadata']['max'], 2)
+    metadata["general mean in the history of this town"] = round(json_data[town]['metadata']['mean'], 2)
+    metadata["general std in the history of this town"] = round(json_data[town]['metadata']['std'], 2)
+    metadata["general min in the history of this town"] = round(json_data[town]['metadata']['min'], 2)
+    metadata["general max in the history of this town"] = round(json_data[town]['metadata']['max'], 2)
 
     metadata["mean of this specific series"] = round(np.mean(ts), 2)
     metadata["standard deviation of this specific series"] = round(np.std(ts), 2)
@@ -128,20 +149,25 @@ def get_sample(dataset_name: str, series_len: int): # returns the metadata and t
     del metadata['frequency']
 
   elif dataset_name == "border crossing":
-    port = random.choice(list(crossing_data.keys()))
+    port = random.choice(list(json_data.keys()))
     metadata = {}
-    means = random.choice(list(crossing_data[port]['data'].keys()))
-    start_idx = random.randint(0, len(crossing_data[port]['data'][means]) - series_len)
-    ts = crossing_data[port]['data'][means][start_idx:start_idx + series_len]
+    means = random.choice(list(json_data[port]['data'].keys()))
+
+    if series_len is None:
+      series_len = random.randint(5, min(100, int(len(json_data[port]["data"]['means'])/8)))
+    if start_idx is None:
+      start_idx = random.randint(0, len(json_data[port]["data"]["means"]) - series_len)
+
+    ts = json_data[port]['data'][means][start_idx:start_idx + series_len]
 
 
     metadata['port'] = port
     metadata['means'] = means
 
-    metadata["state"] = crossing_data[port]['metadata']['state']
-    metadata["border"] = crossing_data[port]['metadata']['border']
+    metadata["state"] = json_data[port]['metadata']['state']
+    metadata["border"] = json_data[port]['metadata']['border']
     metadata["sampling frequency"] = "monthly"
-    metadata["start date of the series"] = crossing_data[port]['metadata']['start date'][:-9]
+    metadata["start date of the series"] = json_data[port]['metadata']['start date'][:-9]
     date = pd.to_datetime(metadata["start date of the series"])
     start_date = date + pd.DateOffset(months=start_idx)
     end_date = start_date + pd.DateOffset(months=series_len)
@@ -149,10 +175,10 @@ def get_sample(dataset_name: str, series_len: int): # returns the metadata and t
     metadata["end date of the series"] =  end_date.strftime('%Y-%m-%d')
 
 
-    metadata["general mean in the history of this port"] = round(crossing_data[port]['metadata']['mean'][means], 2)
-    metadata["general standard deviation in the history of this port"] = round(crossing_data[port]['metadata']['std'][means], 2)
-    metadata["general min in the history of this port"] = round(crossing_data[port]['metadata']['min'][means], 2)
-    metadata["general max in the history of this port"] = round(crossing_data[port]['metadata']['max'][means], 2)
+    metadata["general mean in the history of this port"] = round(json_data[port]['metadata']['mean'][means], 2)
+    metadata["general standard deviation in the history of this port"] = round(json_data[port]['metadata']['std'][means], 2)
+    metadata["general min in the history of this port"] = round(json_data[port]['metadata']['min'][means], 2)
+    metadata["general max in the history of this port"] = round(json_data[port]['metadata']['max'][means], 2)
 
     metadata['mean in this specific series'] = round(np.mean(ts), 2)
     metadata['standard deviation in this specific series'] = round(np.std(ts), 2)
@@ -162,7 +188,12 @@ def get_sample(dataset_name: str, series_len: int): # returns the metadata and t
   elif dataset_name == "heart rate":
     patient_id = random.choice(list(hr_data.keys()))
     metadata = {}
-    start_idx = random.randint(0, len(hr_data[patient_id]['data']) - series_len)
+    
+    if series_len is None:
+      series_len = random.randint(5, min(100, int(len(json_data[patient_id]["data"])/8)))
+    if start_idx is None:
+      start_idx = random.randint(0, len(json_data[patient_id]["data"]) - series_len)
+
     ts = hr_data[patient_id]['data'][start_idx:start_idx + series_len]['heart rate'].tolist()
     ts = [round(x, 2) for x in ts]
 
@@ -206,22 +237,27 @@ def get_sample(dataset_name: str, series_len: int): # returns the metadata and t
         metadata['moment'] = "during meditation"
 
   elif dataset_name == "demography":
-    series_len = 22 # let's fix it at 22 because we only have 22 timesteps for any country
-    country_ID = random.choice(list(demo_dict.keys()))
-    attribute = random.choice(list(demo_dict[country_ID].keys())[1:])
+    #series_len = 22 # let's fix it at 22 because we only have 22 timesteps for any country
+    country_ID = random.choice(list(json_data.keys()))
+    attribute = random.choice(list(json_data[country_ID].keys())[1:])
+
+    if series_len is None:
+      series_len = random.randint(5, min(100, int(len(json_data[country_ID][attribute])/2)))
+    if start_idx is None:
+      start_idx = random.randint(0, len(json_data[country_ID][attribute]) - series_len)
+
     metadata = {}
 
-    metadata['country'] = demo_dict[country_ID]['metadata']['country name']
+    metadata['country'] = json_data[country_ID]['metadata']['country name']
     metadata['attribute'] = attribute
-    metadata['category by income'] = demo_dict[country_ID]["metadata"]['By Income']
-    metadata['groups'] = demo_dict[country_ID]["metadata"]['Other Country Groups']
+    metadata['category by income'] = json_data[country_ID]["metadata"]['By Income']
+    metadata['groups'] = json_data[country_ID]["metadata"]['Other Country Groups']
     if len(metadata['groups']) == 0: del metadata['groups']
-    metadata['starting year'] = demo_dict[country_ID]["metadata"]['start year of the series']
-    length = 22
+    metadata['starting year'] = json_data[country_ID]["metadata"]['start year of the series']
     metadata['sampling frequency'] = "yearly"
 
-    ts = demo_dict[country_ID][metadata['attribute']][:length]
-    average_ts = np.mean([demo_dict[country][metadata['attribute']] for country in demo_dict if country != country_ID], axis=0)
+    ts = json_data[country_ID][metadata['attribute']][:series_len]
+    average_ts = np.mean([json_data[country][metadata['attribute']] for country in json_data if country != country_ID], axis=0)
 
     ts = [round(x, 2) for x in ts]
     metadata['global average time series'] = [round(x, 2) for x in average_ts]
@@ -235,10 +271,15 @@ def get_sample(dataset_name: str, series_len: int): # returns the metadata and t
   return metadata, ts
 
 # the following function does not preclude that no sample is duplicated, there's a very slim chance that it occurs
-def get_samples(dataset_name, series_len, n) -> list: # returns a list of tuples (metadata, ts) of the specified dataset
+def get_samples(dataset_name, json_data, n, series_len=None) -> list: # returns a list of tuples (metadata, ts) of the specified dataset
   samples = []
-  for i in range(n):
-    samples.append(get_sample(dataset_name, series_len))
+  if n is not None: # this fixes the number of samples
+    i = 0
+    while i < n:
+      metadata, ts = get_sample(dataset_name, json_data, series_len=None)
+      if not np.isnan(ts).any() and not any(isinstance(x, str) and x.lower() == 'nan' for x in ts):
+        samples.append((metadata, ts)) # when series_len is none, the get_sample function handles it by randomizing
+        i += 1
   return samples
 
 
@@ -343,7 +384,7 @@ def get_request(dataset_name, metadata, ts):
 
           Answer in a single paragraph of four sentences at most, without bullet points or any formatting.
           """
-    return request
+  return request
 
 
 def augment_request(request, n=3): # rephrases the request prompt n times and returns the augmentations in a list
