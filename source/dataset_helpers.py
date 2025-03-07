@@ -83,7 +83,7 @@ def get_sample(dataset_name: str, json_data, series_len = None, start_idx = None
     metadata = json_data[id]["metadata"].copy()
     metadata_cpy = metadata.copy()
 
-    attributes_to_keep = ['state', 'city', 'station_location','start_month','start_year','mean','std','min','max','starting time']
+    attributes_to_keep = ['state', 'city', 'station_location','start_month','start_year','mean','standard deviation','min','max','starting time']
 
     for attr in metadata_cpy:
       if attr not in attributes_to_keep:
@@ -91,19 +91,19 @@ def get_sample(dataset_name: str, json_data, series_len = None, start_idx = None
 
     metadata["measure"] = measure
     metadata["mean"] = round(metadata_cpy["mean"][measure], 2)
-    metadata["std"] = round(metadata_cpy["std"][measure], 2)
+    metadata["standard deviation"] = round(metadata_cpy["standard deviation"][measure], 2)
     metadata["min"] = round(metadata_cpy["min"][measure], 2)
     metadata["max"] = round(metadata_cpy["max"][measure], 2)
 
 
     metadata["all-time average value until today"] = round(metadata.pop("mean"), 2)
-    metadata["all-time standard deviation until today"] = round(metadata.pop("std"), 2)
+    metadata["all-time standard deviation until today"] = round(metadata.pop("standard deviation"), 2)
     metadata["all-time minimum"] = round(metadata.pop("min"), 2)
     metadata["all-time  maximum"] = round(metadata.pop("max"), 2)
     metadata["starting time"] = metadata["starting time"][start_idx]
 
     metadata['average value in this time series'] = round(np.mean(ts), 2)
-    metadata['standard deviation in this time series'] = round(np.std(ts), 2)
+    metadata['standard deviation in this time series'] = round(np.standard deviation(ts), 2)
     metadata['minimum value in this time series'] = round(min(ts), 2)
     metadata['maximum value in this time series'] = round(max(ts), 2)
 
@@ -131,14 +131,14 @@ def get_sample(dataset_name: str, json_data, series_len = None, start_idx = None
     metadata["sampling frequency"] = "daily"
     metadata['series length'] = series_len
     metadata["general mean in the history of this town"] = round(json_data[town]['metadata']['mean'], 2)
-    metadata["general std in the history of this town"] = round(json_data[town]['metadata']['std'], 2)
-    metadata["general min in the history of this town"] = round(json_data[town]['metadata']['min'], 2)
-    metadata["general max in the history of this town"] = round(json_data[town]['metadata']['max'], 2)
+    metadata["general standard deviation in the history of this town"] = round(json_data[town]['metadata']['standard deviation'], 2)
+    metadata["general minimum in the history of this town"] = round(json_data[town]['metadata']['min'], 2)
+    metadata["general maximum in the history of this town"] = round(json_data[town]['metadata']['max'], 2)
 
     metadata["mean of this specific series"] = round(np.mean(ts), 2)
-    metadata["standard deviation of this specific series"] = round(np.std(ts), 2)
-    metadata["minimum of this series"] = round(min(ts), 2)
-    metadata["maximum of this series"] = round(max(ts), 2)
+    metadata["standard deviation of this specific series"] = round(np.standard deviation(ts), 2)
+    metadata["minimum of this specific series"] = round(min(ts), 2)
+    metadata["maximum of this specific series"] = round(max(ts), 2)
 
     del metadata['min']
     del metadata['max']
@@ -146,7 +146,6 @@ def get_sample(dataset_name: str, json_data, series_len = None, start_idx = None
     del metadata['std']
     del metadata['start date']
     del metadata['end date']
-    del metadata['frequency']
 
   elif dataset_name == "border crossing":
     port = random.choice(list(json_data.keys()))
@@ -175,15 +174,15 @@ def get_sample(dataset_name: str, json_data, series_len = None, start_idx = None
     metadata["start date of the series"] =  start_date.strftime('%Y-%m-%d')
     metadata["end date of the series"] =  end_date.strftime('%Y-%m-%d')
 
-    metadata["general mean in the history of this port"] = round(json_data[port]['metadata']['mean'][means], 2)
+    metadata["general mean of the history of this port"] = round(json_data[port]['metadata']['mean'][means], 2)
     metadata["general standard deviation in the history of this port"] = round(json_data[port]['metadata']['std'][means], 2)
-    metadata["general min in the history of this port"] = round(json_data[port]['metadata']['min'][means], 2)
-    metadata["general max in the history of this port"] = round(json_data[port]['metadata']['max'][means], 2)
+    metadata["general minimum in the history of this port"] = round(json_data[port]['metadata']['min'][means], 2)
+    metadata["general maximum in the history of this port"] = round(json_data[port]['metadata']['max'][means], 2)
 
-    metadata['mean in this specific series'] = round(np.mean(ts), 2)
+    metadata['mean of this specific series'] = round(np.mean(ts), 2)
     metadata['standard deviation in this specific series'] = round(np.std(ts), 2)
-    metadata['minimum in this series'] = round(min(ts), 2)
-    metadata['maximum in this series'] = round(max(ts), 2)
+    metadata['minimum in this specific series'] = round(min(ts), 2)
+    metadata['maximum in this specific series'] = round(max(ts), 2)
 
   elif dataset_name == "heart rate":
     patient_id = random.choice(list(hr_data.keys()))
@@ -199,13 +198,13 @@ def get_sample(dataset_name: str, json_data, series_len = None, start_idx = None
 
 
     metadata['general mean of this patient in this situation'] = round(hr_data[patient_id]['metadata']['mean'], 2)
-    metadata['general std of this patient in this situation'] = round(hr_data[patient_id]['metadata']['std'], 2)
-    metadata['general min of this patient in this situation'] = round(hr_data[patient_id]['metadata']['min'], 2)
-    metadata['general max of this patient in this situation'] = round(hr_data[patient_id]['metadata']['max'], 2)
+    metadata['general standard deviation of this patient in this situation'] = round(hr_data[patient_id]['metadata']['std'], 2)
+    metadata['general minimum of this patient in this situation'] = round(hr_data[patient_id]['metadata']['min'], 2)
+    metadata['general maximum of this patient in this situation'] = round(hr_data[patient_id]['metadata']['max'], 2)
     metadata['mean of this specific series'] = round(np.mean(ts), 2)
-    metadata['this std of this specific series'] = round(np.std(ts), 2)
-    metadata['this min of this specific series'] = round(min(ts), 2)
-    metadata['this max of this specific series'] = round(max(ts), 2)
+    metadata['standard deviation of this specific series'] = round(np.std(ts), 2)
+    metadata['minimum of this specific series'] = round(min(ts), 2)
+    metadata['maximum of this specific series'] = round(max(ts), 2)
 
     if "." in patient_id:
       unpacked_id = patient_id.split(".")
@@ -264,9 +263,9 @@ def get_sample(dataset_name: str, json_data, series_len = None, start_idx = None
 
 
     metadata['mean of this specific series'] = round(np.mean(ts), 2)
-    metadata['std of this specific series'] = round(np.std(ts), 2)
-    metadata['min of this specific series'] = round(min(ts), 2)
-    metadata['max of this specific series'] = round(max(ts), 2)
+    metadata['standard deviation of this specific series'] = round(np.std(ts), 2)
+    metadata['minimum of this specific series'] = round(min(ts), 2)
+    metadata['maximum of this specific series'] = round(max(ts), 2)
 
   return metadata, ts
 
@@ -305,9 +304,9 @@ def get_request(dataset_name, metadata, ts):
 
           """
   elif dataset_name == "crime":
-    request = f"""Here is a time series about the number of {metadata["frequency"]} crimes {metadata["town"]}, Los Angeles, starting from {metadata["start_date"]}: \n {ts}
-          \nThe all-time statistics of {metadata["town"]} until today are: \n Mean: {metadata["general_mean"]} \n Standard Deviation: {metadata["general_std"]} \n Minimum: {metadata["general_min"]} \n Maximum: {metadata["general_max"]}
-          \nAnd the statistics for this specific time series are: \n Mean: {metadata["this_mean"]} \n Standard Deviation: {metadata["this_std"]} \n Minimum: {metadata["this_min"]} \n Maximum: {metadata["this_max"]}
+    request = f"""Here is a time series about the number of {metadata["sampling frequency"]} crimes {metadata["town"]}, Los Angeles, starting from {metadata["start date of the series"]}: \n {ts}
+          \nThe all-time statistics of {metadata["town"]} until today are: \n Mean: {metadata["general mean in the history of this town"]} \n Standard Deviation: {metadata["general standard deviation in the history of this town"]} \n Minimum: {metadata["general minimum in the history of this town"]} \n Maximum: {metadata["general maximum in the history of this town"]}
+          \nAnd the statistics for this specific time series are: \n Mean: {metadata["mean of this specific series"]} \n Standard Deviation: {metadata["standard deviation of this specific series"]} \n Minimum: {metadata["minimum of this specific series"]} \n Maximum: {metadata["maximum of this specific series"]}
 
          \n Describe this time series by focusing on trends and patterns. Discuss concrete numbers you see.
           For numerical values, ensure consistency with the provided time series. If making percentage comparisons, round to the nearest whole number.
@@ -327,7 +326,7 @@ def get_request(dataset_name, metadata, ts):
 
   elif dataset_name == "border crossing":
     request = f"""Here is a time series about the number of {metadata['sampling frequency']} {metadata['means']} crossing the port of {metadata['port']} at the {metadata["border"]} border, starting from {metadata["start date of the series"]}: \n {ts}
-          \nThe all-time statistics until today of {metadata['means']} crossing {metadata['port']} are: \n Mean: {metadata["general mean in the history of this port"]} \n Standard Deviation: {metadata["general standard deviation in the history of this port"]} \n Minimum: {metadata["general min in the history of this port"]} \n Maximum: {metadata["general max in the history of this port"]}
+          \nThe all-time statistics until today of {metadata['means']} crossing {metadata['port']} are: \n Mean: {metadata["general mean in the history of this port"]} \n Standard Deviation: {metadata["general standard deviation in the history of this port"]} \n Minimum: {metadata["general minimum in the history of this port"]} \n Maximum: {metadata["general maximum in the history of this port"]}
           Note that these all-time statistics are computed from then all the way until today. These are not historical, these are all-time.
           \nThe statistics for this specific time series are: \n Mean: {metadata['mean in this specific series']} \n Standard Deviation: {metadata['standard deviation in this specific series']} \n Minimum: {metadata['minimum in this series']} \n Maximum: {metadata['maximum in this series']}
 
@@ -348,8 +347,8 @@ def get_request(dataset_name, metadata, ts):
 
   elif dataset_name == "heart rate":
     request = f"""Here is a time series about the heart rate of a {metadata["category"]} {metadata["moment"]}, it's measured as instantaneous heart rates across measurements. Here it is: \n {ts}
-          \nThe general statistics of this person {metadata["moment"]} are: \n Mean: {metadata['general mean of this patient in this situation']} \n Standard Deviation: {metadata['general std of this patient in this situation']} \n Minimum: {metadata['general min of this patient in this situation']} \n Maximum: {metadata['general max of this patient in this situation']}
-          \nThe statistics for this specific time series are: \n Mean: {metadata['mean of this specific series']} \n Standard Deviation: {metadata['this std of this specific series']} \n Minimum: {metadata['this min of this specific series']} \n Maximum: {metadata['this max of this specific series']}
+          \nThe general statistics of this person {metadata["moment"]} are: \n Mean: {metadata['general mean of this patient in this situation']} \n Standard Deviation: {metadata['general standard deviation of this patient in this situation']} \n Minimum: {metadata['general minimum of this patient in this situation']} \n Maximum: {metadata['general maximum of this patient in this situation']}
+          \nThe statistics for this specific time series are: \n Mean: {metadata['mean of this specific series']} \n Standard Deviation: {metadata['this std of this specific series']} \n Minimum: {metadata['this minimum of this specific series']} \n Maximum: {metadata['maximum of this specific series']}
 
           \n Describe this time series by focusing on trends and patterns. Discuss concrete numbers you see.
           For numerical values, ensure consistency with the provided time series. If making percentage comparisons, round to the nearest whole number.
@@ -370,7 +369,7 @@ def get_request(dataset_name, metadata, ts):
     request = f"""I will give you a time series about the {metadata['sampling frequency']} {metadata['attribute']} of {metadata['country']} from {metadata['starting year']}, it's measured as the number of births per 1000 people.
           {metadata['country']} is categorized as a country with these attributes: {metadata['category by income']}.
            Here is the time series: \n {ts}
-          \nHere are the statistics for this specific time series for {metadata['country']}: \n Mean: {metadata['mean of this specific series']} \n Standard Deviation: {metadata['std of this specific series']} \n Minimum: {metadata['min of this specific series']} \n Maximum: {metadata['max of this specific series']}
+          \nHere are the statistics for this specific time series for {metadata['country']}: \n Mean: {metadata['mean of this specific series']} \n Standard Deviation: {metadata['standard deviation of this specific series']} \n Minimum: {metadata['minimum of this specific series']} \n Maximum: {metadata['maximum of this specific series']}
           \nHere is the global average time series for {metadata['attribute']} across all countries: \n {metadata['global average time series']}
 
           \n Describe this time series by focusing on trends and patterns. Discuss concrete numbers you see.
