@@ -3,6 +3,7 @@ import random
 import numpy as np 
 import pandas as pd
 import openai
+import json
 
 
 
@@ -17,7 +18,6 @@ def get_response(prompt: str,
                  ):
     if use_openAI: # if I am using OpenAI's API key
       pass
-
 
     else:  
       data = {
@@ -74,7 +74,7 @@ def get_sample(dataset_name: str, json_data, series_len = None, start_idx = None
     id = random.choice(list(json_data.keys()))
     measure = random.choice(list(json_data[id].keys())[1:])
     if series_len is None:
-      series_len = random.randint(5, min(100, int(len(json_data[id][measure])/8)))
+      series_len = random.randint(5, min(100, 5+int(len(json_data[id][measure])/8)))
     if start_idx is None:
       start_idx = random.randint(0, len(json_data[id][measure]) - series_len)
     ts = json_data[id][measure][start_idx:start_idx+series_len]
@@ -114,15 +114,15 @@ def get_sample(dataset_name: str, json_data, series_len = None, start_idx = None
     town = random.choice(list(json_data.keys()))
     metadata = json_data[town]['metadata'].copy()
     if series_len is None:
-      series_len = random.randint(5, min(100, int(len(json_data[town]["data"])/8)))
+      series_len = random.randint(5, min(100, 5+int(len(json_data[town]["data"])/8)))
     if start_idx is None:
       start_idx = random.randint(0, len(json_data[town]["data"]) - series_len)
 
     ts = json_data[town]['data'][start_idx:start_idx + series_len]
     ts = [round(x, 2) for x in ts]
 
-    metadata["start date"] = json_data[town]['metadata']['start date'][:-9]
-    date = pd.to_datetime(metadata["start date"])
+    metadata["start date of the series"] = json_data[town]['metadata']['start date'][:-9]
+    date = pd.to_datetime(metadata["start date of the series"])
     start_date = date + pd.DateOffset(days=start_idx)
     end_date = start_date + pd.DateOffset(days=series_len)
     metadata["start date of the series"] =  start_date.strftime('%Y-%m-%d')
@@ -150,13 +150,14 @@ def get_sample(dataset_name: str, json_data, series_len = None, start_idx = None
 
   elif dataset_name == "border crossing":
     port = random.choice(list(json_data.keys()))
+
     metadata = {}
     means = random.choice(list(json_data[port]['data'].keys()))
 
     if series_len is None:
-      series_len = random.randint(5, min(100, int(len(json_data[port]["data"]['means'])/8)))
+      series_len = random.randint(5, min(100, 5+int(len(json_data[port]["data"][means])/8)))
     if start_idx is None:
-      start_idx = random.randint(0, len(json_data[port]["data"]["means"]) - series_len)
+      start_idx = random.randint(0, len(json_data[port]["data"][means]) - series_len)
 
     ts = json_data[port]['data'][means][start_idx:start_idx + series_len]
 
@@ -174,7 +175,6 @@ def get_sample(dataset_name: str, json_data, series_len = None, start_idx = None
     metadata["start date of the series"] =  start_date.strftime('%Y-%m-%d')
     metadata["end date of the series"] =  end_date.strftime('%Y-%m-%d')
 
-
     metadata["general mean in the history of this port"] = round(json_data[port]['metadata']['mean'][means], 2)
     metadata["general standard deviation in the history of this port"] = round(json_data[port]['metadata']['std'][means], 2)
     metadata["general min in the history of this port"] = round(json_data[port]['metadata']['min'][means], 2)
@@ -190,7 +190,7 @@ def get_sample(dataset_name: str, json_data, series_len = None, start_idx = None
     metadata = {}
     
     if series_len is None:
-      series_len = random.randint(5, min(100, int(len(json_data[patient_id]["data"])/8)))
+      series_len = random.randint(5, min(100, 5+int(len(json_data[patient_id]["data"])/8)))
     if start_idx is None:
       start_idx = random.randint(0, len(json_data[patient_id]["data"]) - series_len)
 
@@ -242,7 +242,7 @@ def get_sample(dataset_name: str, json_data, series_len = None, start_idx = None
     attribute = random.choice(list(json_data[country_ID].keys())[1:])
 
     if series_len is None:
-      series_len = random.randint(5, min(100, int(len(json_data[country_ID][attribute])/2)))
+      series_len = random.randint(5, min(100, 5+int(len(json_data[country_ID][attribute])/2)))
     if start_idx is None:
       start_idx = random.randint(0, len(json_data[country_ID][attribute]) - series_len)
 
@@ -278,8 +278,11 @@ def get_samples(dataset_name, json_data, n, series_len=None) -> list: # returns 
     while i < n:
       metadata, ts = get_sample(dataset_name, json_data, series_len=None)
       if not np.isnan(ts).any() and not any(isinstance(x, str) and x.lower() == 'nan' for x in ts):
-        samples.append((metadata, ts)) # when series_len is none, the get_sample function handles it by randomizing
-        i += 1
+        zero_percentage = (ts.count(0) / len(ts)) * 100
+        if zero_percentage <= 10:
+            samples.append((metadata, ts))
+            i += 1
+      
   return samples
 
 
@@ -323,7 +326,7 @@ def get_request(dataset_name, metadata, ts):
           """
 
   elif dataset_name == "border crossing":
-    request = f"""Here is a time series about the number of {metadata['sampling frequency']} {metadata['means']} crossing the port of {metadata['port']} at the {metadata["border"]} border, starting from {metadata["start date"]}: \n {ts}
+    request = f"""Here is a time series about the number of {metadata['sampling frequency']} {metadata['means']} crossing the port of {metadata['port']} at the {metadata["border"]} border, starting from {metadata["start date of the series"]}: \n {ts}
           \nThe all-time statistics until today of {metadata['means']} crossing {metadata['port']} are: \n Mean: {metadata["general mean in the history of this port"]} \n Standard Deviation: {metadata["general standard deviation in the history of this port"]} \n Minimum: {metadata["general min in the history of this port"]} \n Maximum: {metadata["general max in the history of this port"]}
           Note that these all-time statistics are computed from then all the way until today. These are not historical, these are all-time.
           \nThe statistics for this specific time series are: \n Mean: {metadata['mean in this specific series']} \n Standard Deviation: {metadata['standard deviation in this specific series']} \n Minimum: {metadata['minimum in this series']} \n Maximum: {metadata['maximum in this series']}
@@ -421,3 +424,20 @@ def augment_request(request, n=3): # rephrases the request prompt n times and re
       prompt_variants[i] += "\nAnswer in a single paragraph of four sentences at most, without bullet points or any formatting."
 
   return prompt_variants
+
+
+def save_file(data, filepath: str):
+  if isinstance(data, str):
+    with open(filepath, 'w') as file:
+      file.write(data)
+  elif isinstance(data, list):
+    with open(filepath, 'w') as file:
+      for item in data:
+        file.write(str(item) + '\n')
+  elif isinstance(data, dict):
+    with open(filepath, 'w') as file:
+      json.dump(data, file, indent=4, sort_keys=True)
+  else:
+    raise ValueError("Unsupported data type")
+
+

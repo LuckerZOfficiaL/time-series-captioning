@@ -228,14 +228,15 @@ def preprocess_border_crossing():
         crossing_data[port_name]['metadata']['max'] = {}
         crossing_data[port_name]['metadata']['std'] = {}
 
-    for measure in measures:
-        crossing_data[port_name]['metadata']['mean'][measure] = float(np.mean(crossing_data[port_name]['data'][measure]))
-        crossing_data[port_name]['metadata']['std'][measure] = float(np.std(crossing_data[port_name]['data'][measure]))
-        try:
-            crossing_data[port_name]['metadata']['min'][measure] = int(np.min(crossing_data[port_name]['data'][measure]))
-            crossing_data[port_name]['metadata']['max'][measure] = int(np.max(crossing_data[port_name]['data'][measure]))
-        except:
-            pass
+        for measure in measures:
+            crossing_data[port_name]['metadata']['mean'][measure] = np.mean(crossing_data[port_name]['data'][measure])
+            crossing_data[port_name]['metadata']['std'][measure] = np.std(crossing_data[port_name]['data'][measure])
+            try:
+                crossing_data[port_name]['metadata']['min'][measure] = int(np.min(crossing_data[port_name]['data'][measure]))
+                crossing_data[port_name]['metadata']['max'][measure] = int(np.max(crossing_data[port_name]['data'][measure]))
+            except:
+                print("Error in generating min and max for border crossing", port_name, measure)
+                pass
     crossing_data[port_name]['metadata']['sampling frequency'] = "monthly"
 
     with open('/home/ubuntu/thesis/data/processed/border_crossing.json', 'w') as file:
@@ -243,10 +244,10 @@ def preprocess_border_crossing():
 
 
 def main():
-    preprocess_heart_rate()
-    preprocess_air_quality()
-    preprocess_demographics()
-    preprocess_crime()
+    #preprocess_heart_rate()
+    #preprocess_air_quality()
+    #preprocess_demographics()
+    #preprocess_crime()
     preprocess_border_crossing()
 
 if __name__ == "__main__":
