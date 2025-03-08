@@ -252,7 +252,8 @@ def get_sample(dataset_name: str, json_data, series_len = None, start_idx = None
     metadata['category by income'] = json_data[country_ID]["metadata"]['By Income']
     metadata['groups'] = json_data[country_ID]["metadata"]['Other Country Groups']
     if len(metadata['groups']) == 0: del metadata['groups']
-    metadata['starting year'] = json_data[country_ID]["metadata"]['start year of the series']
+    metadata['starting year'] = json_data[country_ID]["metadata"]['start year of the series'] + start_idx
+    metadata['end year'] = metadata['starting year'] + series_len - 1
     metadata['sampling frequency'] = "yearly"
 
     ts = json_data[country_ID][attribute][start_idx:start_idx+series_len]
@@ -370,7 +371,7 @@ def get_request(dataset_name, metadata, ts):
           """
 
   elif dataset_name == "demography":
-    request = f"""I will give you a time series about the {metadata['sampling frequency']} {metadata['attribute']} of {metadata['country']} from {metadata['starting year']}, it's measured as the number of births per 1000 people.
+    request = f"""I will give you a time series about the {metadata['sampling frequency']} {metadata['attribute']} of {metadata['country']} from {metadata['starting year']} to {metadata['end year']}, it's measured as number per 1000 people.
           {metadata['country']} is categorized as a country with these attributes: {metadata['category by income']}.
            Here is the time series: \n {ts}
           \nHere are the statistics for this specific time series for {metadata['country']}: \n Mean: {metadata['mean of this specific series']} \n Standard Deviation: {metadata['standard deviation of this specific series']} \n Minimum: {metadata['minimum of this specific series']} \n Maximum: {metadata['maximum of this specific series']}
