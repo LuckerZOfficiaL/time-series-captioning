@@ -91,7 +91,7 @@ def get_sample(dataset_name: str, json_data, series_len = None, start_idx = None
 
     metadata["measure"] = measure
     metadata["mean"] = round(metadata_cpy["mean"][measure], 2)
-    metadata["standard deviation"] = round(metadata_cpy["standard deviation"][measure], 2)
+    metadata["standard deviation"] = round(metadata_cpy["std"][measure], 2)
     metadata["min"] = round(metadata_cpy["min"][measure], 2)
     metadata["max"] = round(metadata_cpy["max"][measure], 2)
 
@@ -174,13 +174,13 @@ def get_sample(dataset_name: str, json_data, series_len = None, start_idx = None
     metadata["start date of the series"] =  start_date.strftime('%Y-%m-%d')
     metadata["end date of the series"] =  end_date.strftime('%Y-%m-%d')
 
-    metadata["general mean of the history of this port"] = round(json_data[port]['metadata']['mean'][means], 2)
+    metadata["general mean in the history of this port"] = round(json_data[port]['metadata']['mean'][means], 2)
     metadata["general standard deviation in the history of this port"] = round(json_data[port]['metadata']['std'][means], 2)
     metadata["general minimum in the history of this port"] = round(json_data[port]['metadata']['min'][means], 2)
     metadata["general maximum in the history of this port"] = round(json_data[port]['metadata']['max'][means], 2)
 
     metadata['mean of this specific series'] = round(np.mean(ts), 2)
-    metadata['standard deviation in this specific series'] = round(np.std(ts), 2)
+    metadata['standard deviation of this specific series'] = round(np.std(ts), 2)
     metadata['minimum in this specific series'] = round(min(ts), 2)
     metadata['maximum in this specific series'] = round(max(ts), 2)
 
@@ -333,7 +333,7 @@ def get_request(dataset_name, metadata, ts):
     request = f"""Here is a time series about the number of {metadata['sampling frequency']} {metadata['means']} crossing the port of {metadata['port']} at the {metadata["border"]} border, starting from {metadata["start date of the series"]}: \n {ts}
           \nThe all-time statistics until today of {metadata['means']} crossing {metadata['port']} are: \n Mean: {metadata["general mean in the history of this port"]} \n Standard Deviation: {metadata["general standard deviation in the history of this port"]} \n Minimum: {metadata["general minimum in the history of this port"]} \n Maximum: {metadata["general maximum in the history of this port"]}
           Note that these all-time statistics are computed from then all the way until today. These are not historical, these are all-time.
-          \nThe statistics for this specific time series are: \n Mean: {metadata['mean in this specific series']} \n Standard Deviation: {metadata['standard deviation in this specific series']} \n Minimum: {metadata['minimum in this series']} \n Maximum: {metadata['maximum in this series']}
+          \nThe statistics for this specific time series are: \n Mean: {metadata['mean of this specific series']} \n Standard Deviation: {metadata['standard deviation of this specific series']} \n Minimum: {metadata['minimum in this specific series']} \n Maximum: {metadata['maximum in this specific series']}
 
            \n Describe this time series by focusing on trends and patterns. Discuss concrete numbers you see.
           For numerical values, ensure consistency with the provided time series. If making percentage comparisons, round to the nearest whole number.
@@ -460,10 +460,10 @@ def add_facts_to_caption(caption, model="Gemini-1.5-Flash-Search"):
    \n
    {caption} 
    \n
-   The above time series description contains some vague statements about some social or geopolitical events. Please replase these vague statements with concrete facts or events, without affecting the rest of the description. Answer with the refined description in one paragraph, without adding anything more.
+   The above time series description mentions some vague statements about some social or geopolitical events. Please replace these vague statements by referring and explaining concrete facts or events that you know, be clear. Do not affect the rest of the description beyond that. Answer with the refined description in one paragraph, without adding anything more.
   """
   response = get_response(prompt, model,
                           temperature = 0.7,
                           top_p = 0.85,
-                  )
+            )
   return response
