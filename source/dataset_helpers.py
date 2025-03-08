@@ -309,7 +309,7 @@ def get_request(dataset_name, metadata, ts):
 
           """
   elif dataset_name == "crime":
-    request = f"""Here is a time series about the number of {metadata["sampling frequency"]} crimes {metadata["town"]}, Los Angeles, starting from {metadata["start date of the series"]}: \n {ts}
+    request = f"""Here is a time series about the number of {metadata["sampling frequency"]} crimes {metadata["town"]}, Los Angeles, from {metadata["start date of the series"]} to {metadata["end date of the series"]}: \n {ts}
           \nThe all-time statistics of {metadata["town"]} until today are: \n Mean: {metadata["general mean in the history of this town"]} \n Standard Deviation: {metadata["general standard deviation in the history of this town"]} \n Minimum: {metadata["general minimum in the history of this town"]} \n Maximum: {metadata["general maximum in the history of this town"]}
           \nAnd the statistics for this specific time series are: \n Mean: {metadata["mean of this specific series"]} \n Standard Deviation: {metadata["standard deviation of this specific series"]} \n Minimum: {metadata["minimum of this specific series"]} \n Maximum: {metadata["maximum of this specific series"]}
 
@@ -460,7 +460,7 @@ def add_facts_to_caption(caption, model="Gemini-1.5-Flash-Search"):
    \n
    {caption} 
    \n
-   The above time series description mentions some vague statements about some social or geopolitical events. Please replace these vague statements by referring and explaining concrete facts or events that you know, be clear. Do not affect the rest of the description beyond that. Answer with the refined description in one paragraph, without adding anything more.
+   The above time series description mentions some vague statements about some social or geopolitical events. Replace these vague statements by referring to your scientific knowledge or explaining concrete events that you know happened in that period of time. Do not affect the rest of the description beyond that. Answer with the refined description in one paragraph, without explaining anything more.
   """
   response = get_response(prompt, model,
                           temperature = 0.7,
