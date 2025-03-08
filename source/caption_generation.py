@@ -14,7 +14,7 @@ FILE_MAPPING = {
         "air quality": "aq.json",
         "border crossing": "border_crossing.json",
         "crime": "crime.json",
-        "demographics": "demographics.json",
+        "demography": "demographics.json",
         "heart rate": "hr_data.json"
     }
 SAVE_TOP_K = 2 # save the top k best captions based on the ranking
@@ -71,4 +71,4 @@ def main(dataset_name):
     
 
 if __name__ == "__main__":
-    main("crime")
+    main("demography")

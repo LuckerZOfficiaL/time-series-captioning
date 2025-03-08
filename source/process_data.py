@@ -147,22 +147,22 @@ def preprocess_demographics():
         df_rows_to_ts(median_age_df, attribute="median age", demo_dict=demo_dict)
 
 
-    demo_dict[country_id]["metadata"]['series length'] = len(demo_dict[country_id]["birth rate"])
-    demo_dict[country_id]["metadata"]['start year of the series'] = 2000 # all ts start from year 2000
+        demo_dict[country_id]["metadata"]['series length'] = len(demo_dict[country_id]["birth rate"])
+        demo_dict[country_id]["metadata"]['start year of the series'] = 2000 # all ts start from year 2000
 
-    demo_dict[country_id]["metadata"]['mean'] = {}
-    demo_dict[country_id]["metadata"]['min'] = {}
-    demo_dict[country_id]["metadata"]['max'] = {}
-    demo_dict[country_id]["metadata"]['std'] = {}
+        demo_dict[country_id]["metadata"]['mean'] = {}
+        demo_dict[country_id]["metadata"]['min'] = {}
+        demo_dict[country_id]["metadata"]['max'] = {}
+        demo_dict[country_id]["metadata"]['std'] = {}
 
-    for attr in demo_dict[country_id]:
-        if attr != "metadata":
-            demo_dict[country_id]["metadata"]['mean'][attr] = np.mean(demo_dict[country_id][attr])
-            demo_dict[country_id]["metadata"]['min'][attr] = np.min(demo_dict[country_id][attr])
-            demo_dict[country_id]["metadata"]['max'][attr] = np.max(demo_dict[country_id][attr])
-            demo_dict[country_id]["metadata"]['std'][attr] = np.std(demo_dict[country_id][attr])
+        for attr in demo_dict[country_id]:
+            if attr != "metadata":
+                demo_dict[country_id]["metadata"]['mean'][attr] = np.mean(demo_dict[country_id][attr])
+                demo_dict[country_id]["metadata"]['min'][attr] = np.min(demo_dict[country_id][attr])
+                demo_dict[country_id]["metadata"]['max'][attr] = np.max(demo_dict[country_id][attr])
+                demo_dict[country_id]["metadata"]['std'][attr] = np.std(demo_dict[country_id][attr])
 
-    demo_dict[country_id]["metadata"]['sampling frequency'] = "yearly"
+        demo_dict[country_id]["metadata"]['sampling frequency'] = "yearly"
 
     with open('/home/ubuntu/thesis/data/processed/demographics.json', 'w') as file:
         json.dump(demo_dict, file, indent=4, sort_keys=True)
@@ -246,9 +246,9 @@ def preprocess_border_crossing():
 def main():
     #preprocess_heart_rate()
     #preprocess_air_quality()
-    #preprocess_demographics()
+    preprocess_demographics()
     #preprocess_crime()
-    preprocess_border_crossing()
+    #preprocess_border_crossing()
 
 if __name__ == "__main__":
     main()

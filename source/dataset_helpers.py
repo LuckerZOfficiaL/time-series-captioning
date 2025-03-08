@@ -103,7 +103,7 @@ def get_sample(dataset_name: str, json_data, series_len = None, start_idx = None
     metadata["starting time"] = metadata["starting time"][start_idx]
 
     metadata['average value in this time series'] = round(np.mean(ts), 2)
-    metadata['standard deviation in this time series'] = round(np.standard deviation(ts), 2)
+    metadata['standard deviation in this time series'] = round(np.std(ts), 2)
     metadata['minimum value in this time series'] = round(min(ts), 2)
     metadata['maximum value in this time series'] = round(max(ts), 2)
 
@@ -136,7 +136,7 @@ def get_sample(dataset_name: str, json_data, series_len = None, start_idx = None
     metadata["general maximum in the history of this town"] = round(json_data[town]['metadata']['max'], 2)
 
     metadata["mean of this specific series"] = round(np.mean(ts), 2)
-    metadata["standard deviation of this specific series"] = round(np.standard deviation(ts), 2)
+    metadata["standard deviation of this specific series"] = round(np.std(ts), 2)
     metadata["minimum of this specific series"] = round(min(ts), 2)
     metadata["maximum of this specific series"] = round(max(ts), 2)
 
@@ -185,22 +185,22 @@ def get_sample(dataset_name: str, json_data, series_len = None, start_idx = None
     metadata['maximum in this specific series'] = round(max(ts), 2)
 
   elif dataset_name == "heart rate":
-    patient_id = random.choice(list(hr_data.keys()))
+    patient_id = random.choice(list(json_data.keys()))
     metadata = {}
     
     if series_len is None:
-      series_len = random.randint(5, min(100, 5+int(len(json_data[patient_id]["data"])/8)))
+      series_len = random.randint(5, min(100, 5+int(len(json_data[patient_id]["data"]["heart rate"])/8)))
     if start_idx is None:
-      start_idx = random.randint(0, len(json_data[patient_id]["data"]) - series_len)
+      start_idx = random.randint(0, len(json_data[patient_id]["data"]["heart rate"]) - series_len)
 
-    ts = hr_data[patient_id]['data'][start_idx:start_idx + series_len]['heart rate'].tolist()
+    ts = json_data[patient_id]['data']['heart rate'][start_idx:start_idx + series_len]
     ts = [round(x, 2) for x in ts]
 
 
-    metadata['general mean of this patient in this situation'] = round(hr_data[patient_id]['metadata']['mean'], 2)
-    metadata['general standard deviation of this patient in this situation'] = round(hr_data[patient_id]['metadata']['std'], 2)
-    metadata['general minimum of this patient in this situation'] = round(hr_data[patient_id]['metadata']['min'], 2)
-    metadata['general maximum of this patient in this situation'] = round(hr_data[patient_id]['metadata']['max'], 2)
+    metadata['general mean of this patient in this situation'] = round(json_data[patient_id]['metadata']['mean'], 2)
+    metadata['general standard deviation of this patient in this situation'] = round(json_data[patient_id]['metadata']['std'], 2)
+    metadata['general minimum of this patient in this situation'] = round(json_data[patient_id]['metadata']['min'], 2)
+    metadata['general maximum of this patient in this situation'] = round(json_data[patient_id]['metadata']['max'], 2)
     metadata['mean of this specific series'] = round(np.mean(ts), 2)
     metadata['standard deviation of this specific series'] = round(np.std(ts), 2)
     metadata['minimum of this specific series'] = round(min(ts), 2)
@@ -238,10 +238,10 @@ def get_sample(dataset_name: str, json_data, series_len = None, start_idx = None
   elif dataset_name == "demography":
     #series_len = 22 # let's fix it at 22 because we only have 22 timesteps for any country
     country_ID = random.choice(list(json_data.keys()))
-    attribute = random.choice(list(json_data[country_ID].keys())[1:])
+    attribute = random.choice([key for key in json_data[country_ID].keys() if key != "metadata"])
 
     if series_len is None:
-      series_len = random.randint(5, min(100, 5+int(len(json_data[country_ID][attribute])/2)))
+      series_len = random.randint(5, len(json_data[country_ID][attribute]))
     if start_idx is None:
       start_idx = random.randint(0, len(json_data[country_ID][attribute]) - series_len)
 
@@ -255,9 +255,13 @@ def get_sample(dataset_name: str, json_data, series_len = None, start_idx = None
     metadata['starting year'] = json_data[country_ID]["metadata"]['start year of the series']
     metadata['sampling frequency'] = "yearly"
 
-    ts = json_data[country_ID][metadata['attribute']][:series_len]
-    average_ts = np.mean([json_data[country][metadata['attribute']] for country in json_data if country != country_ID], axis=0)
-
+    ts = json_data[country_ID][attribute][start_idx:start_idx+series_len]
+    average_ts = np.mean(
+        [json_data[country][attribute][start_idx:start_idx+series_len] 
+        for country in json_data if country != country_ID and 
+        not np.any(np.isnan(json_data[country][attribute][start_idx:start_idx+series_len]))], 
+        axis=0
+    )
     ts = [round(x, 2) for x in ts]
     metadata['global average time series'] = [round(x, 2) for x in average_ts]
 
@@ -346,9 +350,9 @@ def get_request(dataset_name, metadata, ts):
           """
 
   elif dataset_name == "heart rate":
-    request = f"""Here is a time series about the heart rate of a {metadata["category"]} {metadata["moment"]}, it's measured as instantaneous heart rates across measurements. Here it is: \n {ts}
-          \nThe general statistics of this person {metadata["moment"]} are: \n Mean: {metadata['general mean of this patient in this situation']} \n Standard Deviation: {metadata['general standard deviation of this patient in this situation']} \n Minimum: {metadata['general minimum of this patient in this situation']} \n Maximum: {metadata['general maximum of this patient in this situation']}
-          \nThe statistics for this specific time series are: \n Mean: {metadata['mean of this specific series']} \n Standard Deviation: {metadata['this std of this specific series']} \n Minimum: {metadata['this minimum of this specific series']} \n Maximum: {metadata['maximum of this specific series']}
+    request = f"""Here is a time series about the heart rate of a {metadata["category"]}{' ' + metadata["moment"] if "moment" in metadata else ''}, it's measured as instantaneous heart rates across measurements. Here it is: \n {ts}
+          \nThe general statistics of this person{' ' + metadata["moment"] if "moment" in metadata else ''} are: \n Mean: {metadata['general mean of this patient in this situation']} \n Standard Deviation: {metadata['general standard deviation of this patient in this situation']} \n Minimum: {metadata['general minimum of this patient in this situation']} \n Maximum: {metadata['general maximum of this patient in this situation']}
+          \nThe statistics for this specific time series are: \n Mean: {metadata['mean of this specific series']} \n Standard Deviation: {metadata['standard deviation of this specific series']} \n Minimum: {metadata['minimum of this specific series']} \n Maximum: {metadata['maximum of this specific series']}
 
           \n Describe this time series by focusing on trends and patterns. Discuss concrete numbers you see.
           For numerical values, ensure consistency with the provided time series. If making percentage comparisons, round to the nearest whole number.
@@ -370,7 +374,7 @@ def get_request(dataset_name, metadata, ts):
           {metadata['country']} is categorized as a country with these attributes: {metadata['category by income']}.
            Here is the time series: \n {ts}
           \nHere are the statistics for this specific time series for {metadata['country']}: \n Mean: {metadata['mean of this specific series']} \n Standard Deviation: {metadata['standard deviation of this specific series']} \n Minimum: {metadata['minimum of this specific series']} \n Maximum: {metadata['maximum of this specific series']}
-          \nHere is the global average time series for {metadata['attribute']} across all countries: \n {metadata['global average time series']}
+          \nHere is the global average time series for {metadata['attribute']} across all countries in the same period: \n {metadata['global average time series']}
 
           \n Describe this time series by focusing on trends and patterns. Discuss concrete numbers you see.
           For numerical values, ensure consistency with the provided time series. If making percentage comparisons, round to the nearest whole number.
