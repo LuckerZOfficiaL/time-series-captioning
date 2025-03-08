@@ -1,5 +1,6 @@
 import requests
 import json
+import re
 from dataset_helpers import (
     get_response, 
     get_sample, 
@@ -17,9 +18,11 @@ FILE_MAPPING = {
         "demography": "demographics.json",
         "heart rate": "hr_data.json"
     }
-SAVE_TOP_K = 2 # save the top k best captions based on the ranking
-AUGMENTATIONS = 2 # how many times to rephrase the original prompt request?
-SAMPLES = 2 # how many window samples to extract? i.e. how many tiime series to sample?
+
+SAVE_TOP_K = 5 # save the top k best captions based on the ranking
+REQUEST_AUGMENTATIONS = 0 # how many times to rephrase the original prompt request?
+SAMPLES = 1 # how many window samples to extract? i.e. how many tiime series to sample?
+MODELS = ["GPT-4o-Aug", "Claude-3.5-Haiku", "Gemini-1.5-flash", "Gemini-1.5-Pro", "DeepSeek-R1-FW"]
 
 def main(dataset_name):
     filepath = f"/home/ubuntu/thesis/data/processed/{FILE_MAPPING[dataset_name]}"
@@ -35,30 +38,43 @@ def main(dataset_name):
         #print("\nSeries: ", ts)
         request = get_request(dataset_name, metadata, ts)
         #print("\nOriginal request: ", request)
-        augmented_requests = augment_request(request, n=AUGMENTATIONS)
-        #print("\nAugmented requests: ")
-        #for req in augmented_requests:
+        if REQUEST_AUGMENTATIONS > 0:
+            requests = augment_request(request, n=REQUEST_AUGMENTATIONS)
+        else: # do not augment the fixed-template prompt
+            requests = []
+        requests.append(request) # add the original fixed-template prompt too
+        #print("\Requests: ")
+        #for req in requests:
         #    print("\n", req)
 
         responses = []
-        for i in range(len(augmented_requests)):
-            responses.append(get_response(augmented_requests[i], model="GPT-4o-Aug",
-                                    temperature = 0.75,
-                                    top_p = 0.85
-                            )
-                        )
+        for i in range(len(requests)):
+            for model in MODELS:
+                response = get_response(requests[i], model=model,
+                                        temperature = 0.75,
+                                        top_p = 0.85
+                                )
+                if "DeepSeek" in model: # if it's DeepSeek, discard the reasoning text
+                    match = re.search(r"Thinking\.\.\..*?>\s*\n\n(.*)", response, re.DOTALL)
+                    response = match.group(1).strip() if match else None
+                responses.append(response)
             #print(f"Done for request variant {i+1}.")
 
-        rank = rank_responses(responses)
-        rank = [x-1 for x in rank]
-        #print("Ranking done: ", rank)
+        ranks = rank_responses(responses)
+        ranks = [x-1 for x in ranks]
+        print("\nRanking: ")
+        for r in ranks:
+            print(MODELS[r])
 
-        #print("\nReranked captions: ")
-        #for r in rank:
-        #    print("\n", responses[r])
+        
+        #print("Ranking done: ", rank)
+        print("\nReranked captions: ")
+        for r in ranks:
+            print("\n", responses[r])
+
         for k in range(SAVE_TOP_K):
             caption_filepath = f"/home/ubuntu/thesis/data/samples/captions/{dataset_name}_{idx}.txt" 
-            save_file(responses[rank[k]], caption_filepath)
+            save_file(responses[ranks[k]], caption_filepath)
 
             metadata_filepath = f"/home/ubuntu/thesis/data/samples/metadata/{dataset_name}_{idx}.json" 
             save_file(metadata, metadata_filepath)   

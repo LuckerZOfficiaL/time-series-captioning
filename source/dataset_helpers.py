@@ -52,7 +52,7 @@ def get_response(prompt: str,
           print("Error:", response.status_code, response.text)
 
 
-def rank_responses(responses_list: list) -> list: # takes a list of texts, returns a ranking of the indices
+def rank_responses(responses_list: list, model="GPT-4o-Aug") -> list: # takes a list of texts, returns a ranking of the indices
   unified_responses = ""
   for i in range(len(responses_list)):
     unified_responses += str(i+1) + ". " + responses_list[i] + "\n\n"
@@ -62,7 +62,7 @@ def rank_responses(responses_list: list) -> list: # takes a list of texts, retur
                 Answer only with the ranked indices directly and don't say anything more, don't copy the entire descriptions.
             """
 
-  ranked_responses = get_response(request + unified_responses)
+  ranked_responses = get_response(request + unified_responses, model)
   ranked_responses = ranked_responses.split(",")
   ranked_responses = [int(x) for x in ranked_responses]
   return ranked_responses
@@ -265,7 +265,7 @@ def get_sample(dataset_name: str, json_data, series_len = None, start_idx = None
     )
     ts = [round(x, 2) for x in ts]
     metadata['global average time series'] = [round(x, 2) for x in average_ts]
-    metadata['global standard deviation'] = np.std(metadata['global average time series'], 2)
+    metadata['global standard deviation'] = round(np.std(metadata['global average time series']), 2)
 
     metadata['mean of this specific series'] = round(np.mean(ts), 2)
     metadata['standard deviation of this specific series'] = round(np.std(ts), 2)
@@ -394,7 +394,7 @@ def get_request(dataset_name, metadata, ts):
   return request
 
 
-def augment_request(request, n=3): # rephrases the request prompt n times and returns the augmentations in a list
+def augment_request(request, n=3, model="GPT-4o-Aug"): # rephrases the request prompt n times and returns the augmentations in a list
   augmentation_request = f"""
           Your task is to rephrase the given prompt while preserving all its original information, intent, meta-data, and length.
           - Ensure that the meaning remains unchanged, including instructions related to numerical accuracy, world knowledge, and comparison guidelines.
@@ -414,7 +414,7 @@ def augment_request(request, n=3): # rephrases the request prompt n times and re
   """
 
 
-  variants_response = get_response(augmentation_request, model="GPT-4o-Aug",
+  variants_response = get_response(augmentation_request, model=model,
                           temperature = 0.7,
                           top_p = 0.85,
                           )
@@ -428,6 +428,15 @@ def augment_request(request, n=3): # rephrases the request prompt n times and re
       prompt_variants[i] += "\nAnswer in a single paragraph of four sentences at most, without bullet points or any formatting."
 
   return prompt_variants
+
+def get_captions(prompt: str, model_list):
+  captions = []
+  for model in model_list:
+    caption.append(get_response(prompt, model=model,
+                          temperature = 0.7,
+                          top_p = 0.85,
+                  ))
+  return captions
 
 
 def save_file(data, filepath: str):
