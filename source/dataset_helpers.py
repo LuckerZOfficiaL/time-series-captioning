@@ -265,7 +265,7 @@ def get_sample(dataset_name: str, json_data, series_len = None, start_idx = None
     )
     ts = [round(x, 2) for x in ts]
     metadata['global average time series'] = [round(x, 2) for x in average_ts]
-
+    metadata['global standard deviation'] = np.std(metadata['global average time series'], 2)
 
     metadata['mean of this specific series'] = round(np.mean(ts), 2)
     metadata['standard deviation of this specific series'] = round(np.std(ts), 2)
@@ -375,7 +375,7 @@ def get_request(dataset_name, metadata, ts):
           {metadata['country']} is categorized as a country with these attributes: {metadata['category by income']}.
            Here is the time series: \n {ts}
           \nHere are the statistics for this specific time series for {metadata['country']}: \n Mean: {metadata['mean of this specific series']} \n Standard Deviation: {metadata['standard deviation of this specific series']} \n Minimum: {metadata['minimum of this specific series']} \n Maximum: {metadata['maximum of this specific series']}
-          \nHere is the global average time series for {metadata['attribute']} across all countries in the same period: \n {metadata['global average time series']}
+          \nHere is the global average time series for {metadata['attribute']} across all countries in the same period: \n {metadata['global average time series']}, whose standard deviation is {metadata['global standard deviation']}
 
           \n Describe this time series by focusing on trends and patterns. Discuss concrete numbers you see.
           For numerical values, ensure consistency with the provided time series. If making percentage comparisons, round to the nearest whole number.
