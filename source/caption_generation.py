@@ -8,7 +8,8 @@ from dataset_helpers import (
     get_request, 
     augment_request, 
     rank_responses,
-    save_file
+    save_file,
+    add_facts_to_caption
 )
 
 FILE_MAPPING = {
@@ -25,7 +26,7 @@ SAMPLES = 1 # how many window samples to extract? i.e. how many time series to s
 MODELS = ["GPT-4o-Aug", "Claude-3.5-Haiku", "Gemini-1.5-Flash", "Gemini-1.5-Pro", "DeepSeek-R1-FW"] # models used for generating captions
 JUDGE_MODEL = "GPT-4o-Aug" # the model used to rank the captions
 REFINEMENT_MODEL = "Gemini-1.5-Flash-Search"
-REFINE_CAPTIONS = False # whether to refine the generated captions with REFINEMENT_MDOEL
+REFINE_CAPTIONS = True # whether to refine the generated captions with REFINEMENT_MDOEL
 
 def main(dataset_name):
     filepath = f"/home/ubuntu/thesis/data/processed/{FILE_MAPPING[dataset_name]}"
@@ -64,6 +65,7 @@ def main(dataset_name):
             #print(f"Done for request variant {i+1}.")
 
         if REFINE_CAPTIONS:
+            print("\nCaptions are REFINED!")
             refined_captions = []
             for response in responses:
                 refined_captions.append(add_facts_to_caption(response, REFINEMENT_MODEL))
