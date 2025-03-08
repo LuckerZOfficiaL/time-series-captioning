@@ -21,8 +21,11 @@ FILE_MAPPING = {
 
 SAVE_TOP_K = 5 # save the top k best captions based on the ranking
 REQUEST_AUGMENTATIONS = 0 # how many times to rephrase the original prompt request?
-SAMPLES = 1 # how many window samples to extract? i.e. how many tiime series to sample?
-MODELS = ["GPT-4o-Aug", "Claude-3.5-Haiku", "Gemini-1.5-flash", "Gemini-1.5-Pro", "DeepSeek-R1-FW"]
+SAMPLES = 1 # how many window samples to extract? i.e. how many time series to sample?
+MODELS = ["GPT-4o-Aug", "Claude-3.5-Haiku", "Gemini-1.5-Flash", "Gemini-1.5-Pro", "DeepSeek-R1-FW"] # models used for generating captions
+JUDGE_MODEL = "GPT-4o-Aug" # the model used to rank the captions
+REFINEMENT_MODEL = "Gemini-1.5-Flash-Search"
+REFINE_CAPTIONS = False # whether to refine the generated captions with REFINEMENT_MDOEL
 
 def main(dataset_name):
     filepath = f"/home/ubuntu/thesis/data/processed/{FILE_MAPPING[dataset_name]}"
@@ -60,17 +63,22 @@ def main(dataset_name):
                 responses.append(response)
             #print(f"Done for request variant {i+1}.")
 
-        ranks = rank_responses(responses)
+        if REFINE_CAPTIONS:
+            refined_captions = []
+            for response in responses:
+                refined_captions.append(add_facts_to_caption(response, REFINEMENT_MODEL))
+
+        ranks = rank_responses(responses, model=JUDGE_MODEL)
         ranks = [x-1 for x in ranks]
-        print("\nRanking: ")
+        print("\n\nRanking: \n")
         for r in ranks:
             print(MODELS[r])
 
         
         #print("Ranking done: ", rank)
-        print("\nReranked captions: ")
+        print("\n\nReranked captions: \n")
         for r in ranks:
-            print("\n", responses[r])
+            print(MODELS[r], ":", responses[r], "\n")
 
         for k in range(SAVE_TOP_K):
             caption_filepath = f"/home/ubuntu/thesis/data/samples/captions/{dataset_name}_{idx}.txt" 
@@ -87,4 +95,4 @@ def main(dataset_name):
     
 
 if __name__ == "__main__":
-    main("demography")
+    main("crime")

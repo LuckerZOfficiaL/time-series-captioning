@@ -131,7 +131,7 @@ def get_sample(dataset_name: str, json_data, series_len = None, start_idx = None
     metadata["sampling frequency"] = "daily"
     metadata['series length'] = series_len
     metadata["general mean in the history of this town"] = round(json_data[town]['metadata']['mean'], 2)
-    metadata["general standard deviation in the history of this town"] = round(json_data[town]['metadata']['standard deviation'], 2)
+    metadata["general standard deviation in the history of this town"] = round(json_data[town]['metadata']['std'], 2)
     metadata["general minimum in the history of this town"] = round(json_data[town]['metadata']['min'], 2)
     metadata["general maximum in the history of this town"] = round(json_data[town]['metadata']['max'], 2)
 
@@ -454,3 +454,16 @@ def save_file(data, filepath: str):
     raise ValueError("Unsupported data type")
 
 
+def add_facts_to_caption(caption, model="Gemini-1.5-Flash-Search"):
+  prompt = f"""
+   Here is a time series description, read it carefully. 
+   \n
+   {caption} 
+   \n
+   The above time series description contains some vague statements about some social or geopolitical events. Please replase these vague statements with concrete facts or events, without affecting the rest of the description. Answer with the refined description in one paragraph, without adding anything more.
+  """
+  response = get_response(prompt, model,
+                          temperature = 0.7,
+                          top_p = 0.85,
+                  )
+  return response
