@@ -1,3 +1,5 @@
+# This script requires that process_data.py is run already. This script generates samples from the given processed data. Each sample consists of (time series, metadata, caption).
+
 import requests
 import json
 import re
@@ -9,7 +11,8 @@ from dataset_helpers import (
     augment_request, 
     rank_responses,
     save_file,
-    add_facts_to_caption
+    add_facts_to_caption,
+    generate_line_plot
 )
 
 FILE_MAPPING = {
@@ -86,13 +89,13 @@ def main(dataset_names):
 
             for k in range(SAVE_TOP_K):
                 caption_filepath = f"/home/ubuntu/thesis/data/samples/captions/{dataset_name}_{idx}.txt" 
-                save_file(responses[ranks[k]], caption_filepath)
+                save_file(responses[k], caption_filepath)
 
                 metadata_filepath = f"/home/ubuntu/thesis/data/samples/metadata/{dataset_name}_{idx}.json" 
                 save_file(metadata, metadata_filepath)   
 
                 series_filepath = f"/home/ubuntu/thesis/data/samples/time series/{dataset_name}_{idx}.json" 
-                save_file(ts, series_filepath)   
+                save_file(ts, series_filepath) 
 
                 idx += 1
 

@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 import openai
 import json
+import matplotlib.pyplot as plt
 
 
 
@@ -50,7 +51,6 @@ def get_response(prompt: str,
           return result["choices"][0]["message"]["content"]
       else:
           print("Error:", response.status_code, response.text)
-
 
 def rank_responses(responses_list: list, model="GPT-4o-Aug") -> list: # takes a list of texts, returns a ranking of the indices
   unified_responses = ""
@@ -292,7 +292,6 @@ def get_samples(dataset_name, json_data, n, series_len=None) -> list: # returns 
       
   return samples
 
-
 def get_request(dataset_name, metadata, ts):
   if dataset_name == "air quality":
     request = f"""Here is a time series about {metadata["sampling frequency"]} {metadata["measure"]} in the Indian city of {metadata['city']}: \n {ts} \n Here is the detailed metadata: \n {str(metadata)}.
@@ -396,7 +395,6 @@ def get_request(dataset_name, metadata, ts):
           """
   return request
 
-
 def augment_request(request, n=3, model="GPT-4o-Aug"): # rephrases the request prompt n times and returns the augmentations in a list
   augmentation_request = f"""
           Your task is to rephrase the given prompt while preserving all its original information, intent, meta-data, and length.
@@ -441,7 +439,6 @@ def get_captions(prompt: str, model_list):
                   ))
   return captions
 
-
 def save_file(data, filepath: str):
   if isinstance(data, str):
     with open(filepath, 'w') as file:
@@ -456,7 +453,6 @@ def save_file(data, filepath: str):
   else:
     raise ValueError("Unsupported data type")
 
-
 def add_facts_to_caption(caption, model="Gemini-2.0-Flash", ask_urls=False):
   prompt = f"""
    Here is a time series description, read it carefully. 
@@ -470,3 +466,17 @@ def add_facts_to_caption(caption, model="Gemini-2.0-Flash", ask_urls=False):
                           top_p = 0.85,
             )
   return response
+
+def generate_line_plot(ts, xlabel, ylabel, title, savepath, height=None, width=None): 
+  figsize = (width, height) if width is not None and height is not None else None
+  plt.figure(figsize=figsize)
+
+  plt.plot(ts, marker='o', linestyle='-')  # Plot the time series
+  plt.xlabel(xlabel)
+  plt.ylabel(ylabel)
+  plt.title(title)
+  plt.grid(True)
+
+  plt.savefig(savepath, bbox_inches='tight')  # Save the plot
+  plt.close()
+  

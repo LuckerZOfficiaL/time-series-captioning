@@ -1,3 +1,5 @@
+# This script expectes that sample_generation.py is run already and the captions are already generated. This script refines these captions.
+
 import json
 import os
 from dataset_helpers import (
@@ -5,17 +7,17 @@ from dataset_helpers import (
     add_facts_to_caption
 )
 
-REFINEMENT_MODEL = "Gemini-1.5-Flash-Search"
-captions_path = "/home/ubuntu/thesis/data/samples/captions"
+REFINEMENT_MODEL = "Gemini-2.0-Flash"
+CAPTIONS_PATH = "/home/ubuntu/thesis/data/samples/captions"
 DATASET_NAMES = ["air quality", "border crossing", "crime", "demography", "heart rate"]   
-ASK_URLS = False # whether to ask the refinement model to provide URL references
+ASK_URLS = False #whether to ask the refinement model to provide URL references, even if it's True, the refiner doesn't give the URLs :C
 
 def main(dataset_names):
     for dataset_name in dataset_names:
         # read all caption files from the folder, use the refinement model to add real facts and save them back into the original files
-        for filename in os.listdir(captions_path):
+        for filename in os.listdir(CAPTIONS_PATH):
             if filename.startswith(dataset_name) and filename.endswith(".txt") and "refined" not in filename:
-                filepath = os.path.join(captions_path, filename)
+                filepath = os.path.join(CAPTIONS_PATH, filename)
                 with open(filepath, 'r') as file:
                     caption = file.read()
                 refined_caption = add_facts_to_caption(caption, model=REFINEMENT_MODEL, ask_urls=ASK_URLS)

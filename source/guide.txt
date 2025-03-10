@@ -1,0 +1,4 @@
+The scripts must be executed sequentially as follows:
+ - process_data.py
+ - sample_generation.py
+ - caption_refinement.py || plot_generation.py
