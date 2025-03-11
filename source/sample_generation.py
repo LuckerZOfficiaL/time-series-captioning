@@ -107,7 +107,7 @@ if __name__ == "__main__":
     print(get_response(prompt="Continue the sequence: 1, 4, 9",
                         temperature = 0.75,
                         top_p = 0.85,
-                        use_API_model="Claude"))
+                        use_API_model="GPT-4o"))
 
     """prompts = [
         "What is 1+1 equal to?",

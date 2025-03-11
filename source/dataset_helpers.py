@@ -19,7 +19,39 @@ def get_response(prompt: str,
                  use_API_model = None, # if this is set, it gets the priority over the "model" argument, which is ignored.
                  ):
     if use_API_model == "GPT-4o": # if I am using OpenAI's API key
-      pass
+
+      with open("/home/ubuntu/thesis/.credentials/openai", "r") as file: # Read the API key from secret file
+        openai_api_key = file.read().strip()
+
+      url = "https://api.openai.com/v1/chat/completions"
+
+      headers = {
+          "Content-Type": "application/json",
+          "Authorization": f"Bearer {openai_api_key}"
+      }
+
+      data = {
+          "model": "gpt-4o",
+          "messages": [
+              {
+                  "role": "system",
+                  "content": system_prompt
+              },
+              {
+                  "role": "user",
+                  "content": prompt
+              }
+          ]
+      }
+
+      response = requests.post(url, headers=headers, json=data)
+
+      # Check if the request was successful
+      if response.status_code == 200:
+          return response.json()['choices'][0]['message']['content']
+      else:
+          print("Error:", response.status_code, response.text)
+          return response["choices"][0]["message"]["content"]
     
     if use_API_model == "Claude":
       bedrock = boto3.client(service_name="bedrock-runtime", region_name="us-east-2")
