@@ -11,11 +11,11 @@ from concurrent.futures import ThreadPoolExecutor
 
 def get_response(prompt,
                  system_prompt="You are a helpful assistant and you have to generate text on my request.",
-                 model="GPT-4o",  # "Gemini-1.5-Pro"
+                 model="OpenAI GPT-4o",  # "Gemini-1.5-Pro"
                  temperature=0.45,  # Controls randomness (0 = deterministic, 1 = max randomness)
                  top_p=.95,  # Nucleus sampling (0.0 to 1.0, lower = more focused sampling)
                  top_k=40,  # Filters to the top-k highest probability tokens (if supported)
-                 max_tokens=150,  # Maximum number of tokens in response
+                 max_tokens=516,  # Maximum number of tokens in response
                  ):
 
     # Check if prompt is a list or a single string
@@ -262,7 +262,7 @@ def get_sample(dataset_name: str, json_data, series_len = None, start_idx = None
     try:
       ts = json_data[id][measure][start_idx:start_idx+series_len]
       ts = [round(x, 2) for x in ts]
-      
+
     except KeyError as e:
       print(e)
       print("series len ", series_len)
@@ -640,7 +640,7 @@ def save_file(data, filepath: str):
   else:
     raise ValueError("Unsupported data type")
 
-def add_facts_to_caption(caption, model="Gemini-2.0-Flash", ask_urls=False):
+def add_facts_to_caption(caption, model="OpenAI GPT-4o", ask_urls=False):
   prompt = f"""
    Here is a time series description, read it carefully. 
    \n
@@ -648,7 +648,7 @@ def add_facts_to_caption(caption, model="Gemini-2.0-Flash", ask_urls=False):
    \n
    The above time series description mentions some vague statements about some social or geopolitical events. Replace these vague statements by referring to your scientific knowledge or explaining concrete events that you know happened in that period of time.Give concrete reference to these events or knowledge so that I can search them online.{"Give me the URLs to your statements if you can, otherwise ignore this request without saying anything." if ask_urls else ""} Do not affect the rest of the description beyond that. Answer with the refined description in one paragraph, without explaining anything more.
   """
-  response = get_response(prompt, model,
+  response = get_response(prompt=prompt, model=model,
                           temperature = 0.7,
                           top_p = 0.85,
 
