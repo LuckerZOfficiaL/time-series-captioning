@@ -647,19 +647,28 @@ def save_file(data, filepath: str):
     raise ValueError("Unsupported data type")
 
 def add_facts_to_caption(caption, model="OpenAI GPT-4o", ask_urls=False):
-  prompt = f"""
-   Here is a time series description, read it carefully. 
-   \n
-   {caption} 
-   \n
-   The above time series description mentions some vague statements about some social or geopolitical events. Replace these vague statements by referring to your scientific knowledge or explaining concrete events that you know happened in that period of time.Give concrete reference to these events or knowledge so that I can search them online.{"Give me the URLs to your statements if you can, otherwise ignore this request without saying anything." if ask_urls else ""} Do not affect the rest of the description beyond that. Answer with the refined description in one paragraph, without explaining anything more.
-  """
-  response = get_response(prompt=prompt, model=model,
-                          temperature = 0.7,
-                          top_p = 0.85,
+    prompt = f"""
+    Here is a time series description. Carefully analyze it:  
+    \n
+    {caption}  
+    \n
+    The description may include vague references to scientific facts, economic, or geopolitical events.  
+    1. Identify any **unclear or speculative** statements.  
+    2. **Replace** them with **concrete facts** by referring to your scientific knowledge and historical events from that period.  
+    3. For each fact added, **mention a source, historical reference, or well-documented event**.  
+    {"4️. If possible, provide URLs to support your statements. If not, ignore this request without commenting." if ask_urls else ""}
+    
+    **Rules:**  
+    - Do NOT modify the original structure of the description beyond factual refinements.  
+    - Maintain a natural and fluent writing style.  
+    - Return ONLY the refined caption in one paragraph—do not explain your changes.  
+    """
+    
+    response = get_response(prompt=prompt, model=model,
+                            temperature=0.4,  # Lower temp for reliability
+                            top_p=0.85)
+    return response
 
-            )
-  return response
 
 def change_linguistic_style(caption, style="casual", model="OpenAI GPT-4o"):
   prompt = f"""
@@ -675,7 +684,6 @@ def change_linguistic_style(caption, style="casual", model="OpenAI GPT-4o"):
             )
   return response
 
-
 def enrich_language(caption, model="OpenAI GPT-4o"):
   prompt = f"""
   Here is a time series description, read it carefully. 
@@ -690,10 +698,6 @@ def enrich_language(caption, model="OpenAI GPT-4o"):
 
             )
   return response
-
-
-
-
 
 def generate_line_plot(ts, xlabel, ylabel, title, savepath, height=None, width=None): 
   figsize = (width, height) if width is not None and height is not None else None
