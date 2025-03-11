@@ -15,7 +15,7 @@ def get_response(prompt,
                  temperature=0.45,  # Controls randomness (0 = deterministic, 1 = max randomness)
                  top_p=.95,  # Nucleus sampling (0.0 to 1.0, lower = more focused sampling)
                  top_k=40,  # Filters to the top-k highest probability tokens (if supported)
-                 max_tokens=516,  # Maximum number of tokens in response
+                 max_tokens=216,  # Maximum number of tokens in response
                  ):
 
     # Check if prompt is a list or a single string
@@ -65,7 +65,7 @@ def get_response(prompt,
                 "body": json.dumps({
                     "anthropic_version": "bedrock-2023-05-31",
                     "messages": [{"role": "user", "content": p}],
-                    "max_tokens": 512,
+                    "max_tokens": max_tokens,
                     "temperature": temperature,
                     "top_p": top_p
                 })
@@ -127,7 +127,7 @@ def get_response_iterative(prompt,
                  temperature=0.75,  # Controls randomness (0 = deterministic, 1 = max randomness)
                  top_p=.95,  # Nucleus sampling (0.0 to 1.0, lower = more focused sampling)
                  top_k=40,  # Filters to the top-k highest probability tokens (if supported)
-                 max_tokens=150,  # Maximum number of tokens in response
+                 max_tokens=256,  # Maximum number of tokens in response
                  ):
 
     # Check if prompt is a list or a single string
@@ -178,7 +178,7 @@ def get_response_iterative(prompt,
                 "body": json.dumps({
                     "anthropic_version": "bedrock-2023-05-31",
                     "messages": [{"role": "user", "content": p}],
-                    "max_tokens": 512,
+                    "max_tokens": 256,
                     "temperature": temperature,
                     "top_p": top_p
                 })
@@ -251,7 +251,13 @@ def rank_responses(responses_list: list, model="GPT-4o") -> list: # takes a list
 def get_sample(dataset_name: str, json_data, series_len = None, start_idx = None): # returns the metadata and the time series
   if dataset_name == "air quality":
     id = random.choice(list(json_data.keys()))
-    measure = random.choice(list(json_data[id].keys())[1:])
+    #print("\nID: ", id)
+    #print("\nKeys: ", json_data[id].keys())
+    choices = list(json_data[id].keys())
+    choices.remove("metadata")
+    measure = random.choice(choices)
+    #print("\nMeasure: ", measure)
+
     if series_len is None:
       series_len = random.randint(5, min(100, 5+int(len(json_data[id][measure])/8)))
     if start_idx is None:
