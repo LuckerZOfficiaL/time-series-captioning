@@ -669,20 +669,24 @@ def add_facts_to_caption(caption, model="OpenAI GPT-4o", ask_urls=False):
                             top_p=0.85)
     return response
 
-
 def change_linguistic_style(caption, style="casual", model="OpenAI GPT-4o"):
-  prompt = f"""
-   Here is a time series description, read it carefully. 
-   \n
-   {caption} 
-   \n
-   Rewrite the above description using a {style} language, preserve all information and numbers. Answer with the rewritten description directly without saying anything more.
-  """
-  response = get_response(prompt=prompt, model=model,
-                          temperature = 0.75,
-                          top_p = 0.85,
-            )
-  return response
+    prompt = f"""
+    Here is a time series description. Carefully analyze it:  
+    \n
+    {caption}  
+    \n
+    Rewrite the description using a **{style}** linguistic style while **preserving all information, numbers, and factual details**.  
+    - Do **not** remove, add, or alter the meaning of the content.  
+    - Adapt only the **tone, phrasing, and word choice** to match the requested style.  
+    - Keep it fluent and natural.  
+      
+    **Return only the rewritten description. Do not include explanations or formatting.**  
+    """
+    
+    response = get_response(prompt=prompt, model=model,
+                            temperature=0.7,  # Balanced randomness for stylistic variety
+                            top_p=0.9)  # Slightly more diverse phrasing
+    return response
 
 def enrich_language(caption, model="OpenAI GPT-4o"):
   prompt = f"""
@@ -698,6 +702,27 @@ def enrich_language(caption, model="OpenAI GPT-4o"):
 
             )
   return response
+
+def factual_checking(caption, model="OpenAI GPT-4o"):
+    prompt = f"""
+    Here is a time series description. Carefully analyze it:  
+    \n
+    {caption}  
+    \n
+    The description may contain **inaccurate or misleading facts** about scientific, economic, or geopolitical events from that period.  
+    Your task is to:  
+    1. **Verify all claims or historical references** based on your knowledge.  
+    2. **Identify incorrect or unsubstantiated facts** and replace them with accurate ones.  
+    3. **Preserve the original writing style and structure**, modifying only incorrect statements.  
+    4. **If a fact is unverifiable, state that it is uncertain rather than making assumptions**.  
+    
+    **Return only the corrected description. Do not add explanations or formatting.**  
+    """
+    
+    response = get_response(prompt=prompt, model=model,
+                            temperature=0.3,  # Lower temp for more factual accuracy
+                            top_p=0.85)
+    return response
 
 def generate_line_plot(ts, xlabel, ylabel, title, savepath, height=None, width=None): 
   figsize = (width, height) if width is not None and height is not None else None
