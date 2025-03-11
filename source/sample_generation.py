@@ -25,7 +25,7 @@ FILE_MAPPING = {
     }
 
 REQUEST_AUGMENTATIONS = 0 # how many times to rephrase the original prompt request?
-N_SAMPLES = 5 # how many window samples to extract per dataset? i.e. how many time series to sample?
+N_SAMPLES = 3 # how many window samples to extract per dataset? i.e. how many time series to sample?
 ALL_MODELS = ["OpenAI GPT-4o", "Anthropic Claude-3.5", "GPT-4o", "Claude-3.5-Haiku", "Gemini-1.5-Flash", "Gemini-1.5-Pro", "DeepSeek-R1-FW"] # available model choices, the first two are from official APIs
 MODELS = ["OpenAI GPT-4o", "Anthropic Claude-3.5"] # models to use for generating captions
 JUDGE_MODEL = "OpenAI GPT-4o" # the model used to rank the captions

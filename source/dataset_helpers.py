@@ -15,7 +15,7 @@ def get_response(prompt,
                  temperature=0.45,  # Controls randomness (0 = deterministic, 1 = max randomness)
                  top_p=.95,  # Nucleus sampling (0.0 to 1.0, lower = more focused sampling)
                  top_k=40,  # Filters to the top-k highest probability tokens (if supported)
-                 max_tokens=216,  # Maximum number of tokens in response
+                 max_tokens=300,  # Maximum number of tokens in response
                  ):
 
     # Check if prompt is a list or a single string
@@ -127,7 +127,7 @@ def get_response_iterative(prompt,
                  temperature=0.75,  # Controls randomness (0 = deterministic, 1 = max randomness)
                  top_p=.95,  # Nucleus sampling (0.0 to 1.0, lower = more focused sampling)
                  top_k=40,  # Filters to the top-k highest probability tokens (if supported)
-                 max_tokens=256,  # Maximum number of tokens in response
+                 max_tokens=300,  # Maximum number of tokens in response
                  ):
 
     # Check if prompt is a list or a single string
@@ -488,8 +488,8 @@ def get_samples(dataset_name, json_data, n, series_len=None) -> list: # returns 
 def get_request(dataset_name, metadata, ts):
   if dataset_name == "air quality":
     request = f"""Here is a time series about {metadata["sampling frequency"]} {metadata["measure"]} in the Indian city of {metadata['city']}: \n {ts} \n Here is the detailed metadata: \n {str(metadata)}.
-          \n Describe this time series by focusing on trends and patterns. Discuss concrete numbers you see.
-          For numerical values, ensure consistency with the provided time series. If making percentage comparisons, round to the nearest whole number.
+          \n Describe this time series by focusing on trends and patterns. Discuss concrete numbers you see and pay attention to the dates.
+          For numerical values, ensure consistency with the provided time series. If making percentage comparisons, round to the nearest whole number.Report the dates when things happened.
           Use the statistics I provided you for comparing this example to the normalcy.
           Use your broad knowledge of geopolitics, natural events, and economic trends to provide meaningful comparisons.
           Be specific and factual, avoiding broad generalizations.
@@ -497,7 +497,7 @@ def get_request(dataset_name, metadata, ts):
           You don't have to explicitly report the numeric values of general statistics, you just use them for reference.
           Compare the trends in this time series to global or regional norms, explaining whether they are higher, lower, or follow expected seasonal patterns.
           When making comparisons, clearly state whether differences are minor, moderate, or significant.
-          Use varied sentence structures and descriptive language to create engaging, natural-sounding text.
+          Use descriptive language to create engaging, natural-sounding text.
           Avoid repetitive phrasing and overused expressions.
 
           Answer in a single paragraph of four sentences at most, without bullet points or any formatting.
@@ -508,8 +508,8 @@ def get_request(dataset_name, metadata, ts):
           \nThe all-time statistics of {metadata["town"]} until today are: \n Mean: {metadata["general mean in the history of this town"]} \n Standard Deviation: {metadata["general standard deviation in the history of this town"]} \n Minimum: {metadata["general minimum in the history of this town"]} \n Maximum: {metadata["general maximum in the history of this town"]}
           \nAnd the statistics for this specific time series are: \n Mean: {metadata["mean of this specific series"]} \n Standard Deviation: {metadata["standard deviation of this specific series"]} \n Minimum: {metadata["minimum of this specific series"]} \n Maximum: {metadata["maximum of this specific series"]}
 
-         \n Describe this time series by focusing on trends and patterns. Discuss concrete numbers you see.
-          For numerical values, ensure consistency with the provided time series. If making percentage comparisons, round to the nearest whole number.
+         \nDescribe this time series by focusing on trends and patterns. Discuss concrete   numbers you see and pay attention to the dates.
+          For numerical values, ensure consistency with the provided time series. If making percentage comparisons, round to the nearest whole number.Report the dates when things happened.
           Use the statistics I provided you for comparing this example to the normalcy.
           Use your broad knowledge of geopolitics, natural events, and economic trends to provide meaningful comparisons.
           Be specific and factual, avoiding broad generalizations.
@@ -517,7 +517,7 @@ def get_request(dataset_name, metadata, ts):
           You don't have to explicitly report the numeric values of general statistics, you just use them for reference.
           Compare the trends in this time series to global or regional norms, explaining whether they are higher, lower, or follow expected seasonal patterns.
           When making comparisons, clearly state whether differences are minor, moderate, or significant.
-          Use varied sentence structures and descriptive language to create engaging, natural-sounding text.
+          Use descriptive language to create engaging, natural-sounding text.
           Avoid repetitive phrasing and overused expressions.
 
           Answer in a single paragraph of four sentences at most, without bullet points or any formatting.
@@ -530,8 +530,8 @@ def get_request(dataset_name, metadata, ts):
           Note that these all-time statistics are computed from then all the way until today. These are not historical, these are all-time.
           \nThe statistics for this specific time series are: \n Mean: {metadata['mean of this specific series']} \n Standard Deviation: {metadata['standard deviation of this specific series']} \n Minimum: {metadata['minimum in this specific series']} \n Maximum: {metadata['maximum in this specific series']}
 
-           \n Describe this time series by focusing on trends and patterns. Discuss concrete numbers you see.
-          For numerical values, ensure consistency with the provided time series. If making percentage comparisons, round to the nearest whole number.
+           \n Describe this time series by focusing on trends and patterns. Discuss concrete numbers you see and pay attention to the dates.
+          For numerical values, ensure consistency with the provided time series. If making percentage comparisons, round to the nearest whole number.Report the dates when things happened.
           Use the statistics I provided you for comparing this example to the normalcy.
           Use your broad knowledge of geopolitics, natural events, and economic trends to provide meaningful comparisons.
           Be specific and factual, avoiding broad generalizations.
@@ -539,7 +539,7 @@ def get_request(dataset_name, metadata, ts):
           You don't have to explicitly report the numeric values of general statistics, you just use them for reference.
           Compare the trends in this time series to global or regional norms, explaining whether they are higher, lower, or follow expected seasonal patterns.
           When making comparisons, clearly state whether differences are minor, moderate, or significant.
-          Use varied sentence structures and descriptive language to create engaging, natural-sounding text.
+          Use descriptive language to create engaging, natural-sounding text.
           Avoid repetitive phrasing and overused expressions.
 
           Answer in a single paragraph of four sentences at most, without bullet points or any formatting.
@@ -550,8 +550,8 @@ def get_request(dataset_name, metadata, ts):
           \nThe general statistics of this person{' ' + metadata["moment"] if "moment" in metadata else ''} are: \n Mean: {metadata['general mean of this patient in this situation']} \n Standard Deviation: {metadata['general standard deviation of this patient in this situation']} \n Minimum: {metadata['general minimum of this patient in this situation']} \n Maximum: {metadata['general maximum of this patient in this situation']}
           \nThe statistics for this specific time series are: \n Mean: {metadata['mean of this specific series']} \n Standard Deviation: {metadata['standard deviation of this specific series']} \n Minimum: {metadata['minimum of this specific series']} \n Maximum: {metadata['maximum of this specific series']}
 
-          \n Describe this time series by focusing on trends and patterns. Discuss concrete numbers you see.
-          For numerical values, ensure consistency with the provided time series. If making percentage comparisons, round to the nearest whole number.
+          \n Describe this time series by focusing on trends and patterns. Discuss concrete numbers you see and pay attention to the dates.
+          For numerical values, ensure consistency with the provided time series. If making percentage comparisons, round to the nearest whole number.Report the dates when things happened.
           Use the statistics I provided you for comparing this example to the normalcy.
           Use your broad knowledge of geopolitics, natural events, and economic trends to provide meaningful comparisons.
           Be specific and factual, avoiding broad generalizations.
@@ -559,7 +559,7 @@ def get_request(dataset_name, metadata, ts):
           You don't have to explicitly report the numeric values of general statistics, you just use them for reference.
           Compare the trends in this time series to global or regional norms, explaining whether they are higher, lower, or follow expected seasonal patterns.
           When making comparisons, clearly state whether differences are minor, moderate, or significant.
-          Use varied sentence structures and descriptive language to create engaging, natural-sounding text.
+          Use descriptive language to create engaging, natural-sounding text.
           Avoid repetitive phrasing and overused expressions.
 
           Answer in a single paragraph of four sentences at most, without bullet points or any formatting.
@@ -572,8 +572,8 @@ def get_request(dataset_name, metadata, ts):
           \nHere are the statistics for this specific time series for {metadata['country']}: \n Mean: {metadata['mean of this specific series']} \n Standard Deviation: {metadata['standard deviation of this specific series']} \n Minimum: {metadata['minimum of this specific series']} \n Maximum: {metadata['maximum of this specific series']}
           \nHere is the global average time series for {metadata['attribute']} across all countries in the same period: \n {metadata['global average time series']}, whose standard deviation is {metadata['global standard deviation']}
 
-          \n Describe this time series by focusing on trends and patterns. Discuss concrete numbers you see.
-          For numerical values, ensure consistency with the provided time series. If making percentage comparisons, round to the nearest whole number.
+          \n Describe this time series by focusing on trends and patterns. Discuss concrete numbers you see and pay attention to the dates.
+          For numerical values, ensure consistency with the provided time series. If making percentage comparisons, round to the nearest whole number.Report the dates when things happened.
           Use the statistics I provided you for comparing this example to the normalcy.
           Use your broad knowledge of geopolitics, natural events, and economic trends to provide meaningful comparisons.
           Be specific and factual, avoiding broad generalizations.
@@ -581,7 +581,7 @@ def get_request(dataset_name, metadata, ts):
           You don't have to explicitly report the numeric values of general statistics, you just use them for reference.
           Compare the trends in this time series to global or regional norms, explaining whether they are higher, lower, or follow expected seasonal patterns.
           When making comparisons, clearly state whether differences are minor, moderate, or significant.
-          Use varied sentence structures and descriptive language to create engaging, natural-sounding text.
+          Use descriptive language to create engaging, natural-sounding text.
           Avoid repetitive phrasing and overused expressions.
 
           Answer in a single paragraph of four sentences at most, without bullet points or any formatting.

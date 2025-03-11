@@ -13,10 +13,14 @@ REFINEMENT_MODEL = "OpenAI GPT-4o" #"Gemini-2.0-Flash"
 CAPTIONS_PATH = "/home/ubuntu/thesis/data/samples/captions"
 DATASET_NAMES = ["air quality", "border crossing", "crime", "demography", "heart rate"]   
 ASK_URLS = False #whether to ask the refinement model to provide URL references, even if it's True, the refiner doesn't give the URLs :C
-REFINEMENT_TYPE = "change style" # "add facts", "change style", "enrich language"
+REFINEMENT_TYPE = "add facts" # "add facts", "change style", "enrich language"
 DESIRED_STYLE = "casual" # used only if REFINEMENT_TYPE = "change style"
+# Possible styles I can think of: casual, scientific, journalistic, technical, storytelling
 
 def main(dataset_names):
+    if REFINEMENT_TYPE not in ["add facts", "change style", "enrich language"]:
+        print("\nAn erroneous refinement type is given!")
+        exit()
     for dataset_name in dataset_names:
         # read all caption files from the folder, use the refinement model to add real facts and save them back into the original files
         for filename in os.listdir(CAPTIONS_PATH):
@@ -33,7 +37,8 @@ def main(dataset_names):
                     refined_caption = enrich_language(caption, model=REFINEMENT_MODEL)
                 
 
-                if len(refined_caption) > int(0.75 * len(caption)) and caption not in refined_caption: # if the answer is much shorter than the original caption, the model has refused to refine the caption, so save only if that doesn't happen
+                save_folder = CAPTIONS_PATH + "/refined"
+                if len(refined_caption) > int(0.7 * len(caption)) and caption not in refined_caption: # if the answer is much shorter than the original caption, the model has refused to refine the caption, so save only if that doesn't happen
                     if REFINEMENT_TYPE == "change style":
                         postfix = f"_{DESIRED_STYLE}.txt"
                     elif REFINEMENT_TYPE == "enrich language":
@@ -41,9 +46,9 @@ def main(dataset_names):
                     elif REFINEMENT_TYPE == "add facts":
                         postfix = f"_facts.txt"
                         
-                    refined_filepath = filepath[:-4] + postfix
-                    save_file(refined_caption, refined_filepath)
-                    print("\nSuccess: refined caption:", filename)
+                    save_path = save_folder + "/" + filename[:-4] + postfix
+                    save_file(refined_caption, save_path)
+                    print("\nSuccess: refined caption with", REFINEMENT_TYPE, ":", filename)
                 elif len(refined_caption) == len(caption) or caption in refined_caption: # if the model just copied the original caption
                     print("\nFailure: the Refinement model copied the original caption:", filename)
                 else:

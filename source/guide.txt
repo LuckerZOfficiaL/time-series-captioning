@@ -1,4 +1,4 @@
 The scripts must be executed sequentially as follows:
- - process_data.py
- - sample_generation.py
+ - process_data.py: converts raw datasets into json files inside the folder "./data/processed"
+ - sample_generation.py: generates random samples and stores the different files in their own folders in ./data
  - caption_refinement.py || plot_generation.py
