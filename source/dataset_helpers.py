@@ -16,7 +16,6 @@ def get_response(prompt,
                  top_p=.95,  # Nucleus sampling (0.0 to 1.0, lower = more focused sampling)
                  top_k=40,  # Filters to the top-k highest probability tokens (if supported)
                  max_tokens=150,  # Maximum number of tokens in response
-                 use_API_model=False  # If True, uses the model from the official API
                  ):
 
     # Check if prompt is a list or a single string
@@ -26,7 +25,7 @@ def get_response(prompt,
     responses = []
 
     def process_prompt(p):
-        if model == "GPT-4o" and use_API_model:
+        if model == "OpenAI GPT-4o":
             # Read OpenAI API key
             with open("/home/ubuntu/thesis/.credentials/openai", "r") as file:
                 openai_api_key = file.read().strip()
@@ -56,7 +55,7 @@ def get_response(prompt,
                 print("Error:", response.status_code, response.text)
                 return None
 
-        elif model == "Claude-3.5" and use_API_model:
+        elif model == "Anthropic Claude-3.5":
             bedrock = boto3.client(service_name="bedrock-runtime", region_name="us-east-2")
 
             input_payload = {
@@ -82,7 +81,7 @@ def get_response(prompt,
             response_body = json.loads(response["body"].read().decode("utf-8"))
             return response_body['content'][0]['text']
 
-        else:  # Use the self-hosted model
+        else:  # the model is one of the self-hosted
             with open("/home/ubuntu/thesis/.credentials/openai", "r") as file:
                 API_KEY = file.read().strip()
 
@@ -125,11 +124,10 @@ def get_response(prompt,
 def get_response_iterative(prompt, 
                  system_prompt="You are a helpful assistant and you have to generate text on my request.",
                  model="GPT-4o",  # "Gemini-1.5-Pro"
-                 temperature=0.45,  # Controls randomness (0 = deterministic, 1 = max randomness)
+                 temperature=0.75,  # Controls randomness (0 = deterministic, 1 = max randomness)
                  top_p=.95,  # Nucleus sampling (0.0 to 1.0, lower = more focused sampling)
                  top_k=40,  # Filters to the top-k highest probability tokens (if supported)
                  max_tokens=150,  # Maximum number of tokens in response
-                 use_API_model=False  # If True, uses the model from the official API
                  ):
 
     # Check if prompt is a list or a single string
@@ -138,7 +136,7 @@ def get_response_iterative(prompt,
 
     responses = []
 
-    if model == "GPT-4o" and use_API_model:
+    if model == "OpenAI GPT-4o":
         # Read OpenAI API key
         with open("/home/ubuntu/thesis/.credentials/openai", "r") as file:
             openai_api_key = file.read().strip()
@@ -169,7 +167,7 @@ def get_response_iterative(prompt,
                 print("Error:", response.status_code, response.text)
                 responses.append(None)
 
-    elif model == "Claude-3.5" and use_API_model:
+    elif model == "Anthropic Claude-3.5":
         bedrock = boto3.client(service_name="bedrock-runtime", region_name="us-east-2")
 
         for p in prompts:
@@ -258,11 +256,19 @@ def get_sample(dataset_name: str, json_data, series_len = None, start_idx = None
       series_len = random.randint(5, min(100, 5+int(len(json_data[id][measure])/8)))
     if start_idx is None:
       start_idx = random.randint(0, len(json_data[id][measure]) - series_len)
-    print("series len ", series_len)
-    print("start idx", start_idx),
-    print("tot series len", len(json_data[id][measure]))
-    ts = json_data[id][measure][start_idx:start_idx+series_len]
-    ts = [round(x, 2) for x in ts]
+    #print("series len ", series_len)
+    #print("start idx", start_idx),
+    #print("tot series len", len(json_data[id][measure]))
+    try:
+      ts = json_data[id][measure][start_idx:start_idx+series_len]
+      ts = [round(x, 2) for x in ts]
+      
+    except KeyError as e:
+      print(e)
+      print("series len ", series_len)
+      print("start idx", start_idx),
+      print("tot series len", len(json_data[id][measure]))
+      
 
     metadata = json_data[id]["metadata"].copy()
     metadata_cpy = metadata.copy()
@@ -645,6 +651,7 @@ def add_facts_to_caption(caption, model="Gemini-2.0-Flash", ask_urls=False):
   response = get_response(prompt, model,
                           temperature = 0.7,
                           top_p = 0.85,
+
             )
   return response
 
