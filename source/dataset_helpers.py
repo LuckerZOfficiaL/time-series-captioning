@@ -11,14 +11,14 @@ import boto3
 
 def get_response(prompt: str,
                  system_prompt="You are a helpful assistant and you have to generate text on my request.",
-                 model="GPT-4o-Aug", #"Gemini-1.5-Pro"
+                 model="GPT-4o", #"Gemini-1.5-Pro"
                  temperature=0.45,  # Controls randomness (0 = deterministic, 1 = max randomness)
                  top_p=.95,  # Nucleus sampling (0.0 to 1.0, lower = more focused sampling)
                  top_k=40,  # Filters to the top-k highest probability tokens (if supported)
                  max_tokens=150,  # Maximum number of tokens in response,
-                 use_API_model = None, # if this is set, it gets the priority over the "model" argument, which is ignored.
+                 use_API_model = False, # if this is true, the model from official API is used
                  ):
-    if use_API_model == "GPT-4o": # if I am using OpenAI's API key
+    if model == "GPT-4o" and use_API_model == True: # if I am using OpenAI's API key
 
       with open("/home/ubuntu/thesis/.credentials/openai", "r") as file: # Read the API key from secret file
         openai_api_key = file.read().strip()
@@ -53,7 +53,7 @@ def get_response(prompt: str,
           print("Error:", response.status_code, response.text)
           return response["choices"][0]["message"]["content"]
     
-    if use_API_model == "Claude":
+    if model == "Claude 3.5" and use_API_model == True :
       bedrock = boto3.client(service_name="bedrock-runtime", region_name="us-east-2")
 
       # Updated input format using the Messages API structure
@@ -86,7 +86,7 @@ def get_response(prompt: str,
       return response_body['content'][0]['text']
 
 
-    else:  
+    else:  # else use the self-hosted model
       data = {
           "model": model,
           "messages": [
@@ -98,7 +98,9 @@ def get_response(prompt: str,
           "max_tokens": max_tokens,
       }
 
-      API_KEY = "NoBed0fRoses"
+      with open("/home/ubuntu/thesis/.credentials/openai", "r") as file: # Read the API key from secret file
+        API_KEY = file.read().strip()
+      
       API_ENDPOINT = "https://backend.zzhou.info/v1/chat/completions"
 
       headers = {
@@ -117,7 +119,7 @@ def get_response(prompt: str,
       else:
           print("Error:", response.status_code, response.text)
 
-def rank_responses(responses_list: list, model="GPT-4o-Aug") -> list: # takes a list of texts, returns a ranking of the indices
+def rank_responses(responses_list: list, model="GPT-4o") -> list: # takes a list of texts, returns a ranking of the indices
   unified_responses = ""
   for i in range(len(responses_list)):
     unified_responses += str(i+1) + ". " + responses_list[i] + "\n\n"
@@ -460,7 +462,7 @@ def get_request(dataset_name, metadata, ts):
           """
   return request
 
-def augment_request(request, n=3, model="GPT-4o-Aug"): # rephrases the request prompt n times and returns the augmentations in a list
+def augment_request(request, n=3, model="GPT-4o"): # rephrases the request prompt n times and returns the augmentations in a list
   augmentation_request = f"""
           Your task is to rephrase the given prompt while preserving all its original information, intent, meta-data, and length.
           - Ensure that the meaning remains unchanged, including instructions related to numerical accuracy, world knowledge, and comparison guidelines.
