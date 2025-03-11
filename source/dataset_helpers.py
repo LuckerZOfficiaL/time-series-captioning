@@ -6,118 +6,232 @@ import openai
 import json
 import matplotlib.pyplot as plt
 import boto3
+from concurrent.futures import ThreadPoolExecutor
 
 
-
-def get_response(prompt: str,
+def get_response(prompt,
                  system_prompt="You are a helpful assistant and you have to generate text on my request.",
-                 model="GPT-4o", #"Gemini-1.5-Pro"
+                 model="GPT-4o",  # "Gemini-1.5-Pro"
                  temperature=0.45,  # Controls randomness (0 = deterministic, 1 = max randomness)
                  top_p=.95,  # Nucleus sampling (0.0 to 1.0, lower = more focused sampling)
                  top_k=40,  # Filters to the top-k highest probability tokens (if supported)
-                 max_tokens=150,  # Maximum number of tokens in response,
-                 use_API_model = False, # if this is true, the model from official API is used
+                 max_tokens=150,  # Maximum number of tokens in response
+                 use_API_model=False  # If True, uses the model from the official API
                  ):
-    if model == "GPT-4o" and use_API_model == True: # if I am using OpenAI's API key
 
-      with open("/home/ubuntu/thesis/.credentials/openai", "r") as file: # Read the API key from secret file
-        openai_api_key = file.read().strip()
+    # Check if prompt is a list or a single string
+    is_list = isinstance(prompt, list)
+    prompts = prompt if is_list else [prompt]  # Ensure we always work with a list
 
-      url = "https://api.openai.com/v1/chat/completions"
+    responses = []
 
-      headers = {
-          "Content-Type": "application/json",
-          "Authorization": f"Bearer {openai_api_key}"
-      }
+    def process_prompt(p):
+        if model == "GPT-4o" and use_API_model:
+            # Read OpenAI API key
+            with open("/home/ubuntu/thesis/.credentials/openai", "r") as file:
+                openai_api_key = file.read().strip()
 
-      data = {
-          "model": "gpt-4o",
-          "messages": [
-              {
-                  "role": "system",
-                  "content": system_prompt
-              },
-              {
-                  "role": "user",
-                  "content": prompt
-              }
-          ]
-      }
+            url = "https://api.openai.com/v1/chat/completions"
+            headers = {
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {openai_api_key}"
+            }
 
-      response = requests.post(url, headers=headers, json=data)
+            data = {
+                "model": "gpt-4o",
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": p}
+                ],
+                "temperature": temperature,
+                "top_p": top_p,
+                "max_tokens": max_tokens
+            }
 
-      # Check if the request was successful
-      if response.status_code == 200:
-          return response.json()['choices'][0]['message']['content']
-      else:
-          print("Error:", response.status_code, response.text)
-          return response["choices"][0]["message"]["content"]
-    
-    if model == "Claude 3.5" and use_API_model == True :
-      bedrock = boto3.client(service_name="bedrock-runtime", region_name="us-east-2")
+            response = requests.post(url, headers=headers, json=data)
 
-      # Updated input format using the Messages API structure
-      input = {
-          "modelId": "us.anthropic.claude-3-5-sonnet-20241022-v2:0",  # Updated model ID
-          "contentType": "application/json",
-          "accept": "*/*",
-          "body": json.dumps({
-              "anthropic_version": "bedrock-2023-05-31",
-              "messages": [
-                  {
-                      "role": "user",
-                      "content": prompt
-                  }
-              ],
-              "max_tokens": 512,
-              "temperature": temperature,
-              "top_p": top_p
-          })
-      }
+            if response.status_code == 200:
+                return response.json()['choices'][0]['message']['content']
+            else:
+                print("Error:", response.status_code, response.text)
+                return None
 
-      response = bedrock.invoke_model(
-          body=input["body"],
-          modelId=input["modelId"],
-          accept=input["accept"],
-          contentType=input["contentType"],
-      )
+        elif model == "Claude-3.5" and use_API_model:
+            bedrock = boto3.client(service_name="bedrock-runtime", region_name="us-east-2")
 
-      response_body = json.loads(response["body"].read().decode("utf-8"))
-      return response_body['content'][0]['text']
+            input_payload = {
+                "modelId": "us.anthropic.claude-3-5-sonnet-20241022-v2:0",
+                "contentType": "application/json",
+                "accept": "*/*",
+                "body": json.dumps({
+                    "anthropic_version": "bedrock-2023-05-31",
+                    "messages": [{"role": "user", "content": p}],
+                    "max_tokens": 512,
+                    "temperature": temperature,
+                    "top_p": top_p
+                })
+            }
+
+            response = bedrock.invoke_model(
+                body=input_payload["body"],
+                modelId=input_payload["modelId"],
+                accept=input_payload["accept"],
+                contentType=input_payload["contentType"],
+            )
+
+            response_body = json.loads(response["body"].read().decode("utf-8"))
+            return response_body['content'][0]['text']
+
+        else:  # Use the self-hosted model
+            with open("/home/ubuntu/thesis/.credentials/openai", "r") as file:
+                API_KEY = file.read().strip()
+
+            API_ENDPOINT = "https://backend.zzhou.info/v1/chat/completions"
+            headers = {
+                "Authorization": f"Bearer {API_KEY}",
+                "Content-Type": "application/json"
+            }
+
+            data = {
+                "model": model,
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": p}
+                ],
+                "temperature": temperature,
+                "top_p": top_p,
+                "max_tokens": max_tokens
+            }
+
+            if top_k is not None:
+                data["top_k"] = top_k
+
+            response = requests.post(API_ENDPOINT, headers=headers, json=data)
+
+            if response.status_code == 200:
+                return response.json()["choices"][0]["message"]["content"]
+            else:
+                print("Error:", response.status_code, response.text)
+                return None
+
+    with ThreadPoolExecutor() as executor:
+        responses = list(executor.map(process_prompt, prompts))
+
+    # Return a single response if the input was a single string, otherwise return a list
+    return responses if is_list else responses[0]
 
 
-    else:  # else use the self-hosted model
-      data = {
-          "model": model,
-          "messages": [
-              {"role": "system", "content": system_prompt},
-              {"role": "user", "content": prompt}
-          ],
-          "temperature": temperature,
-          "top_p": top_p,
-          "max_tokens": max_tokens,
-      }
+# This is the old code that feeds prompts one by one. Deprecated!
+def get_response_iterative(prompt, 
+                 system_prompt="You are a helpful assistant and you have to generate text on my request.",
+                 model="GPT-4o",  # "Gemini-1.5-Pro"
+                 temperature=0.45,  # Controls randomness (0 = deterministic, 1 = max randomness)
+                 top_p=.95,  # Nucleus sampling (0.0 to 1.0, lower = more focused sampling)
+                 top_k=40,  # Filters to the top-k highest probability tokens (if supported)
+                 max_tokens=150,  # Maximum number of tokens in response
+                 use_API_model=False  # If True, uses the model from the official API
+                 ):
 
-      with open("/home/ubuntu/thesis/.credentials/openai", "r") as file: # Read the API key from secret file
-        API_KEY = file.read().strip()
-      
-      API_ENDPOINT = "https://backend.zzhou.info/v1/chat/completions"
+    # Check if prompt is a list or a single string
+    is_list = isinstance(prompt, list)
+    prompts = prompt if is_list else [prompt]  # Ensure we always work with a list
 
-      headers = {
-          "Authorization": f"Bearer {API_KEY}",
-          "Content-Type": "application/json"
-      }
+    responses = []
 
-      if top_k is not None:  # Some APIs support top_k, but not all
-          data["top_k"] = top_k
+    if model == "GPT-4o" and use_API_model:
+        # Read OpenAI API key
+        with open("/home/ubuntu/thesis/.credentials/openai", "r") as file:
+            openai_api_key = file.read().strip()
 
-      response = requests.post(API_ENDPOINT, headers=headers, json=data)
+        url = "https://api.openai.com/v1/chat/completions"
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {openai_api_key}"
+        }
 
-      if response.status_code == 200:
-          result = response.json()
-          return result["choices"][0]["message"]["content"]
-      else:
-          print("Error:", response.status_code, response.text)
+        for p in prompts:
+            data = {
+                "model": "gpt-4o",
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": p}
+                ],
+                "temperature": temperature,
+                "top_p": top_p,
+                "max_tokens": max_tokens
+            }
+
+            response = requests.post(url, headers=headers, json=data)
+
+            if response.status_code == 200:
+                responses.append(response.json()['choices'][0]['message']['content'])
+            else:
+                print("Error:", response.status_code, response.text)
+                responses.append(None)
+
+    elif model == "Claude-3.5" and use_API_model:
+        bedrock = boto3.client(service_name="bedrock-runtime", region_name="us-east-2")
+
+        for p in prompts:
+            input_payload = {
+                "modelId": "us.anthropic.claude-3-5-sonnet-20241022-v2:0",
+                "contentType": "application/json",
+                "accept": "*/*",
+                "body": json.dumps({
+                    "anthropic_version": "bedrock-2023-05-31",
+                    "messages": [{"role": "user", "content": p}],
+                    "max_tokens": 512,
+                    "temperature": temperature,
+                    "top_p": top_p
+                })
+            }
+
+            response = bedrock.invoke_model(
+                body=input_payload["body"],
+                modelId=input_payload["modelId"],
+                accept=input_payload["accept"],
+                contentType=input_payload["contentType"],
+            )
+
+            response_body = json.loads(response["body"].read().decode("utf-8"))
+            responses.append(response_body['content'][0]['text'])
+
+    else:  # Use the self-hosted model
+        with open("/home/ubuntu/thesis/.credentials/openai", "r") as file:
+            API_KEY = file.read().strip()
+
+        API_ENDPOINT = "https://backend.zzhou.info/v1/chat/completions"
+        headers = {
+            "Authorization": f"Bearer {API_KEY}",
+            "Content-Type": "application/json"
+        }
+
+        for p in prompts:
+            data = {
+                "model": model,
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": p}
+                ],
+                "temperature": temperature,
+                "top_p": top_p,
+                "max_tokens": max_tokens
+            }
+
+            if top_k is not None:
+                data["top_k"] = top_k
+
+            response = requests.post(API_ENDPOINT, headers=headers, json=data)
+
+            if response.status_code == 200:
+                responses.append(response.json()["choices"][0]["message"]["content"])
+            else:
+                print("Error:", response.status_code, response.text)
+                responses.append(None)
+
+    # Return a single response if the input was a single string, otherwise return a list
+    return responses if is_list else responses[0]
+
 
 def rank_responses(responses_list: list, model="GPT-4o") -> list: # takes a list of texts, returns a ranking of the indices
   unified_responses = ""

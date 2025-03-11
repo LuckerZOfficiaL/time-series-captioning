@@ -15,6 +15,7 @@ from dataset_helpers import (
     generate_line_plot
 )
 
+
 FILE_MAPPING = {
         "air quality": "aq.json",
         "border crossing": "border_crossing.json",
@@ -26,10 +27,12 @@ FILE_MAPPING = {
 SAVE_TOP_K = 5 # save the top k best captions based on the ranking
 REQUEST_AUGMENTATIONS = 0 # how many times to rephrase the original prompt request?
 SAMPLES = 1 # how many window samples to extract? i.e. how many time series to sample?
-MODELS = ["GPT-4o", "Claude-3.5-Haiku", "Gemini-1.5-Flash", "Gemini-1.5-Pro", "DeepSeek-R1-FW"] # models used for generating captions
+API_MODELS = ["GPT-4o", "Claude-3.5"]
+SELF_HOSTED_MODELS = ["GPT-4o", "Claude-3.5-Haiku", "Gemini-1.5-Flash", "Gemini-1.5-Pro", "DeepSeek-R1-FW"] # models used for generating captions
 JUDGE_MODEL = "GPT-4o" # the model used to rank the captions
 REFINEMENT_MODEL = "Gemini-2.0-Flash-Search"
 REFINE_CAPTIONS = False # whether to refine the generated captions with REFINEMENT_MDOEL (deprecated: keep it as False and run the script caption_refinement.py to do this separately)
+USE_API_MODEL = True
 
 
 def main(dataset_names):
@@ -62,7 +65,8 @@ def main(dataset_names):
                 for model in MODELS:
                     response = get_response(requests[i], model=model,
                                             temperature = 0.75,
-                                            top_p = 0.85
+                                            top_p = 0.85,
+                                            use_API_model=USE_API_MODEL
                                     )
                     if "DeepSeek" in model: # if it's DeepSeek, discard the reasoning text
                         match = re.search(r"Thinking\.\.\..*?>\s*\n\n(.*)", response, re.DOTALL)
@@ -104,13 +108,15 @@ if __name__ == "__main__":
     dataset_names = list(FILE_MAPPING.keys())
     #main(dataset_names)
 
-    print(get_response(prompt="Continue the sequence: 1, 4, 9",
-                        temperature = 0.75,
-                        top_p = 0.85,
-                        use_API_model="GPT-4o"))
-
-    """prompts = [
+    # Test Code
+    prompts = [
         "What is 1+1 equal to?",
         "What is 2+2 equal to?",
         "What is the color of an orange?"
-    ]"""
+    ]
+
+    print(get_response(prompt=prompts,
+                        model = "GPT-4o",
+                        temperature = 0.75,
+                        top_p = 0.85,
+                        use_API_model=False))
