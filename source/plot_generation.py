@@ -35,20 +35,20 @@ def main(dataset_names):
     for dataset_name in dataset_names:
         print("\nGenerating plots for", dataset_name)
         for filename in os.listdir(TS_PATH):
-            if dataset_name in filename:
-                filepath = os.path.join(TS_PATH, filename)
-                with open(filepath, 'r') as file:
-                    ts = [float(line.strip()) for line in file if line.strip()]
+            if dataset_name in dataset_names:
+            filepath = os.path.join(TS_PATH, filename)
+            with open(filepath, 'r') as file:
+                ts = [float(line.strip()) for line in file if line.strip()]
 
-                savepath = f"/home/ubuntu/thesis/data/samples/plots/{filename[:-5]}.jpeg" 
-                generate_line_plot(ts=ts, 
-                                    xlabel=X_LABEL_MAP[dataset_name],
-                                    ylabel=Y_LABEL_MAP[dataset_name],
-                                    title=TITLE_MAP[dataset_name],
-                                    savepath=savepath,
-                                    height=PLOT_HEIGHT,
-                                    width=PLOT_WIDTH
-                                    )
+            savepath = f"/home/ubuntu/thesis/data/samples/plots/{filename[:-5]}.jpeg" 
+            generate_line_plot(ts=ts, 
+                                xlabel=X_LABEL_MAP[dataset_name],
+                                ylabel=Y_LABEL_MAP[dataset_name],
+                                title=TITLE_MAP[dataset_name],
+                                savepath=savepath,
+                                height=PLOT_HEIGHT,
+                                width=PLOT_WIDTH
+                                )
                     
 
 

@@ -5,6 +5,7 @@ import pandas as pd
 import openai
 import json
 import matplotlib.pyplot as plt
+import boto3
 
 
 
@@ -15,10 +16,43 @@ def get_response(prompt: str,
                  top_p=.95,  # Nucleus sampling (0.0 to 1.0, lower = more focused sampling)
                  top_k=40,  # Filters to the top-k highest probability tokens (if supported)
                  max_tokens=150,  # Maximum number of tokens in response,
-                 use_openAI = False,
+                 use_API_model = None, # if this is set, it gets the priority over the "model" argument, which is ignored.
                  ):
-    if use_openAI: # if I am using OpenAI's API key
+    if use_API_model == "GPT-4o": # if I am using OpenAI's API key
       pass
+    
+    if use_API_model == "Claude":
+      bedrock = boto3.client(service_name="bedrock-runtime", region_name="us-east-2")
+
+      # Updated input format using the Messages API structure
+      input = {
+          "modelId": "us.anthropic.claude-3-5-sonnet-20241022-v2:0",  # Updated model ID
+          "contentType": "application/json",
+          "accept": "*/*",
+          "body": json.dumps({
+              "anthropic_version": "bedrock-2023-05-31",
+              "messages": [
+                  {
+                      "role": "user",
+                      "content": prompt
+                  }
+              ],
+              "max_tokens": 512,
+              "temperature": temperature,
+              "top_p": top_p
+          })
+      }
+
+      response = bedrock.invoke_model(
+          body=input["body"],
+          modelId=input["modelId"],
+          accept=input["accept"],
+          contentType=input["contentType"],
+      )
+
+      response_body = json.loads(response["body"].read().decode("utf-8"))
+      return response_body['content'][0]['text']
+
 
     else:  
       data = {
@@ -39,7 +73,6 @@ def get_response(prompt: str,
           "Authorization": f"Bearer {API_KEY}",
           "Content-Type": "application/json"
       }
-
 
       if top_k is not None:  # Some APIs support top_k, but not all
           data["top_k"] = top_k

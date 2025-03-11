@@ -102,7 +102,12 @@ def main(dataset_names):
 
 if __name__ == "__main__":
     dataset_names = list(FILE_MAPPING.keys())
-    main(dataset_names)
+    #main(dataset_names)
+
+    print(get_response(prompt="Continue the sequence: 1, 4, 9",
+                        temperature = 0.75,
+                        top_p = 0.85,
+                        use_API_model="Claude"))
 
     """prompts = [
         "What is 1+1 equal to?",
