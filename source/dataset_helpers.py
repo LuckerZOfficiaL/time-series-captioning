@@ -661,6 +661,40 @@ def add_facts_to_caption(caption, model="OpenAI GPT-4o", ask_urls=False):
             )
   return response
 
+def change_linguistic_style(caption, style="casual", model="OpenAI GPT-4o"):
+  prompt = f"""
+   Here is a time series description, read it carefully. 
+   \n
+   {caption} 
+   \n
+   Rewrite the above description using a {style} language, preserve all information and numbers. Answer with the rewritten description directly without saying anything more.
+  """
+  response = get_response(prompt=prompt, model=model,
+                          temperature = 0.75,
+                          top_p = 0.85,
+            )
+  return response
+
+
+def enrich_language(caption, model="OpenAI GPT-4o"):
+  prompt = f"""
+  Here is a time series description, read it carefully. 
+  \n
+  {caption} 
+  \n
+  Rewrite the above description using richer and more diverse language. Avoid repetitions and redundant sentences. Answer with the refined description directly, without saying anything more.
+  """
+  response = get_response(prompt=prompt, model=model,
+                          temperature = 0.75,
+                          top_p = 0.85,
+
+            )
+  return response
+
+
+
+
+
 def generate_line_plot(ts, xlabel, ylabel, title, savepath, height=None, width=None): 
   figsize = (width, height) if width is not None and height is not None else None
   plt.figure(figsize=figsize)
