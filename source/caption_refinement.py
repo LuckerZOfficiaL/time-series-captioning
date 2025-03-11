@@ -11,11 +11,12 @@ from dataset_helpers import (
 )
 
 REFINEMENT_MODEL = "OpenAI GPT-4o" #"Gemini-2.0-Flash"
-CAPTIONS_PATH = "/home/ubuntu/thesis/data/samples/captions"
+CHECKING_MODEL = "Gemini-1.5-Pro"
+CAPTIONS_PATH = "/home/ubuntu/thesis/data/samples/captions" #/refined/add facts" # where to look for the captions to refine
 DATASET_NAMES = ["air quality", "border crossing", "crime", "demography", "heart rate"]   
 ASK_URLS = False #whether to ask the refinement model to provide URL references, even if it's True, the refiner doesn't give the URLs :C
 REFINEMENT_TYPES = ["add facts", "change style", "enrich language", "factual checking"] # supported refinement types
-REFINEMENT_TYPE = "factual checking" # "add facts", "change style", "enrich language", "factual checking"
+REFINEMENT_TYPE = "change style" # "add facts", "change style", "enrich language", "factual checking"
 DESIRED_STYLE = "academic" # used only if REFINEMENT_TYPE = "change style"
 # Possible styles I can think of: casual, scientific, journalistic, technical, storytelling, academic
 
@@ -38,9 +39,9 @@ def main(dataset_names):
                 elif REFINEMENT_TYPE == "enrich language":
                     refined_caption = enrich_language(caption, model=REFINEMENT_MODEL)
                 elif REFINEMENT_TYPE == "factual checking":
-                    refined_caption = factual_checking(caption, model=REFINEMENT_MODEL)
+                    refined_caption = factual_checking(caption, model=CHECKING_MODEL)
 
-                save_folder = CAPTIONS_PATH + "/refined"
+                save_folder = "/home/ubuntu/thesis/data/samples/captions/refined"
                 if len(refined_caption) > int(0.7 * len(caption)) and caption not in refined_caption: # if the answer is much shorter than the original caption, the model has refused to refine the caption, so save only if that doesn't happen
                     if REFINEMENT_TYPE == "change style":
                         folder_path = os.path.join(save_folder, "change style", DESIRED_STYLE)
