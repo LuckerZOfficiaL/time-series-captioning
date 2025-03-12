@@ -10,13 +10,13 @@ from dataset_helpers import (
     factual_checking
 )
 
-REFINEMENT_MODEL = "OpenAI GPT-4o" #"Gemini-2.0-Flash"
-CHECKING_MODEL = "Gemini-1.5-Pro"
+REFINEMENT_MODEL = "Google Gemini-2.0-Flash" #"OpenAI GPT-4o" #"Gemini-2.0-Flash"
+CHECKING_MODEL = "Google Gemini-2.0-Flash"
 CAPTIONS_PATH = "/home/ubuntu/thesis/data/samples/captions" #/refined/add facts" # where to look for the captions to refine
 DATASET_NAMES = ["air quality", "border crossing", "crime", "demography", "heart rate"]   
 ASK_URLS = False #whether to ask the refinement model to provide URL references, even if it's True, the refiner doesn't give the URLs :C
 REFINEMENT_TYPES = ["add facts", "change style", "enrich language", "factual checking"] # supported refinement types
-REFINEMENT_TYPE = "change style" # "add facts", "change style", "enrich language", "factual checking"
+REFINEMENT_TYPE = "add facts" # "add facts", "change style", "enrich language", "factual checking"
 DESIRED_STYLE = "academic" # used only if REFINEMENT_TYPE = "change style"
 # Possible styles I can think of: casual, scientific, journalistic, technical, storytelling, academic
 
@@ -34,6 +34,10 @@ def main(dataset_names):
 
                 if REFINEMENT_TYPE == "add facts":
                     refined_caption = add_facts_to_caption(caption, model=REFINEMENT_MODEL, ask_urls=ASK_URLS)
+                    if len(refined_caption.split('\n\n')) > 1: # if there are more than one paragraph, discard the first as it is likely an introduction to the answer from the refiner model
+                            paragraphs = refined_caption.split('\n\n')
+                            refined_caption = paragraphs[1:]
+                        
                 elif REFINEMENT_TYPE == "change style":
                     refined_caption = change_linguistic_style(caption, model=REFINEMENT_MODEL)
                 elif REFINEMENT_TYPE == "enrich language":
@@ -42,7 +46,7 @@ def main(dataset_names):
                     refined_caption = factual_checking(caption, model=CHECKING_MODEL)
 
                 save_folder = "/home/ubuntu/thesis/data/samples/captions/refined"
-                if len(refined_caption) > int(0.7 * len(caption)) and caption not in refined_caption: # if the answer is much shorter than the original caption, the model has refused to refine the caption, so save only if that doesn't happen
+                if len(refined_caption) > int(0.7 * len(caption)) and caption not in refined_caption: # if the answer is much shorter than the original caption, assume the model has refused to refine the caption, so save only if that doesn't happen
                     if REFINEMENT_TYPE == "change style":
                         folder_path = os.path.join(save_folder, "change style", DESIRED_STYLE)
                         if not os.path.isdir(folder_path):  # Check if it's not a folder

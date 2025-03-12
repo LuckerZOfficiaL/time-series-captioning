@@ -26,10 +26,10 @@ FILE_MAPPING = {
 
 REQUEST_AUGMENTATIONS = 0 # how many times to rephrase the original prompt request?
 N_SAMPLES = 3 # how many window samples to extract per dataset? i.e. how many time series to sample?
-ALL_MODELS = ["OpenAI GPT-4o", "Anthropic Claude-3.5", "GPT-4o", "Claude-3.5-Haiku", "Gemini-1.5-Flash", "Gemini-1.5-Pro", "DeepSeek-R1-FW"] # available model choices, the first two are from official APIs
-MODELS = ["OpenAI GPT-4o", "Anthropic Claude-3.5"] # models to use for generating captions
+ALL_MODELS = ["Google Gemini-2.0-Flash", "OpenAI GPT-4o", "Anthropic Claude-3.5", "GPT-4o", "Claude-3.5-Haiku", "Gemini-1.5-Flash", "Gemini-1.5-Pro", "DeepSeek-R1-FW"] # available model choices, the first two are from official APIs
+MODELS = ["OpenAI GPT-4o", "Anthropic Claude-3.5", "Google Gemini-2.0-Flash"] # models to use for generating captions
 JUDGE_MODEL = "OpenAI GPT-4o" # the model used to rank the captions
-REFINEMENT_MODEL = "Gemini-2.0-Flash-Search"
+REFINEMENT_MODEL = None
 REFINE_CAPTIONS = False # whether to refine the generated captions with REFINEMENT_MDOEL (deprecated: keep it as False and run the script caption_refinement.py to do this separately)
 SAVE_TOP_K = 0 # save the top k best captions based on the ranking, if it's 0 or negative, don't do top-k. If top-k is on, caption ranking is invoked
 

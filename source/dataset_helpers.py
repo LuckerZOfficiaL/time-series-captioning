@@ -7,6 +7,9 @@ import json
 import matplotlib.pyplot as plt
 import boto3
 from concurrent.futures import ThreadPoolExecutor
+from google import genai
+from google.genai import types
+from google.genai.types import Tool, GenerateContentConfig, GoogleSearch
 
 
 def get_response(prompt,
@@ -80,6 +83,30 @@ def get_response(prompt,
 
             response_body = json.loads(response["body"].read().decode("utf-8"))
             return response_body['content'][0]['text']
+
+        elif model == "Google Gemini-2.0-Flash":
+          with open("/home/ubuntu/thesis/.credentials/google", "r") as file:
+              google_api_key = file.read().strip()
+          client = genai.Client(api_key=google_api_key)
+
+          google_search_tool = Tool(
+            google_search = GoogleSearch()
+        )
+
+          response = client.models.generate_content(
+            model="gemini-2.0-flash",
+            contents=p,
+            config=types.GenerateContentConfig(
+                max_output_tokens=max_tokens,
+                temperature=temperature,
+                tools=[google_search_tool],
+                response_modalities=["TEXT"],
+            )
+          )
+
+          text_response = response.text
+          #web_metadata = response.candidates[0].grounding_metadata.search_entry_point.rendered_content # To get grounding metadata as web content.
+          return text_response
 
         else:  # the model is one of the self-hosted
             with open("/home/ubuntu/thesis/.credentials/openai", "r") as file:
@@ -646,7 +673,7 @@ def save_file(data, filepath: str):
   else:
     raise ValueError("Unsupported data type")
 
-def add_facts_to_caption(caption, model="OpenAI GPT-4o", ask_urls=False):
+def add_facts_to_caption(caption, model="OpenAI GPT-4o", temperature=0.3, ask_urls=False):
     prompt = f"""
     Here is a time series description. Carefully analyze it:  
     \n
@@ -656,16 +683,16 @@ def add_facts_to_caption(caption, model="OpenAI GPT-4o", ask_urls=False):
     1. Identify any **unclear or speculative** statements.  
     2. **Replace** them with **concrete facts** by referring to your scientific knowledge and historical events from that period.  
     3. For each fact added, **mention a source, historical reference, or well-documented event**.  
-    {"4️. If possible, provide URLs to support your statements. If not, ignore this request without commenting." if ask_urls else ""}
+    {"4. If possible, provide URLs to support your statements. If not, ignore this request without commenting." if ask_urls else ""}
     
     **Rules:**  
     - Do NOT modify the original structure of the description beyond factual refinements.  
     - Maintain a natural and fluent writing style.  
-    - Return ONLY the refined caption in one paragraph—do not explain your changes.  
+    - Return ONLY the refined caption in one paragraph, do not introduce your refinement but write your refinement directly.  
     """
     
     response = get_response(prompt=prompt, model=model,
-                            temperature=0.4,  # Lower temp for reliability
+                            temperature=temperature,  # Lower temp for reliability
                             top_p=0.85)
     return response
 
@@ -737,3 +764,11 @@ def generate_line_plot(ts, xlabel, ylabel, title, savepath, height=None, width=N
   plt.savefig(savepath, bbox_inches='tight')  # Save the plot
   plt.close()
   
+
+
+def main():
+  prompts = ["how to solve 2x = 4?", "continue the sequence: 1, 4, 9, 16..."]
+  print(get_response(prompts, model="Google Gemini-2.0-Flash"))
+
+if __name__ == "__main__":
+  main()
