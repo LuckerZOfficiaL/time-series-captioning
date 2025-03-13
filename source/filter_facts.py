@@ -1,5 +1,3 @@
-# This script expectes that sample_generation.py is run already and the captions are already generated. This script refines these captions.
-
 import json
 import os
 from helpers import (
@@ -8,15 +6,15 @@ from helpers import (
 )
 
 FILTER_MODEL = "Google Gemini-2.0-Flash" #"OpenAI GPT-4o" #"Gemini-2.0-Flash"
-CAPTIONS_PATH = "/home/ubuntu/thesis/data/samples/captions/extracted facts" # where to look for the captions to refine
+FACTS_PATH = "/home/ubuntu/thesis/data/samples/captions/extracted facts" # where to look at
 DATASET_NAMES = ["air quality", "border crossing", "crime", "demography", "heart rate"]   
 SAVE_PATH = "/home/ubuntu/thesis/data/samples/captions/filtered facts"
 
 def main(dataset_names):
     for dataset_name in dataset_names:
-        for filename in os.listdir(CAPTIONS_PATH+"/"+dataset_name):
+        for filename in os.listdir(FACTS_PATH+"/"+dataset_name):
             if filename.startswith(dataset_name) and filename.endswith(".txt"):
-                filepath = os.path.join(CAPTIONS_PATH+"/"+dataset_name, filename)
+                filepath = os.path.join(FACTS_PATH+"/"+dataset_name, filename)
                 with open(filepath, 'r') as file:
                     facts = file.read()
                     filtered_facts = filter_facts(facts, model=FILTER_MODEL)

@@ -1,5 +1,3 @@
-# This script expectes that sample_generation.py is run already and the captions are already generated. This script refines these captions.
-
 import json
 import os
 from helpers import (

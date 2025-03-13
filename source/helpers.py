@@ -10,6 +10,7 @@ from concurrent.futures import ThreadPoolExecutor
 from google import genai
 from google.genai import types
 from google.genai.types import Tool, GenerateContentConfig, GoogleSearch
+import os
 
 
 def get_response(prompt,
@@ -660,18 +661,27 @@ def get_captions(prompt: str, model_list):
   return captions
 
 def save_file(data, filepath: str):
-  if isinstance(data, str):
-    with open(filepath, 'w') as file:
-      file.write(data)
-  elif isinstance(data, list):
-    with open(filepath, 'w') as file:
-      for item in data:
-        file.write(str(item) + '\n')
-  elif isinstance(data, dict):
-    with open(filepath, 'w') as file:
-      json.dump(data, file, indent=4, sort_keys=True)
-  else:
-    raise ValueError("Unsupported data type")
+    """
+    Saves data to a file, supporting strings, lists, dictionaries, and tensors.
+
+    Args:
+        data: The data to save.
+        filepath (str): The path to the file.
+    """
+    if isinstance(data, str):
+        with open(filepath, 'w') as file:
+            file.write(data)
+    elif isinstance(data, list):
+        with open(filepath, 'w') as file:
+            for item in data:
+                file.write(str(item) + '\n')
+    elif isinstance(data, dict):
+        with open(filepath, 'w') as file:
+            json.dump(data, file, indent=4, sort_keys=True)
+    elif isinstance(data, torch.Tensor):
+        torch.save(data, filepath)
+    else:
+        raise ValueError("Unsupported data type")
 
 def add_facts_to_caption(caption, model="OpenAI GPT-4o", temperature=0.3, ask_urls=False):
     prompt = f"""
@@ -817,7 +827,27 @@ def filter_facts(caption, model="Google Gemini-2.0-Flash"):
                             top_p=0.85)  
     return response
 
+def unify_facts(folder):
+    """
+    Reads all fact files from a folder (including nested subfolders), 
+    extracts facts (one per line), and returns a list of all facts.
+    """
+    all_facts = []
 
+    # Walk through all subdirectories and files
+    for root, _, files in os.walk(folder):
+        for file in files:
+            if file.endswith(".txt"):  # Process only text files
+                file_path = os.path.join(root, file)
+                with open(file_path, "r", encoding="utf-8") as f:
+                    facts = [line.strip() for line in f if line.strip()]  # Remove empty lines
+                    all_facts.extend(facts)
+    return all_facts
+
+
+
+
+  
 
 def main():
   prompts = ["how to solve 2x = 4?", "continue the sequence: 1, 4, 9, 16..."]
