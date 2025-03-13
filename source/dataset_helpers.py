@@ -737,6 +737,8 @@ def factual_checking(caption, model="OpenAI GPT-4o"):
     {caption}  
     \n
     The description may contain **inaccurate or misleading facts** about scientific, economic, or geopolitical events from that period.  
+    You can safely ignore the facts about numbers or numerical comparisons as they are already verified.
+    
     Your task is to:  
     1. **Verify all claims or historical references** based on your knowledge.  
     2. **Identify incorrect or unsubstantiated facts** and replace them with accurate ones.  
