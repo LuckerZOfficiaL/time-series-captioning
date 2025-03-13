@@ -65,7 +65,7 @@ def save_embeddings_pca(sentence_list, model_name="all-MiniLM-L6-v2"):
 
 def main():
     all_facts_list = unify_facts(FACTS_PATH)
-    save_file(all_facts_list, SAVE_PATH+"/all_facts.json")
+    save_file(all_facts_list, SAVE_PATH+"/all_facts.txt")
     for i, fact in enumerate(all_facts_list):
         print(i, fact)
    

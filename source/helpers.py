@@ -13,6 +13,7 @@ from google.genai.types import Tool, GenerateContentConfig, GoogleSearch
 import os
 import torch
 from sklearn.metrics.pairwise import cosine_similarity
+from sentence_transformers import SentenceTransformer
 
 
 def get_response(prompt,
@@ -846,13 +847,13 @@ def unify_facts(folder):
                     all_facts.extend(facts)
     return all_facts
 
-def augment_prompt_with_facts(prompt: str, all_facts_list: list, all_facts_emb: torch.Tensor, retrieve_k=5, embedding_model) -> str:
+def augment_prompt_with_facts(prompt: str, all_facts_list: list, all_facts_emb: torch.Tensor, embedding_model, retrieve_k=5) -> str:
     """
     Given a prompt, embed the prompt with embedding model, then find the indices of the top k most similar embeddings from all_facts_emb,
     use these indices to get the actual sentences from all_facts_list, then append these facts row by row to the prompt, resulting in the augmented
     prompt to return.
     """
-    prompt_embedding = embedding_model.encode([prompt], convert_to_tensor=True)
+    prompt_embedding = embedding_model.encode([prompt], convert_to_tensor=True).cpu()
     similarity_scores = cosine_similarity(prompt_embedding, all_facts_emb)[0]
 
     similarity_tuples = list(enumerate(similarity_scores)) # tuples of (fact_index, similarity_score)
@@ -861,16 +862,25 @@ def augment_prompt_with_facts(prompt: str, all_facts_list: list, all_facts_emb: 
     top_k_indices = [index for index, _ in similarity_tuples[:retrieve_k]]
     top_k_facts = [all_facts_list[index] for index in top_k_indices]
 
-    augmented_prompt = prompt + "\n\nHere are some facts that might help you in generating the caption:\n"
+    augmented_prompt = f"{prompt}\n\nHere are some optional facts to consider, if they are helpful:\n"
     for fact in top_k_facts:
         augmented_prompt += "- " + fact + "\n"
     return augmented_prompt
     
-     
 
 def main():
-  prompts = ["how to solve 2x = 4?", "continue the sequence: 1, 4, 9, 16..."]
-  print(get_response(prompts, model="Google Gemini-2.0-Flash"))
+  prompt = "How was the relative Canadian dollar value compared to USD between 2005 and 2008?"
+
+  embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
+
+  with open("/home/ubuntu/thesis/data/fact bank/all_facts.txt", "r") as file:
+    all_facts_list = file.read().splitlines()
+
+  all_facts_emb = torch.load("/home/ubuntu/thesis/data/fact bank/all_facts_emb.pth").cpu()
+
+  augmented_prompt = augment_prompt_with_facts(prompt, all_facts_list, all_facts_emb, embedding_model)
+  print(augmented_prompt)
+
 
 if __name__ == "__main__":
   main()
