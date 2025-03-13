@@ -1,5 +1,5 @@
 import os
-from dataset_helpers import (
+from helpers import (
     generate_line_plot
 )
 

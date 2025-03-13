@@ -3,7 +3,7 @@
 import requests
 import json
 import re
-from dataset_helpers import (
+from helpers import (
     get_response, 
     get_sample, 
     get_samples, 
@@ -83,13 +83,13 @@ def main(dataset_names):
             ranks = [x-1 for x in ranks] #to make the rank start from index 0 instead of 1
 
             for k in range(SAVE_TOP_K):
-                caption_filepath = f"/home/ubuntu/thesis/data/samples/captions/{dataset_name}_{idx}.txt" 
+                caption_filepath = f"/home/ubuntu/thesis/data/samples/captions/raw/{dataset_name}_{idx}.txt" 
                 save_file(responses[rank[k]], caption_filepath)
 
-                metadata_filepath = f"/home/ubuntu/thesis/data/samples/metadata/{dataset_name}_{idx}.json" 
+                metadata_filepath = f"/home/ubuntu/thesis/data/samples/metadata/{dataset_name}/{dataset_name}_{idx}.json" 
                 save_file([meta_and_ts[0] for meta_and_ts in samples][ranks[k]], metadata_filepath)   
 
-                series_filepath = f"/home/ubuntu/thesis/data/samples/time series/{dataset_name}_{idx}.json" 
+                series_filepath = f"/home/ubuntu/thesis/data/samples/time series/{dataset_name}/{dataset_name}_{idx}.json" 
                 save_file([meta_and_ts[1] for meta_and_ts in samples][ranks[k]], series_filepath) 
 
                 idx += 1

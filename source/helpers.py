@@ -730,7 +730,7 @@ def enrich_language(caption, model="OpenAI GPT-4o"):
             )
   return response
 
-def factual_checking(caption, model="OpenAI GPT-4o"):
+def factual_checking(caption, model="Google Gemini-2.0-Flash"):
     prompt = f"""
     Here is a time series description. Carefully analyze it:  
     \n
@@ -766,6 +766,31 @@ def generate_line_plot(ts, xlabel, ylabel, title, savepath, height=None, width=N
   plt.savefig(savepath, bbox_inches='tight')  # Save the plot
   plt.close()
   
+def extract_facts(caption, model="Google Gemini-2.0-Flash"):
+    prompt = f"""
+    Here is a time series description containing **historical events, scientific facts, or geopolitical trends**:  
+    \n
+    {caption}  
+    \n
+    **Your task:**  
+    1. **Identify all explicit or implied facts** related to history, science, or geopolitics.  
+    2. **Rewrite each fact as a self-contained statement** that can be verified independently.  
+    3. **Include dates and locations** where relevant.  
+    4. **Do NOT assume missing details**—extract only what is explicitly stated.  
+      
+    **Formatting:**  
+    - Each fact should be on a **new line** with an empty line between facts.  
+    - Write each fact in a **concise, complete sentence** without referring to the original time series.  
+    
+    **Return only the extracted facts, without explanations, extra text, or formatting.**  
+    """
+    
+    response = get_response(prompt=prompt, model=model,
+                            temperature=0.2,  # Keeps responses factual
+                            top_p=0.85)  
+    return response
+
+
 
 
 def main():
