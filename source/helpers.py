@@ -775,12 +775,13 @@ def extract_facts(caption, model="Google Gemini-2.0-Flash"):
     **Your task:**  
     1. **Identify all explicit or implied facts** related to history, science, or geopolitics.  
     2. **Rewrite each fact as a self-contained statement** that can be verified independently.  
-    3. **Include dates and locations** if relevant to the facts.  
+    3. **Include time information and locations** if they are relevant to the facts.  
     4. **Do NOT assume missing details**, extract only what is explicitly stated.  
       
     **Formatting:**  
     - Each fact should be on a **new line** with an empty line between facts.  
-    - Write each fact in a **concise, complete sentence with context** without referring to the original time series.  
+    - Write each fact as a **concise, complete sentence with full context**.  
+    - Avoiding mentioning the time series but write verifiable sentences, because the time series is unavailable during fact verification.
     
     **Return only the extracted facts, without explanations, extra text, or formatting.**  
     """
