@@ -1,5 +1,6 @@
 The scripts must be executed sequentially as follows:
- 1) process_data.py: converts raw datasets into json files inside the folder "./data/processed"
- 2) sample_generation.py: generates random samples and stores the different files in their own folders in ./data
- 3/4) caption_refinement.py || plot_generation.py
- 5) extract_facts.py: extract facts that are mentioned in the captions and saves them in the facts folder
+ 1. process_data.py: converts raw datasets into json files inside the folder "./data/processed"
+ 2. sample_generation.py: generates random samples and stores the different files in their own folders in ./data
+ 3/4. caption_refinement.py || plot_generation.py
+ 5. extract_facts.py: extract facts that are mentioned in the captions and saves them in the facts folder
+ 6. filter_facts.py: checks the extracted facts from step 5 and filters out those deemed false

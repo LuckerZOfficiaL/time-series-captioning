@@ -791,6 +791,31 @@ def extract_facts(caption, model="Google Gemini-2.0-Flash"):
                             top_p=0.85)  
     return response
 
+def filter_facts(caption, model="Google Gemini-2.0-Flash"):
+    prompt = f"""
+    Here is a list of statements that may contain **real, false, or unverifiable** facts:  
+    \n
+    {caption}  
+    \n
+    **Your task:**  
+    1. **Check each statement carefully** and determine if it is:  
+       - **Real:** Can be verified through reputable sources.  
+       - **False:** Contradicts known facts or evidence.  
+       - **Unverifiable:** Too vague, subjective, or lacking enough details to check.  
+    2. **Remove any statement that is false or unverifiable.**  
+    3. **Keep only the real, verifiable statements.**  
+      
+    **Formatting:**  
+    - List each **remaining fact on a new line**, separated by an empty line.  
+    - Do **not** include explanations, labels, or extra text.  
+      
+    **Return only the filtered facts without additional output.**  
+    """
+    
+    response = get_response(prompt=prompt, model=model,
+                            temperature=0.15,  # Ensures minimal randomness for accuracy
+                            top_p=0.85)  
+    return response
 
 
 
