@@ -14,7 +14,6 @@ SAVE_PATH = "/home/ubuntu/thesis/data/samples/captions/extracted facts"
 
 def main(dataset_names):
     for dataset_name in dataset_names:
-        # read all caption files from the folder, use the refinement model to add real facts and save them back into the original files
         for filename in os.listdir(CAPTIONS_PATH):
             if filename.startswith(dataset_name) and filename.endswith(".txt"):
                 filepath = os.path.join(CAPTIONS_PATH, filename)
@@ -32,7 +31,6 @@ def main(dataset_names):
                 save_file(extracted_facts, save_path)
                 print("\nSuccess: extracted facts from", filename)
                 
-
 
 if __name__ == "__main__":
     main(DATASET_NAMES)

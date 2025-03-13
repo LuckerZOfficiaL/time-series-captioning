@@ -57,7 +57,7 @@ def main(dataset_names):
                         postfix = f"_enriched.txt"
                         save_path = save_folder + "/enriched/" + filename[:-4] + postfix
                     elif REFINEMENT_TYPE == "add facts":
-                        postfix = f"_facts.txt"
+                        postfix = f"_concretized.txt"
                         save_path = save_folder + "/add facts/" + filename[:-4] + postfix
                     elif REFINEMENT_TYPE == "factual checking":
                         postfix = f"_checked.txt"
