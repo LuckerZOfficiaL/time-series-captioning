@@ -16,7 +16,7 @@ EMBEDDING_MODEL = "all-MiniLM-L6-v2"
 SAVE_PCA = False
 
 
-def embed_sentences(sentences, model_name="all-MiniLM-L6-v2"):
+def embed_sentences(sentence_list, model_name="all-MiniLM-L6-v2"):
     """
     Embeds a list of sentences using a pretrained Sentence Transformer model.
 
@@ -28,10 +28,10 @@ def embed_sentences(sentences, model_name="all-MiniLM-L6-v2"):
         torch.Tensor: A tensor of shape [N, embedding_size] containing the sentence embeddings.
     """
     model = SentenceTransformer(model_name)
-    embeddings = model.encode(sentences, convert_to_tensor=True)
+    embeddings = model.encode(sentence_list, convert_to_tensor=True)
     return embeddings
 
-def save_embeddings_pca(sentences, model_name="all-MiniLM-L6-v2"):
+def save_embeddings_pca(sentence_list, model_name="all-MiniLM-L6-v2"):
     """
     Embeds sentences, performs PCA to reduce dimensionality to 2D, and visualizes them.
 
@@ -41,7 +41,7 @@ def save_embeddings_pca(sentences, model_name="all-MiniLM-L6-v2"):
     """
     # 1. Embed Sentences
     model = SentenceTransformer(model_name)
-    embeddings = model.encode(sentences)  # No need for tensor here, PCA works with numpy
+    embeddings = model.encode(sentence_list)  # No need for tensor here, PCA works with numpy
 
     # 2. Perform PCA
     pca = PCA(n_components=2)
@@ -63,19 +63,18 @@ def save_embeddings_pca(sentences, model_name="all-MiniLM-L6-v2"):
     plt.close()
 
 
-
 def main():
     all_facts_list = unify_facts(FACTS_PATH)
     save_file(all_facts_list, SAVE_PATH+"/all_facts.json")
     for i, fact in enumerate(all_facts_list):
         print(i, fact)
-
    
-    all_facts_emb = embed_sentences(all_facts_list)
+    all_facts_emb = embed_sentences(all_facts_list, model_name=EMBEDDING_MODEL)
     save_file(all_facts_emb, SAVE_PATH+"/all_facts_emb.pth")
     print(all_facts_emb.shape)
 
-    if SAVE_PCA: save_embeddings_pca(all_facts_list)
+
+    if SAVE_PCA: save_embeddings_pca(all_facts_list, model_name=EMBEDDING_MODEL)
 
 if __name__ == "__main__":
     main()
