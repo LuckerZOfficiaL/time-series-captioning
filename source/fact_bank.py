@@ -52,7 +52,7 @@ def save_embeddings_pca(sentence_list, model_name="all-MiniLM-L6-v2"):
     plt.scatter(reduced_embeddings[:, 0], reduced_embeddings[:, 1])
 
     # Add labels (optional)
-    for i, sentence in enumerate(sentences):
+    for i, sentence in enumerate(sentence_list):
         plt.annotate(str(i), (reduced_embeddings[i, 0], reduced_embeddings[i, 1]))  # Label with sentence index
 
     plt.title("Sentence Embeddings in 2D (PCA)")

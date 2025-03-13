@@ -1,9 +1,11 @@
 The scripts must be executed sequentially as follows:
  1. process_data.py: converts raw datasets into json files inside the folder "./data/processed"
  2. sample_generation.py: generates random samples and stores the different files in their own folders in ./data
- 3/4. caption_refinement.py || plot_generation.py
- 5. extract_facts.py: extract facts that are mentioned in the captions and saves them in the facts folder
- 6. filter_facts.py: checks the extracted facts from step 5 and filters out those deemed false
+ 3/4. caption_refinement.py (run once for each refinement type) || plot_generation.py
+ 5. extract_facts.py: extract facts that are mentioned in the captions and saves them in the facts folder (apply it to the captions with added facts)
+ 6. filter_facts.py: checks the extracted facts from step 5 and discards those deemed false
  7. fact_bank.py: 
+            - applies to the filtered facts from step 6.
             - creates and saves an indexed list of facts as strings
             - creates and saves a tensor of their embeddings, shape = [#facts, emb. size]
+ 8. sample_generation.py: again if you want to apply RAG, because now the fact bank is ready.

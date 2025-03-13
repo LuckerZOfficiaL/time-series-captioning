@@ -3,6 +3,9 @@
 import requests
 import json
 import re
+import random
+import torch
+from sentence_transformers import SentenceTransformer
 from helpers import (
     get_response, 
     get_sample, 
@@ -12,9 +15,11 @@ from helpers import (
     rank_responses,
     save_file,
     add_facts_to_caption,
-    generate_line_plot
+    generate_line_plot,
+    augment_prompt_with_facts
 )
 
+random.seed(42)
 
 FILE_MAPPING = {
         "air quality": "aq.json",
@@ -38,7 +43,7 @@ RAG = False # whether to apply RAG on caption generation
 
 def main(dataset_names):
     for dataset_name in dataset_names:
-        print("\nGenerating captions for", dataset_name)
+        print(f"\nGenerating{"RAG" if RAG else ""} samples for", dataset_name)
         filepath = f"/home/ubuntu/thesis/data/processed/{FILE_MAPPING[dataset_name]}"
         with open(filepath) as f:
             json_data = json.load(f)
@@ -60,8 +65,7 @@ def main(dataset_names):
                 requests.extend(this_sample_requests)
 
 
-        if RAG:
-            print("\nApplying RAG to the prompts.")
+        if RAG: # augment the requests with some K retrieved facts
             embedding_model = SentenceTransformer(EMBEDDING_MODEL)
         
             with open("/home/ubuntu/thesis/data/fact bank/all_facts.txt", "r") as file: # Load all facts 
@@ -70,8 +74,12 @@ def main(dataset_names):
             all_facts_emb = torch.load("/home/ubuntu/thesis/data/fact bank/all_facts_emb.pth").cpu() # Load all fact embeddings 
 
             for i in range(len(requests)):
-                prompt_embedding = model.encode(requests[i])
-                requests[i] = augment_prompt_with_facts(requests[i], all_facts_list, all_facts_emb, embedding_model)
+                prompt_embedding = embedding_model.encode(requests[i])
+                requests[i] = augment_prompt_with_facts(requests[i], 
+                                                        all_facts_list, 
+                                                        all_facts_emb, 
+                                                        embedding_model, 
+                                                        retrieve_k = RAG_TOP_K)
             
 
         responses = [] 
@@ -100,7 +108,7 @@ def main(dataset_names):
                 idx += 1
         else: # just save all responses without ranking and without selecting top-k
             for i in range(len(responses)):
-                caption_filepath = f"/home/ubuntu/thesis/data/samples/captions/{dataset_name}_{idx}.txt" 
+                caption_filepath = f"/home/ubuntu/thesis/data/samples/captions/{"rag" if RAG else "raw"}/{dataset_name}_{idx}.txt" 
                 save_file(responses[i], caption_filepath)
 
                 metadata_filepath = f"/home/ubuntu/thesis/data/samples/metadata/{dataset_name}_{idx}.json" 

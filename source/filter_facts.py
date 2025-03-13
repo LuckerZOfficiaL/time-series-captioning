@@ -26,7 +26,7 @@ def main(dataset_names):
 
                 save_path = SAVE_PATH + f"/{dataset_name}/{filename[:-4]}_filtered.txt" 
                 save_file(filtered_facts, save_path)
-                print("\nSuccess: extracted facts from", filename)
+                print("\nSuccess: filtered facts from", filename)
                 
 
 if __name__ == "__main__":

@@ -15,6 +15,8 @@ import torch
 from sklearn.metrics.pairwise import cosine_similarity
 from sentence_transformers import SentenceTransformer
 
+random.seed(42)
+
 
 def get_response(prompt,
                  system_prompt="You are a helpful assistant and you have to generate text on my request.",
