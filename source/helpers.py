@@ -945,6 +945,7 @@ def remove_common_sense(facts_list, out_path, model="Google Gemini-2.0-Flash", b
     return new_facts_list
 
 def extract_years(text, min_year=1900, max_year=2025): # takes a string and returns all the detected years. Years are 4 digits.
+  text = str(text) # for safety, in case text is another data type
   years = re.findall(r'\b\d{4}\b', text)
   years = [int(year) for year in years if int(year) >= min_year and int(year) <= max_year] # remove non-year numbers and convert to int
   return  years
@@ -989,20 +990,29 @@ def get_relevant_facts(start_year, end_year, bin_period=10): # only get facts th
   relevant_facts = []
   for root, dirs, files in os.walk(folder_path):
     for dir_name in dirs:
-      if end_year is not None:
+      if end_year is not None and start_year is not None:
         if int(dir_name)+bin_period >= start_year and int(dir_name) <= end_year+bin_period:
           subfolder_path = os.path.join(root, dir_name)
           fact_list_path = os.path.join(subfolder_path, "facts_list.txt")
           with open(fact_list_path, "r") as file:
             facts = file.read().splitlines()
             relevant_facts.extend(facts)
-      else: # end_year is None, i.e. unavailable
+
+      elif start_year is None and end_year is not None:# start_year is unavailable) but end_year is available 
+        if int(dir_name)+bin_period <= end_year: # consider all facts until end_year
+          subfolder_path = os.path.join(root, dir_name)
+          fact_list_path = os.path.join(subfolder_path, "facts_list.txt")
+          with open(fact_list_path, "r") as file:
+            facts = file.read().splitlines()
+            relevant_facts.extend(facts)
+      elif start_year is not None and end_year is None:
         if int(dir_name)+bin_period >= start_year: # consider all facts from the start_year on
           subfolder_path = os.path.join(root, dir_name)
           fact_list_path = os.path.join(subfolder_path, "facts_list.txt")
           with open(fact_list_path, "r") as file:
             facts = file.read().splitlines()
             relevant_facts.extend(facts)
+      # else: no need to specify else because relevant_facts = [] and that is returned by the function
   return relevant_facts
  
 

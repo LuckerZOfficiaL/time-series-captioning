@@ -33,7 +33,7 @@ FILE_MAPPING = {
     }
 
 REQUEST_AUGMENTATIONS = 0 # how many times to rephrase the original prompt request?
-N_SAMPLES = 10 # how many window samples to extract per dataset? i.e. how many time series to sample?
+N_SAMPLES = 25 # how many window samples to extract per dataset? i.e. how many time series to sample?
 ALL_MODELS = ["Google Gemini-2.0-Flash", "OpenAI GPT-4o", "Anthropic Claude-3.5", "GPT-4o", "Claude-3.5-Haiku", "Gemini-1.5-Flash", "Gemini-1.5-Pro", "DeepSeek-R1-FW"] # available model choices, the first two are from official APIs
 MODELS = ["OpenAI GPT-4o", "Anthropic Claude-3.5", "Google Gemini-2.0-Flash"] # models to use for generating captions
 JUDGE_MODEL = "OpenAI GPT-4o" # the model used to rank the captions
@@ -69,19 +69,24 @@ def main(dataset_names):
             this_sample_request = get_request(dataset_name, metadata, ts)
             
             if RAG:
-                
                 start_keys = [key for key in metadata if "start" in key] # this is because different datasets have different keys that denominate the start time entry
                 end_keys = [key for key in metadata if "end" in key] # same for end time
 
                 start_key = start_keys[0] if len(start_keys) == 1 else [key for key in start_keys if "year" in key][0]
                 end_key = end_keys[0] if end_keys != [] else None
                 
-                start_time = str(metadata.get(start_key)) # get the start time of the series
-                end_time = str(metadata.get(end_key)) if end_key is not None else None # get the end time of the series
+                start_time = metadata.get(start_key) # get the start time of the series
+                end_time = metadata.get(end_key) if end_key is not None else None # get the end time of the series
          
-                start_year = extract_years(start_time)[0]
-                end_year = extract_years(end_time)[0] if end_time is not None else None
-
+                start_year = None
+                if start_time is not None: 
+                    #print("\nstart time:", start_time)
+                    start_year = extract_years(start_time)[0]
+                end_year = None 
+                if end_time is not None:
+                    #print("end time:", end_time)
+                    end_year = extract_years(end_time)[0]
+                 
                 #print("\nStart keys",start_keys)
                 #print("End keys",end_keys)
                 #print("Start year",start_year)
