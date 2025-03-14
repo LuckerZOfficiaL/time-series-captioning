@@ -14,6 +14,7 @@ import os
 import torch
 from sklearn.metrics.pairwise import cosine_similarity
 from sentence_transformers import SentenceTransformer
+import re
 
 random.seed(42)
 
@@ -898,7 +899,40 @@ def remove_common_sense(facts_list, out_path, model="Google Gemini-2.0-Flash", b
 
     return new_facts_list
 
-    
+def extract_years(text): # takes a string and returns all the detected years. Years are 4 digits.
+  years = re.findall(r'\b\d{4}\b', text)
+  years = [int(year) for year in years if int(year) < 2025] # remove non-year numbers and convert to int
+  return  years
+
+
+def split_facts_by_time(facts_list, bin_years=10): # reads through fact_list and categorizes the facts by their time period, storing all in one json file
+  min_year = 3000
+  max_year = 0
+
+  for fact in facts_list: # iterate to get the min and max years appeared in the facts
+    years = extract_years(fact)  # Assuming there is a function to extract the year from the fact
+    if years != []:
+      min_year = min(min(years), min_year)
+      max_year = max(max(years), max_year)
+  
+  print("\n\nMin and Max years:", min_year, max_year)
+
+  time_periods = {} # a dictionary where keys=start of time period and values=facts in that period.
+  start_year = min_year - (min_year % bin_years)
+  while start_year <= max_year:
+    time_periods[start_year] = []
+    start_year += bin_years
+
+  for fact in facts_list:
+    years = extract_years(fact)
+    for year in years:
+      for start_year in time_periods.keys():
+        if int(year) >= start_year and int(year) <= start_year + bin_years: # if it's within that bin period
+          time_periods[start_year].append(fact)
+
+  return time_periods 
+
+
 
 def main():
   prompt = "How was the relative Canadian dollar value compared to USD between 2005 and 2008?"
