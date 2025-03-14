@@ -33,7 +33,7 @@ FILE_MAPPING = {
     }
 
 REQUEST_AUGMENTATIONS = 0 # how many times to rephrase the original prompt request?
-N_SAMPLES = 3 # how many window samples to extract per dataset? i.e. how many time series to sample?
+N_SAMPLES = 10 # how many window samples to extract per dataset? i.e. how many time series to sample?
 ALL_MODELS = ["Google Gemini-2.0-Flash", "OpenAI GPT-4o", "Anthropic Claude-3.5", "GPT-4o", "Claude-3.5-Haiku", "Gemini-1.5-Flash", "Gemini-1.5-Pro", "DeepSeek-R1-FW"] # available model choices, the first two are from official APIs
 MODELS = ["OpenAI GPT-4o", "Anthropic Claude-3.5", "Google Gemini-2.0-Flash"] # models to use for generating captions
 JUDGE_MODEL = "OpenAI GPT-4o" # the model used to rank the captions
@@ -69,7 +69,8 @@ def main(dataset_names):
             this_sample_request = get_request(dataset_name, metadata, ts)
             
             if RAG:
-                start_keys = [key for key in metadata if "start" in key] # thi is because different datasets have different keys that denominate the start time entry
+                
+                start_keys = [key for key in metadata if "start" in key] # this is because different datasets have different keys that denominate the start time entry
                 end_keys = [key for key in metadata if "end" in key] # same for end time
 
                 start_key = start_keys[0] if len(start_keys) == 1 else [key for key in start_keys if "year" in key][0]
@@ -87,7 +88,8 @@ def main(dataset_names):
                 #print("End year", end_year)
 
                 relevant_facts_list = get_relevant_facts(start_year, end_year, BIN_PERIOD)
-                relevant_facts_emb = embed_sentences(relevant_facts_list, model_name=EMBEDDING_MODEL)
+                relevant_facts_list.extend(get_relevant_facts(0, 0, BIN_PERIOD)) # beyond the time-relevant facts, also add the general facts that ain't associated with a year. Recall that 0 is the key of general facts.
+                relevant_facts_emb = embed_sentences(relevant_facts_list, model=embedding_model)
                 this_sample_request = augment_prompt_with_rag(this_sample_request,
                                                                 relevant_facts_list,
                                                                 relevant_facts_emb,

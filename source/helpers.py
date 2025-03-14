@@ -14,6 +14,7 @@ import os
 import torch
 from sklearn.metrics.pairwise import cosine_similarity
 from sentence_transformers import SentenceTransformer
+from sklearn.decomposition import PCA
 import re
 
 random.seed(42)
@@ -850,22 +851,21 @@ def unify_facts(folder):
                     all_facts.extend(facts)
     return all_facts
 
-def embed_sentences(sentence_list, model_name="all-MiniLM-L6-v2"):
+def embed_sentences(sentence_list, model):
     """
     Embeds a list of sentences using a pretrained Sentence Transformer model.
 
     Args:
         sentences (list of str): The list of sentences to embed.
-        model_name (str): The name of the Sentence Transformer model to use.
+        model: The Sentence Transformer model to use.
 
     Returns:
         torch.Tensor: A tensor of shape [N, embedding_size] containing the sentence embeddings.
     """
-    model = SentenceTransformer(model_name)
     embeddings = model.encode(sentence_list, convert_to_tensor=True)
     return embeddings
 
-def save_embeddings_pca(sentence_list, model_name="all-MiniLM-L6-v2"):
+def save_embeddings_pca(sentence_list, model, save_path):
     """
     Embeds sentences, performs PCA to reduce dimensionality to 2D, and visualizes them.
 
@@ -874,7 +874,6 @@ def save_embeddings_pca(sentence_list, model_name="all-MiniLM-L6-v2"):
         model_name (str): The name of the Sentence Transformer model to use.
     """
     # 1. Embed Sentences
-    model = SentenceTransformer(model_name)
     embeddings = model.encode(sentence_list)  # No need for tensor here, PCA works with numpy
 
     # 2. Perform PCA
@@ -893,7 +892,7 @@ def save_embeddings_pca(sentence_list, model_name="all-MiniLM-L6-v2"):
     plt.xlabel("Principal Component 1")
     plt.ylabel("Principal Component 2")
     plt.grid(True)
-    plt.savefig(SAVE_PATH+"/pca.jpeg")
+    plt.savefig(save_path)
     plt.close()
 
 def augment_prompt_with_rag(prompt: str, all_facts_list: list, all_facts_emb: torch.Tensor, embedding_model, retrieve_k=5) -> str:
@@ -945,14 +944,14 @@ def remove_common_sense(facts_list, out_path, model="Google Gemini-2.0-Flash", b
 
     return new_facts_list
 
-def extract_years(text): # takes a string and returns all the detected years. Years are 4 digits.
+def extract_years(text, min_year=1900, max_year=2025): # takes a string and returns all the detected years. Years are 4 digits.
   years = re.findall(r'\b\d{4}\b', text)
-  years = [int(year) for year in years if int(year) < 2025] # remove non-year numbers and convert to int
+  years = [int(year) for year in years if int(year) >= min_year and int(year) <= max_year] # remove non-year numbers and convert to int
   return  years
 
 def split_facts_by_time(facts_list, bin_years=10): # reads through fact_list and categorizes the facts by their time period, storing all in one json file
-  min_year = 3000
-  max_year = 0
+  min_year = 9999
+  max_year = -9999
 
   for fact in facts_list: # iterate to get the min and max years appeared in the facts
     years = extract_years(fact)  # Assuming there is a function to extract the year from the fact
@@ -967,17 +966,25 @@ def split_facts_by_time(facts_list, bin_years=10): # reads through fact_list and
   while start_year <= max_year:
     time_periods[start_year] = []
     start_year += bin_years
+  time_periods[0] = [] # add this key to store facts without year information
 
   for fact in facts_list:
     years = extract_years(fact)
-    for year in years:
-      for start_year in time_periods.keys():
-        if int(year) >= start_year and int(year) <= start_year + bin_years: # if it's within that bin period
-          time_periods[start_year].append(fact)
+    if len(years) == 0 : # use this key if there's no year information in the fact
+      time_periods[0].append(fact)
+    else:
+      for year in years:
+        for start_year in time_periods.keys():
+          if start_year != 0:
+            if int(year) >= start_year and int(year) <= start_year + bin_years: # if it's within that bin period
+              time_periods[start_year].append(fact)
+
+  for start_year in time_periods:
+        time_periods[start_year] = list(set(time_periods[start_year])) # remove duplicates, because if both start and end years are in the same period, the fact gets added twice
 
   return time_periods 
 
-def get_relevant_facts(start_year, end_year, bin_period=10):
+def get_relevant_facts(start_year, end_year, bin_period=10): # only get facts that are temporally relevant
   folder_path = f"/home/ubuntu/thesis/data/fact bank/by period/{bin_period}"
   relevant_facts = []
   for root, dirs, files in os.walk(folder_path):

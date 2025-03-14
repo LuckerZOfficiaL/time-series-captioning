@@ -5,7 +5,7 @@ from helpers import (
 )
 
 BIN_YEARS = 10 # how long is a single period in years?
-BANK_PATH = "/home/ubuntu/thesis/data/fact bank/all_facts.txt"
+BANK_PATH = "/home/ubuntu/thesis/data/fact bank/all_facts_no_common_sense.txt"
 SAVE_PATH = f"/home/ubuntu/thesis/data/fact bank/by period/{BIN_YEARS}/all_facts_by_{BIN_YEARS}years.json"
 
 def main():

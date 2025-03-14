@@ -16,7 +16,7 @@ CAPTIONS_PATH = "/home/ubuntu/thesis/data/samples/captions/raw"#/refined/add fac
 DATASET_NAMES = ["air quality", "border crossing", "crime", "demography"]#, "heart rate"]   
 ASK_URLS = False #whether to ask the refinement model to provide URL references, even if it's True, the refiner doesn't give the URLs :C
 REFINEMENT_TYPES = ["add facts", "change style", "enrich language", "factual checking"] # supported refinement types
-REFINEMENT_TYPE = "change style" # "add facts", "change style", "enrich language", "factual checking"
+REFINEMENT_TYPE = "add facts" # "add facts", "change style", "enrich language", "factual checking"
 DESIRED_STYLE = "academic" # used only if REFINEMENT_TYPE = "change style"
 # Possible styles I can think of: casual, scientific, journalistic, technical, storytelling, academic
 

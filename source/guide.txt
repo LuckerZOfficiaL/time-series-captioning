@@ -1,7 +1,8 @@
 The scripts must be executed sequentially as follows:
  1. process_data.py: converts raw datasets into json files inside the folder "./data/processed"
- 2. sample_generation.py: generates random samples and stores the different files in their own folders in ./data
- 3/4. caption_refinement.py (run once for each refinement type) || plot_generation.py
+ 2. sample_generation.py: generates random samples with RAG=False and stores the different files in their own folders in ./data/raw
+ 3. plot_generation.py (OPTIONAL): create line charts of all time series samples
+ 4. caption_refinement.py (run once for each refinement type)
  5. extract_facts.py: extract facts that are mentioned in the captions and saves them in the facts folder (apply it to the captions with added facts)
  6. filter_fake_facts.py: checks the extracted facts from step 5 and discards those deemed false or unclear
  7. fact_bank.py: 
@@ -10,5 +11,10 @@ The scripts must be executed sequentially as follows:
             - creates and saves a tensor of their embeddings, shape = [#facts, emb. size]
  8. remove_common_sense.py: checks the fact bank and removes facts that are too obvious
  9. split_facts_by_period.py: goes through the remaining facts and categorizes them accoding to the time period. A fact might span multiple years, so it can end up in multiple periods.
- 10. fact_bank_by_period: creates one fact bank per period. Inside ./by period/10, create one folder per period, each folder contans its list of facts and a tensor of their embeddings. Then, when using RAG in sample_generation.py, only retrieve from the facts in the relevant period.
- 11. sample_generation.py: again if you want to apply RAG, because now the fact bank is ready.
+ 10. fact_banks_by_period: creates one fact bank per period. Inside ./by period/10, create one folder per period, each folder contans its list of facts and a tensor of their embeddings. Then, when using RAG in sample_generation.py, only retrieve from the facts in the relevant period.
+ 11. sample_generation.py: again if you want to set RAG=True, because now the fact bank is ready.
+
+
+ OPTIONAL: iterate from step 2 (add facts) through 11,  this leads to:
+  - growing fact bank
+  - refining captions

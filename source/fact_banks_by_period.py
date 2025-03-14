@@ -16,6 +16,8 @@ def main():
     with open(PERIODS_FACTS_PATH.format(BIN_YEARS=BIN_YEARS)) as file:
         facts_by_period = json.load(file)
     
+    embedding_model = SentenceTransformer(EMB_MODEL_NAME)
+
     for period in facts_by_period:
         period_facts_list = facts_by_period[period]
         if len(period_facts_list) > 0:
@@ -23,8 +25,8 @@ def main():
             os.makedirs(period_folder, exist_ok=True)
             
             save_file(period_facts_list, period_folder+"/facts_list.txt") # save facts
-
-            facts_emb = embed_sentences(period_facts_list, model_name=EMB_MODEL_NAME)
+            
+            facts_emb = embed_sentences(period_facts_list, model=embedding_model)
             save_file(facts_emb, period_folder+"/facts_emb.pth") # save embeddings
 
     print("\nSuccess: Saved facts and their embeddings by period.")
