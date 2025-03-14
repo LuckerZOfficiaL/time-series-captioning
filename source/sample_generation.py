@@ -40,7 +40,7 @@ JUDGE_MODEL = "OpenAI GPT-4o" # the model used to rank the captions
 SAVE_TOP_K = 0 # save the top k best captions based on the ranking, if it's 0 or negative, don't do top-k. If top-k is on, caption ranking is invoked
 EMBEDDING_MODEL = "all-MiniLM-L6-v2" # the embedding model used for RAG
 RAG_TOP_K = 5 # how many top-relevant facts to retrieve from the bank
-RAG = True # whether to apply RAG on caption generation, it will only retrieve the facts that are temporally relevant to the prompt request.
+RAG = False # whether to apply RAG on caption generation, it will only retrieve the facts that are temporally relevant to the prompt request.
 BIN_PERIOD = 10 # the size of the bins. Each bin represents one period of time
 
 
@@ -78,14 +78,22 @@ def main(dataset_names):
                 start_time = metadata.get(start_key) # get the start time of the series
                 end_time = metadata.get(end_key) if end_key is not None else None # get the end time of the series
          
-                start_year = None
+                start_year = 0 # set to 0 as default, since 0 will retrieve all general facts with no year association
                 if start_time is not None: 
                     #print("\nstart time:", start_time)
-                    start_year = extract_years(start_time)[0]
-                end_year = None 
+                    try:
+                        start_year = extract_years(start_time)[0]
+                    except IndexError as e:
+                        print(e)
+                        print("start_time: ", start_time)
+                end_year = 0 
                 if end_time is not None:
                     #print("end time:", end_time)
-                    end_year = extract_years(end_time)[0]
+                    try: 
+                        end_year = extract_years(end_time)[0]
+                    except IndexError as e:
+                        print(e)
+                        print("end_time: ", end_time)
                  
                 #print("\nStart keys",start_keys)
                 #print("End keys",end_keys)
