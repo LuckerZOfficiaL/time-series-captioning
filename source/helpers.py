@@ -850,6 +850,52 @@ def unify_facts(folder):
                     all_facts.extend(facts)
     return all_facts
 
+def embed_sentences(sentence_list, model_name="all-MiniLM-L6-v2"):
+    """
+    Embeds a list of sentences using a pretrained Sentence Transformer model.
+
+    Args:
+        sentences (list of str): The list of sentences to embed.
+        model_name (str): The name of the Sentence Transformer model to use.
+
+    Returns:
+        torch.Tensor: A tensor of shape [N, embedding_size] containing the sentence embeddings.
+    """
+    model = SentenceTransformer(model_name)
+    embeddings = model.encode(sentence_list, convert_to_tensor=True)
+    return embeddings
+
+def save_embeddings_pca(sentence_list, model_name="all-MiniLM-L6-v2"):
+    """
+    Embeds sentences, performs PCA to reduce dimensionality to 2D, and visualizes them.
+
+    Args:
+        sentences (list of str): The list of sentences to embed.
+        model_name (str): The name of the Sentence Transformer model to use.
+    """
+    # 1. Embed Sentences
+    model = SentenceTransformer(model_name)
+    embeddings = model.encode(sentence_list)  # No need for tensor here, PCA works with numpy
+
+    # 2. Perform PCA
+    pca = PCA(n_components=2)
+    reduced_embeddings = pca.fit_transform(embeddings)
+
+    # 3. Visualize
+    plt.figure(figsize=(10, 8))
+    plt.scatter(reduced_embeddings[:, 0], reduced_embeddings[:, 1])
+
+    # Add labels (optional)
+    for i, sentence in enumerate(sentence_list):
+        plt.annotate(str(i), (reduced_embeddings[i, 0], reduced_embeddings[i, 1]))  # Label with sentence index
+
+    plt.title("Sentence Embeddings in 2D (PCA)")
+    plt.xlabel("Principal Component 1")
+    plt.ylabel("Principal Component 2")
+    plt.grid(True)
+    plt.savefig(SAVE_PATH+"/pca.jpeg")
+    plt.close()
+
 def augment_prompt_with_facts(prompt: str, all_facts_list: list, all_facts_emb: torch.Tensor, embedding_model, retrieve_k=5) -> str:
     """
     Given a prompt, embed the prompt with embedding model, then find the indices of the top k most similar embeddings from all_facts_emb,
