@@ -6,6 +6,7 @@ import re
 import random
 import torch
 from sentence_transformers import SentenceTransformer
+import os
 from helpers import (
     get_response, 
     get_sample, 
@@ -33,7 +34,7 @@ FILE_MAPPING = {
     }
 
 REQUEST_AUGMENTATIONS = 0 # how many times to rephrase the original prompt request?
-N_SAMPLES = 25 # how many window samples to extract per dataset? i.e. how many time series to sample?
+N_SAMPLES = 3 # how many window samples to extract per dataset? i.e. how many time series to sample?
 ALL_MODELS = ["Google Gemini-2.0-Flash", "OpenAI GPT-4o", "Anthropic Claude-3.5", "GPT-4o", "Claude-3.5-Haiku", "Gemini-1.5-Flash", "Gemini-1.5-Pro", "DeepSeek-R1-FW"] # available model choices, the first two are from official APIs
 MODELS = ["OpenAI GPT-4o", "Anthropic Claude-3.5", "Google Gemini-2.0-Flash"] # models to use for generating captions
 JUDGE_MODEL = "OpenAI GPT-4o" # the model used to rank the captions
@@ -145,7 +146,7 @@ def main(dataset_names):
             ranks = [x-1 for x in ranks] #to make the rank start from index 0 instead of 1
 
             for k in range(SAVE_TOP_K):
-                caption_filepath = f"/home/ubuntu/thesis/data/samples/captions/{"rag" if RAG else "raw"}/{dataset_name}_{idx}.txt" 
+                caption_filepath = f"/home/ubuntu/thesis/data/samples/captions/{"rag" if RAG else "raw"}/{dataset_name}_{idx}{"_rag" if RAG else ""}.txt" 
                 save_file(responses[rank[k]], caption_filepath)
 
                 metadata_filepath = f"/home/ubuntu/thesis/data/samples/metadata/{dataset_name}/{dataset_name}_{idx}.json" 

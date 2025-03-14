@@ -753,20 +753,20 @@ def factual_checking(caption, model="Google Gemini-2.0-Flash"):
     \n
     {caption}  
     \n
-    The description may contain **inaccurate or misleading facts** about scientific, economic, or geopolitical events from that period.  
-    You can safely ignore the facts about numbers or numerical comparisons as they are already verified.
+    The description may contain **inaccurate or misleading facts** about scientific, economic, or geopolitical events from that period. 
     
     Your task is to:  
     1. **Verify all claims or historical references** based on your knowledge.  
     2. **Identify incorrect or unsubstantiated facts** and replace them with accurate ones.  
     3. **Preserve the original writing style and structure**, modifying only incorrect statements.  
     4. **If a fact is unverifiable, state that it is uncertain rather than making assumptions**.  
+    5. You can assume that the **facts with numbers are always accurate and verified**, so do not discard them.
     
-    **Return only the corrected description. Do not add explanations or formatting.**  
+    **Return only the modified description. Do not add explanations or formatting.**  
     """
     
     response = get_response(prompt=prompt, model=model,
-                            temperature=0.3,  # Lower temp for more factual accuracy
+                            temperature=0.25,  # Lower temp for more factual accuracy
                             top_p=0.85)
     return response
 
