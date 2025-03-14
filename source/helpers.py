@@ -868,6 +868,36 @@ def augment_prompt_with_facts(prompt: str, all_facts_list: list, all_facts_emb: 
     for fact in top_k_facts:
         augmented_prompt += "- " + fact + "\n"
     return augmented_prompt
+
+def remove_common_sense(facts_list, out_path, model="Google Gemini-2.0-Flash", batch_size=8):
+    batch_size = 8  # How many facts to feed in the prompt each time
+
+    base_prompt = """
+    Categorize and filter the following list of facts. 
+
+    Classify each fact as one of the following:
+
+    - Time-Specific: Relates to a particular point in time.
+    - Location-Specific: Relates to a specific place.
+    - Time and Location-Specific: Combines both time and location.
+    - Common Sense/General Knowledge: Obvious, widely known information.
+
+    Return only the facts that are NOT classified as "Common Sense/General Knowledge". 
+    Output the remaining facts exactly as they appear in the input, each on a new line, with no additional explanation or formatting.
+
+    Facts:
+    """
+
+    new_facts_list = []
+    for i in range(0, len(facts_list), batch_size):  # Improved loop
+        facts_batch = facts_list[i:i + batch_size]
+        facts_prompt = "\n".join(facts_batch)
+        prompt = base_prompt + facts_prompt
+        response = get_response(prompt, model=model)[:-2] # [:-2] removes the empty line
+        new_facts_list.extend(response.split("\n"))
+
+    return new_facts_list
+
     
 
 def main():
