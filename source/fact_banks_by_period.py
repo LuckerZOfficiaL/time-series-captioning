@@ -9,7 +9,7 @@ from helpers import (
 
 EMB_MODEL_NAME = "all-MiniLM-L6-v2"
 BIN_YEARS = 10 # how long is a single period in years?
-PERIODS_FACTS_PATH = "/home/ubuntu/thesis/data/fact bank/by period/{BIN_YEARS}/all_facts_by_10years.json"
+PERIODS_FACTS_PATH = f"/home/ubuntu/thesis/data/fact bank/by period/{BIN_YEARS}/all_facts_by_{BIN_YEARS}years.json"
 SAVE_FOLDER = f"/home/ubuntu/thesis/data/fact bank/by period/{BIN_YEARS}"
 
 def main():

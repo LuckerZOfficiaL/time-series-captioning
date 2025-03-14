@@ -7,7 +7,7 @@ from helpers import (
 
 FILTER_MODEL = "Google Gemini-2.0-Flash" #"OpenAI GPT-4o" #"Gemini-2.0-Flash"
 FACTS_PATH = "/home/ubuntu/thesis/data/samples/captions/extracted facts" # where to look at
-DATASET_NAMES = ["air quality", "border crossing", "crime", "demography", "heart rate"]   
+DATASET_NAMES = ["air quality", "border crossing", "crime", "demography"]#, "heart rate"]   
 SAVE_PATH = "/home/ubuntu/thesis/data/samples/captions/filtered facts"
 
 def main(dataset_names):

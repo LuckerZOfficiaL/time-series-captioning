@@ -40,7 +40,7 @@ JUDGE_MODEL = "OpenAI GPT-4o" # the model used to rank the captions
 SAVE_TOP_K = 0 # save the top k best captions based on the ranking, if it's 0 or negative, don't do top-k. If top-k is on, caption ranking is invoked
 EMBEDDING_MODEL = "all-MiniLM-L6-v2" # the embedding model used for RAG
 RAG_TOP_K = 5 # how many top-relevant facts to retrieve from the bank
-RAG = False # whether to apply RAG on caption generation, it will only retrieve the facts that are temporally relevant to the prompt request.
+RAG = True # whether to apply RAG on caption generation, it will only retrieve the facts that are temporally relevant to the prompt request.
 BIN_PERIOD = 10 # the size of the bins. Each bin represents one period of time
 
 
@@ -102,6 +102,7 @@ def main(dataset_names):
 
                 relevant_facts_list = get_relevant_facts(start_year, end_year, BIN_PERIOD)
                 relevant_facts_list.extend(get_relevant_facts(0, 0, BIN_PERIOD)) # beyond the time-relevant facts, also add the general facts that ain't associated with a year. Recall that 0 is the key of general facts.
+                relevant_facts_list = list(set(relevant_facts_list)) # remove duplicates if there are any
                 relevant_facts_emb = embed_sentences(relevant_facts_list, model=embedding_model)
                 this_sample_request = augment_prompt_with_rag(this_sample_request,
                                                                 relevant_facts_list,

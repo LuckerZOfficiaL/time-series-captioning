@@ -64,11 +64,11 @@ def main(dataset_names):
                         save_path = save_folder + "/checked/" + filename[:-4] + postfix
                                                 
                     save_file(refined_caption, save_path)
-                    print("\nSuccess: refined caption with", REFINEMENT_TYPE, ":", filename)
+                    print("\nSuccess: {REFINEMENT_MODEL} refined caption with", REFINEMENT_TYPE, ":", filename)
                 elif len(refined_caption) == len(caption) or caption in refined_caption: # if the model just copied the original caption
-                    print("\nFailure: the Refinement model copied the original caption:", filename)
+                    print("\nFailure: {REFINEMENT_MODEL} copied the original caption:", filename)
                 else:
-                    print("\nFailure: the Refinement Model refused to refine the caption:", filename)
+                    print(f"\nFailure: {REFINEMENT_MODEL} refused to refine the caption:", filename)
 
 
 if __name__ == "__main__":
