@@ -896,22 +896,22 @@ def save_embeddings_pca(sentence_list, model_name="all-MiniLM-L6-v2"):
     plt.savefig(SAVE_PATH+"/pca.jpeg")
     plt.close()
 
-def augment_prompt_with_facts(prompt: str, all_facts_list: list, all_facts_emb: torch.Tensor, embedding_model, retrieve_k=5) -> str:
+def augment_prompt_with_rag(prompt: str, all_facts_list: list, all_facts_emb: torch.Tensor, embedding_model, retrieve_k=5) -> str:
     """
     Given a prompt, embed the prompt with embedding model, then find the indices of the top k most similar embeddings from all_facts_emb,
     use these indices to get the actual sentences from all_facts_list, then append these facts row by row to the prompt, resulting in the augmented
     prompt to return.
     """
     prompt_embedding = embedding_model.encode([prompt], convert_to_tensor=True).cpu()
-    similarity_scores = cosine_similarity(prompt_embedding, all_facts_emb)[0]
+    similarity_scores = cosine_similarity(prompt_embedding, all_facts_emb.cpu())[0]
 
     similarity_tuples = list(enumerate(similarity_scores)) # tuples of (fact_index, similarity_score)
     similarity_tuples.sort(key=lambda x: x[1], reverse=True) # sort by similarity score in descending order
 
-    top_k_indices = [index for index, _ in similarity_tuples[:retrieve_k]]
+    top_k_indices = [index for index, _ in similarity_tuples[:min(retrieve_k, len(similarity_tuples))]]
     top_k_facts = [all_facts_list[index] for index in top_k_indices]
 
-    augmented_prompt = f"{prompt}\n\nHere are some optional facts to consider, if they are helpful:\n"
+    augmented_prompt = f"{prompt}\n\nHere are some OPTIONAL facts to consider, if they are helpful:\n"
     for fact in top_k_facts:
         augmented_prompt += "- " + fact + "\n"
     return augmented_prompt
@@ -950,7 +950,6 @@ def extract_years(text): # takes a string and returns all the detected years. Ye
   years = [int(year) for year in years if int(year) < 2025] # remove non-year numbers and convert to int
   return  years
 
-
 def split_facts_by_time(facts_list, bin_years=10): # reads through fact_list and categorizes the facts by their time period, storing all in one json file
   min_year = 3000
   max_year = 0
@@ -978,7 +977,27 @@ def split_facts_by_time(facts_list, bin_years=10): # reads through fact_list and
 
   return time_periods 
 
-
+def get_relevant_facts(start_year, end_year, bin_period=10):
+  folder_path = f"/home/ubuntu/thesis/data/fact bank/by period/{bin_period}"
+  relevant_facts = []
+  for root, dirs, files in os.walk(folder_path):
+    for dir_name in dirs:
+      if end_year is not None:
+        if int(dir_name)+bin_period >= start_year and int(dir_name) <= end_year+bin_period:
+          subfolder_path = os.path.join(root, dir_name)
+          fact_list_path = os.path.join(subfolder_path, "facts_list.txt")
+          with open(fact_list_path, "r") as file:
+            facts = file.read().splitlines()
+            relevant_facts.extend(facts)
+      else: # end_year is None, i.e. unavailable
+        if int(dir_name)+bin_period >= start_year: # consider all facts from the start_year on
+          subfolder_path = os.path.join(root, dir_name)
+          fact_list_path = os.path.join(subfolder_path, "facts_list.txt")
+          with open(fact_list_path, "r") as file:
+            facts = file.read().splitlines()
+            relevant_facts.extend(facts)
+  return relevant_facts
+ 
 
 def main():
   prompt = "How was the relative Canadian dollar value compared to USD between 2005 and 2008?"
