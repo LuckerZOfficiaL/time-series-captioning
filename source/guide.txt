@@ -11,5 +11,4 @@ The scripts must be executed sequentially as follows:
  8. remove_common_sense.py: checks the fact bank and removes facts that are too obvious
  9. split_facts_by_period.py: goes through the remaining facts and categorizes them accoding to the time period. A fact might span multiple years, so it can end up in multiple periods.
  10. fact_bank_by_period: creates one fact bank per period. Inside ./by period/10, create one folder per period, each folder contans its list of facts and a tensor of their embeddings. Then, when using RAG in sample_generation.py, only retrieve from the facts in the relevant period.
-
- X. sample_generation.py: again if you want to apply RAG, because now the fact bank is ready.
+ 11. sample_generation.py: again if you want to apply RAG, because now the fact bank is ready.

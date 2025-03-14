@@ -12,7 +12,7 @@ from helpers import (
 )
 
 FACTS_PATH = "/home/ubuntu/thesis/data/samples/captions/filtered facts" # where to look at
-DATASET_NAMES = ["air quality", "border crossing", "crime", "demography", "heart rate"]   
+DATASET_NAMES = ["air quality", "border crossing", "crime", "demography"]#, "heart rate"]   
 SAVE_PATH = "/home/ubuntu/thesis/data/fact bank"
 EMBEDDING_MODEL = "all-MiniLM-L6-v2"
 SAVE_PCA = False

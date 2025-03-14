@@ -3,7 +3,7 @@ from helpers import (
     generate_line_plot
 )
 
-DATASET_NAMES = ["air quality", "border crossing", "crime", "demography", "heart rate"]   
+DATASET_NAMES = ["air quality", "border crossing", "crime", "demography"]#, "heart rate"]   
 TS_PATH = "/home/ubuntu/thesis/data/samples/time series"
 PLOT_HEIGHT = None
 PLOT_WIDTH = None

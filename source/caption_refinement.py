@@ -13,7 +13,7 @@ from helpers import (
 REFINEMENT_MODEL = "Google Gemini-2.0-Flash" #"OpenAI GPT-4o" #"Gemini-2.0-Flash"
 CHECKING_MODEL = "Google Gemini-2.0-Flash"
 CAPTIONS_PATH = "/home/ubuntu/thesis/data/samples/captions/raw"#/refined/add facts" # where to look for the captions to refine
-DATASET_NAMES = ["air quality", "border crossing", "crime", "demography", "heart rate"]   
+DATASET_NAMES = ["air quality", "border crossing", "crime", "demography"]#, "heart rate"]   
 ASK_URLS = False #whether to ask the refinement model to provide URL references, even if it's True, the refiner doesn't give the URLs :C
 REFINEMENT_TYPES = ["add facts", "change style", "enrich language", "factual checking"] # supported refinement types
 REFINEMENT_TYPE = "change style" # "add facts", "change style", "enrich language", "factual checking"
