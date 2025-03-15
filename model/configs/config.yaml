@@ -47,4 +47,6 @@ path: # paths that have "folder" in its name are folder paths, otherwise they ar
   all_facts_no_common_sense_path: /home/ubuntu/thesis/data/fact bank/all_facts_no_common_sense.txt
   all_facts_by_period_folder_path: /home/ubuntu/thesis/data/fact bank/by period #/{BIN_YEARS}/all_facts_by_{BIN_YEARS}years.json
 
+nlp:
+ synonym_similarity_thresh: 0.6
   

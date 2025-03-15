@@ -18,6 +18,9 @@ from sklearn.decomposition import PCA
 import re
 import yaml
 import os
+import spacy
+import nltk
+from nltk.corpus import wordnet
 
 
 def load_config(filepath="/home/ubuntu/thesis/model/configs/config.yaml"):
@@ -1028,14 +1031,140 @@ def delete_samples(root_path = "/home/ubuntu/thesis/data/samples"): #removes all
         file_path = os.path.join(root, file)
         os.remove(file_path)
   print("\nAll samples deleted. Bank files are preserved though.")
-  
+
+def get_most_general_adjective(adjectives):
+    """
+    Given a list of adjectives in English, returns the most general one based on the number of WordNet synsets.
+
+    Args:
+        adjectives (list of str): A list of adjectives.
+
+    Returns:
+        str or None: The most general adjective, or None if the list is empty or no suitable adjective is found.
+    """
+
+    if not adjectives:
+        return None
+    if type(adjectives) == str:
+      adjectives = [adjectives]
+    
+    best_word = ""
+    max_synset = 0
+    for adj in adjectives:
+      syns = wordnet.synsets(adj)
+      if len(syns) > max_synset:
+        max_synset = len(syns)
+        best_word = adj
+    return best_word
+    
+def mask_facts(facts, mask_token="___"):
+    """
+    Automatically identifies key factual elements in a sentence and replaces 
+    one with a masked token for verification.
+    
+    :param fact: The input factual statement.
+    :param mask_token: The placeholder for masked elements.
+    :return: The masked fact and masked words.
+    """
+    if type(facts) != list: # to make the input always a list
+      facts = [facts]
+
+    nlp = spacy.load("en_core_web_sm") # Load the English NLP model
+    masked_facts = []
+    masked_words = []
+
+    for fact in facts:
+      doc = nlp(fact)
+      candidates = []
+      for token in doc:
+          # Mask adjectives (like "high" or "low") that modify a noun
+          if token.pos_ in ["ADJ"] and token.dep_ in ["amod", "acomp"]:
+              candidates.append(token.text)
+
+          # Mask key verbs related to factual claims
+          #elif token.pos_ in ["VERB"] and token.dep_ in ["ROOT"]:
+          #    candidates.append(token.text)
+
+          #if token.ent_type_ in ["GPE", "DATE", "MONEY", "PERCENT", "QUANTITY", "ORDINAL", "CARDINAL"]:
+          #    candidates.append(token.text)
+
+      # Randomly choose one element to mask (ensures variety in checks)
+      if candidates:
+          #print("Candidates:", candidates)
+          word_to_mask = get_most_general_adjective(candidates)
+          masked_words.append(word_to_mask)
+          masked_fact = fact.replace(word_to_mask, mask_token, 1)  # Replace only the first occurrence
+          masked_facts.append(masked_fact)
+      else:
+          pass  # If no candidates found, do nothing
+
+    return masked_facts, masked_words 
+
+def are_synonyms(word1, word2, threshold=0.6):
+    """
+    Checks if two words are synonyms based on their semantic similarity.
+
+    Args:
+        word1 (str or list of str): The first word or list of words.
+        word2 (str or list of str): The second word or list of words.
+        threshold (float): The similarity threshold for considering two words synonyms.
+
+    Returns:
+        bool or list of bool: True if the words are synonyms, False otherwise. If lists are provided, returns a list of booleans.
+    """
+    try:
+        nlp = spacy.load("en_core_web_md")
+    except OSError:
+        print("spaCy model not found. Downloading...")
+        import subprocess
+        subprocess.run(["python", "-m", "spacy", "download", "en_core_web_md"])
+        nlp = spacy.load("en_core_web_md")
+
+    if isinstance(word1, list) and isinstance(word2, list):
+        if len(word1) != len(word2):
+            raise ValueError("Lists word1 and word2 must have the same length.")
+
+        results = []
+        similarities = []
+        for w1, w2 in zip(word1, word2):
+            token1 = nlp(w1)
+            token2 = nlp(w2)
+
+            if token1.has_vector and token2.has_vector:
+                similarity = token1.similarity(token2)
+                results.append(similarity >= threshold)
+                similarities.append(similarity)
+            else:
+                results.append(False)
+        return results, similarities
+
+    else: # we just have 2 words to compare
+        token1 = nlp(word1)
+        token2 = nlp(word2)
+
+        if token1.has_vector and token2.has_vector:
+            similarity = token1.similarity(token2)
+            return similarity >= threshold, similarity
+        else:
+            return False
+
 
 def main():
   config = load_config()
 
   random.seed(config['general']['random_seed'])
 
+  
+  """facts = ["The Canadian dollar had a relatively low exchange rate against USD in 2007.",
+          "The exchange rate of Canadian dollar against USD was high in 2007."]
+  masked_facts, masked_words = mask_facts(facts)
+  print(masked_facts)"""
+
   #delete_samples()
+
+"""  l1 = ["High", "good", "acceptable", "italian", "spanish"]
+  l2 = ["Happy", "amazing", "bad", "european", "russian"]
+  print(are_synonyms(l1, l2, threshold=0.6))"""
 
 
   """prompt = "How was the relative Canadian dollar value compared to USD between 2005 and 2008?"
