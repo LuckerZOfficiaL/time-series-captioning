@@ -163,7 +163,6 @@ def get_response(prompt,
     # Return a single response if the input was a single string, otherwise return a list
     return responses if is_list else responses[0]
 
-
 # This is the old code that feeds prompts one by one. Deprecated!
 def get_response_iterative(prompt, 
                  system_prompt="You are a helpful assistant and you have to generate text on my request.",
@@ -273,7 +272,6 @@ def get_response_iterative(prompt,
 
     # Return a single response if the input was a single string, otherwise return a list
     return responses if is_list else responses[0]
-
 
 def rank_responses(responses_list: list, model="GPT-4o") -> list: # takes a list of texts, returns a ranking of the indices
   unified_responses = ""
@@ -792,7 +790,7 @@ def generate_line_plot(ts, xlabel, ylabel, title, savepath, height=None, width=N
   plt.savefig(savepath, bbox_inches='tight')  # Save the plot
   plt.close()
   
-def extract_facts(caption, model="Google Gemini-2.0-Flash"):
+def extract_facts(caption, model="Google Gemini-2.0-Flash", return_list=False):
     prompt = f"""
     Here is a time series description containing **historical events, scientific facts, or geopolitical trends**:  
     \n
@@ -815,6 +813,10 @@ def extract_facts(caption, model="Google Gemini-2.0-Flash"):
     response = get_response(prompt=prompt, model=model,
                             temperature=0.15,
                             top_p=0.85)  
+
+    if return_list:
+      return response.split('\n')
+
     return response
 
 def filter_facts(caption, model="Google Gemini-2.0-Flash"):
@@ -1073,6 +1075,8 @@ def mask_facts(facts, mask_token="___"):
     masked_facts = []
     masked_words = []
 
+    are_masked = [] # a list of bools indicating whether the i-th fact has been masked or not
+
     for fact in facts:
       doc = nlp(fact)
       candidates = []
@@ -1095,14 +1099,15 @@ def mask_facts(facts, mask_token="___"):
           masked_words.append(word_to_mask)
           masked_fact = fact.replace(word_to_mask, mask_token, 1)  # Replace only the first occurrence
           masked_facts.append(masked_fact)
+          are_masked.append(True)
       else:
-          pass  # If no candidates found, do nothing
+          are_masked.append(False)
 
-    return masked_facts, masked_words 
+    return masked_facts, masked_words, are_masked 
 
 def are_synonyms(word1, word2, threshold=0.6):
     """
-    Checks if two words are synonyms based on their semantic similarity.
+    Checks if two words are synonyms based on their semantic similarity. Lists of words are supported too.
 
     Args:
         word1 (str or list of str): The first word or list of words.
@@ -1148,6 +1153,93 @@ def are_synonyms(word1, word2, threshold=0.6):
         else:
             return False
 
+def fill_gap(masked_sentence, model="Google Gemini-2.0-Flash"):
+  prompt = f"""Here's a sentence with a masked part. Answer with the word that fills is based on your knowledge.
+  \n\n
+  {masked_sentence}
+  \n\n
+  Answer just with a single word, without any explanation or additional text.
+  """
+  response = get_response(prompt=prompt, model=model,
+                            temperature=0.15,
+                            top_p=0.85)  
+
+  response = response.split()[-1] # pick the last word if there are many
+  #response = response[:-1] # to remove \n from the answer
+  return response
+                      
+def extract_and_correct_facts(caption, 
+                              model="Google Gemini-2.0-Flash",
+                              synonym_thresh=0.7):
+  facts_list = extract_facts(caption, model=model, return_list=True)
+  """ print("\nFacts:")
+  for fact in facts_list:
+    print(fact)"""
+
+  masked_facts, masked_words, are_masked =  mask_facts(facts_list)
+  #print("\nMasked facts: ", masked_facts)
+  #print("\nMasked words: ", masked_words)
+  filled_words = []
+  for masked_fact in masked_facts:
+    filled_words.append(fill_gap(masked_fact))
+
+  #print("\nFilled words: ", filled_words)
+  are_synonyms_list, similarities = are_synonyms(filled_words, masked_words, synonym_thresh) 
+  #print("\nAre synonyms: ", are_synonyms_list)
+
+
+  for i in range(len(masked_facts)):
+    if not are_synonyms_list[i]: # the i-th filled word is not a synonym of the original word, i.e. the original fact was false, replace the original word with the new real word
+      masked_facts[i] = masked_facts[i].replace("___", filled_words[i])
+    else:
+      masked_facts[i] = masked_facts[i].replace("___", masked_words[i]) # the i-th filled word is a synonym of the original word, fill with the original masked word
+
+  for i in range(len(facts_list)): #replace the filled masked facts back to the list of all facts
+    if are_masked[i]: # if the i-th fact was masked, replace it with the filled one
+      facts_list[i] = masked_facts.pop(0)
+
+  
+  """print("\nCorrected Facts:")
+  for fact in facts_list:
+    print(fact)"""
+
+  facts_list = [fact for fact in facts_list if fact != ""]
+  return facts_list
+
+def refine_caption_with_corrected_facts(caption, 
+                                        model="Google Gemini-2.0-Flash",
+                                        synonym_thresh=0.7,
+                                        return_corrected_facts=False):
+    facts_list = extract_and_correct_facts(caption, model=model, synonym_thresh=synonym_thresh)
+    facts_str = "\n".join(facts_list)
+    prompt = f"""
+    You are an expert editor specializing in fact-checking time series descriptions.
+
+    Here is a time series description:
+    \n\n
+    {caption}
+    \n\n
+    This description may contain inaccurate or unsubstantiated claims related to geopolitics, history, or society.
+
+    Your task:
+    1. Identify any factual errors in the description.
+    2. Correct or remove the errors, using the following information if helpful:
+    \n
+    {facts_str}
+    \n
+    3. Ensure the refined description is accurate and coherent.
+    4. Maintain the original style and tone of the description.
+
+    Provide the refined time series description only, without any additional explanations.
+    """
+    if return_corrected_facts:
+      return get_response(prompt=prompt, model=model,
+                      temperature=0.3,
+                      top_p=0.85), facts_list
+    return get_response(prompt=prompt, model=model,
+                      temperature=0.3,
+                      top_p=0.85)
+
 
 def main():
   config = load_config()
@@ -1162,22 +1254,19 @@ def main():
 
   #delete_samples()
 
-"""  l1 = ["High", "good", "acceptable", "italian", "spanish"]
-  l2 = ["Happy", "amazing", "bad", "european", "russian"]
-  print(are_synonyms(l1, l2, threshold=0.6))"""
+  caption = "From 2002 to 2018, Spain's birth rate per 1,000 people displayed a noticeable decline, starting at 10.1 in 2002 and dropping to 7.9 by 2018. This trend contrasts sharply with the global average, which was 19.6 per 1,000 people in 2002 and decreased to 18.5 by 2018 (World Bank Data). The most pronounced decline in Spain occurred after 2008, coinciding with the global financial crisis triggered by the collapse of Lehman Brothers in September 2008 (Lehman Brothers Bankruptcy Filing, September 2008), which led to a severe recession in Spain, characterized by high unemployment rates, particularly among young adults (Instituto Nacional de Estadística, Spain). Despite Spain's status as a high-income country, with a GNI per capita of $25,830 in 2018 (World Bank Data), its birth rate consistently fell below the global average, reflecting broader European trends of aging populations and lower fertility rates, such as Italy's rate of 7.3 per 1,000 in 2018 (Eurostat)."
 
+  refined_caption, corrected_facts = refine_caption_with_corrected_facts(caption, 
+                            model=config['model']['refinement_model'],
+                            synonym_thresh=config['nlp']['synonym_similarity_thresh'],
+                            return_corrected_facts=True)
 
-  """prompt = "How was the relative Canadian dollar value compared to USD between 2005 and 2008?"
+  print("\nOriginal caption: ", caption)
+  print("\nRefined caption: ", refined_caption)
 
-  embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
-
-  with open("/home/ubuntu/thesis/data/fact bank/all_facts.txt", "r") as file:
-    all_facts_list = file.read().splitlines()
-
-  all_facts_emb = torch.load("/home/ubuntu/thesis/data/fact bank/all_facts_emb.pth").cpu()
-
-  augmented_prompt = augment_prompt_with_facts(prompt, all_facts_list, all_facts_emb, embedding_model)
-  print(augmented_prompt)"""
+  print("\nCorrected facts: ")
+  for fact in corrected_facts:
+    print(fact)
 
 
 if __name__ == "__main__":
