@@ -20,10 +20,10 @@ from helpers import (
     embed_sentences,
     augment_prompt_with_rag,
     extract_years,
-    get_relevant_facts
+    get_relevant_facts,
+    load_config
 )
 
-random.seed(42)
 
 FILE_MAPPING = {
         "air quality": "aq.json",
@@ -33,43 +33,59 @@ FILE_MAPPING = {
         #"heart rate": "hr_data.json"
     }
 
-REQUEST_AUGMENTATIONS = 0 # how many times to rephrase the original prompt request?
+"""REQUEST_AUGMENTATIONS = 0 # how many times to rephrase the original prompt request?
 N_SAMPLES = 3 # how many window samples to extract per dataset? i.e. how many time series to sample?
 ALL_MODELS = ["Google Gemini-2.0-Flash", "OpenAI GPT-4o", "Anthropic Claude-3.5", "GPT-4o", "Claude-3.5-Haiku", "Gemini-1.5-Flash", "Gemini-1.5-Pro", "DeepSeek-R1-FW"] # available model choices, the first two are from official APIs
 MODELS = ["OpenAI GPT-4o", "Anthropic Claude-3.5", "Google Gemini-2.0-Flash"] # models to use for generating captions
-JUDGE_MODEL = "OpenAI GPT-4o" # the model used to rank the captions
+RANKING_MODEL = "OpenAI GPT-4o" # the model used to rank the captions
 SAVE_TOP_K = 0 # save the top k best captions based on the ranking, if it's 0 or negative, don't do top-k. If top-k is on, caption ranking is invoked
 EMBEDDING_MODEL = "all-MiniLM-L6-v2" # the embedding model used for RAG
 RAG_TOP_K = 5 # how many top-relevant facts to retrieve from the bank
 RAG = True # whether to apply RAG on caption generation, it will only retrieve the facts that are temporally relevant to the prompt request.
-BIN_PERIOD = 10 # the size of the bins. Each bin represents one period of time
+BIN_PERIOD = 10 # the size of the bins. Each bin represents one period of time"""
 
 
 
 def main(dataset_names):
-    if RAG: embedding_model = SentenceTransformer(EMBEDDING_MODEL)
+    config = load_config()
+    random.seed(config['general']['random_seed'])
+
+    request_augmentations = config['data']['request_augmentations']
+    n_samples = config['data']['n_samples']
+    all_models = config['model']['all_models']
+    used_models = config['model']['used_models']
+    ranking_model = config['model']['ranking_model']
+    save_top_k = config['data']['save_top_k']
+    embedding_model = config['model']['embedding_model']
+    use_rag = config['rag']['use_rag']
+    rag_top_k = config['rag']['rag_top_k']
+    bin_years = config['bank']['bin_years']
+
+
+
+    if use_rag: embedding_model = SentenceTransformer(embedding_model)
 
     for dataset_name in dataset_names:
-        print(f"\nGenerating{" RAG " if RAG else " "}samples for", dataset_name)
+        print(f"\nGenerating{" RAG " if use_rag else " "}samples for", dataset_name)
         filepath = f"/home/ubuntu/thesis/data/processed/{FILE_MAPPING[dataset_name]}"
         with open(filepath) as f:
             json_data = json.load(f)
         
         idx = 0
 
-        samples = get_samples(dataset_name, json_data=json_data, n=N_SAMPLES)
+        samples = get_samples(dataset_name, json_data=json_data, n=n_samples)
 
         print(f"\n{dataset_name} has {len(samples)} samples.")
         requests = []
         for i in range(len(samples)): 
             metadata, ts = samples[i]
-            print(f"Generated {"RAG" if RAG else ""} prompt request for {i+1}/{len(samples)}")
+            print(f"Generated {"RAG" if use_rag else ""} prompt request for {i+1}/{len(samples)}")
             #print("\nMetadata: ", metadata)
             #print("\nSeries: ", ts)
             #print(metadata, ts)
             this_sample_request = get_request(dataset_name, metadata, ts)
             
-            if RAG:
+            if use_rag:
                 start_keys = [key for key in metadata if "start" in key] # this is because different datasets have different keys that denominate the start time entry
                 end_keys = [key for key in metadata if "end" in key] # same for end time
 
@@ -101,19 +117,19 @@ def main(dataset_names):
                 #print("Start year",start_year)
                 #print("End year", end_year)
 
-                relevant_facts_list = get_relevant_facts(start_year, end_year, BIN_PERIOD)
-                relevant_facts_list.extend(get_relevant_facts(0, 0, BIN_PERIOD)) # beyond the time-relevant facts, also add the general facts that ain't associated with a year. Recall that 0 is the key of general facts.
+                relevant_facts_list = get_relevant_facts(start_year, end_year, bin_years)
+                relevant_facts_list.extend(get_relevant_facts(0, 0, bin_years)) # beyond the time-relevant facts, also add the general facts that ain't associated with a year. Recall that 0 is the key of general facts.
                 relevant_facts_list = list(set(relevant_facts_list)) # remove duplicates if there are any
                 relevant_facts_emb = embed_sentences(relevant_facts_list, model=embedding_model)
                 this_sample_request = augment_prompt_with_rag(this_sample_request,
                                                                 relevant_facts_list,
                                                                 relevant_facts_emb,
                                                                 embedding_model=embedding_model,
-                                                                retrieve_k=RAG_TOP_K)           
+                                                                retrieve_k=rag_top_k)           
             requests.append(this_sample_request)
 
-            if REQUEST_AUGMENTATIONS > 0:
-                this_sample_requests = augment_request(this_sample_request, n=REQUEST_AUGMENTATIONS)
+            if request_augmentations > 0:
+                this_sample_requests = augment_request(this_sample_request, n=request_augmentations)
                 requests.extend(this_sample_requests)
 
         """if RAG: # augment the requests with some K retrieved facts
@@ -133,7 +149,7 @@ def main(dataset_names):
             
 
         responses = [] 
-        for model in MODELS: # for each model, all requests are asked and the responses are collected
+        for model in used_models: # for each model, all requests are asked and the responses are collected
             model_responses = get_response(requests, model=model,
                                     temperature = 0.75,
                                     top_p = 0.85)
@@ -141,11 +157,11 @@ def main(dataset_names):
         #print("\n\Responses: ", responses)
         
 
-        if SAVE_TOP_K > 0:
-            ranks = rank_responses(responses, model=JUDGE_MODEL)
+        if save_top_k > 0:
+            ranks = rank_responses(responses, model=ranking_model)
             ranks = [x-1 for x in ranks] #to make the rank start from index 0 instead of 1
 
-            for k in range(SAVE_TOP_K):
+            for k in range(save_top_k):
                 caption_filepath = f"/home/ubuntu/thesis/data/samples/captions/{"rag" if RAG else "raw"}/{dataset_name}_{idx}{"_rag" if RAG else ""}.txt" 
                 save_file(responses[rank[k]], caption_filepath)
 
@@ -158,7 +174,7 @@ def main(dataset_names):
                 idx += 1
         else: # just save all responses without ranking and without selecting top-k
             for i in range(len(responses)):
-                caption_filepath = f"/home/ubuntu/thesis/data/samples/captions/{"rag" if RAG else "raw"}/{dataset_name}_{idx}.txt" 
+                caption_filepath = f"/home/ubuntu/thesis/data/samples/captions/{"rag" if use_rag else "raw"}/{dataset_name}_{idx}.txt" 
                 save_file(responses[i], caption_filepath)
 
                 metadata_filepath = f"/home/ubuntu/thesis/data/samples/metadata/{dataset_name}_{idx}.json" 

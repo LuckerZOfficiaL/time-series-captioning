@@ -16,8 +16,14 @@ from sklearn.metrics.pairwise import cosine_similarity
 from sentence_transformers import SentenceTransformer
 from sklearn.decomposition import PCA
 import re
+import yaml
+import os
 
-random.seed(42)
+
+def load_config(filepath="/home/ubuntu/thesis/model/configs/config.yaml"):
+    with open(filepath, "r") as file:
+        config = yaml.safe_load(file)
+    return config
 
 
 def get_response(prompt,
@@ -1015,9 +1021,24 @@ def get_relevant_facts(start_year, end_year, bin_period=10): # only get facts th
       # else: no need to specify else because relevant_facts = [] and that is returned by the function
   return relevant_facts
  
+def delete_samples(root_path = "/home/ubuntu/thesis/data/samples"): #removes all files related to created samples so that a brand new experiment can start
+  for root, dirs, files in os.walk(root_path):
+    for file in files:
+      if file.endswith(".txt") or file.endswith(".json") or file.endswith(".jpeg"):
+        file_path = os.path.join(root, file)
+        os.remove(file_path)
+  print("\nAll samples deleted. Bank files are preserved though.")
+  
 
 def main():
-  prompt = "How was the relative Canadian dollar value compared to USD between 2005 and 2008?"
+  config = load_config()
+
+  random.seed(config['general']['random_seed'])
+
+  #delete_samples()
+
+
+  """prompt = "How was the relative Canadian dollar value compared to USD between 2005 and 2008?"
 
   embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
 
@@ -1027,7 +1048,7 @@ def main():
   all_facts_emb = torch.load("/home/ubuntu/thesis/data/fact bank/all_facts_emb.pth").cpu()
 
   augmented_prompt = augment_prompt_with_facts(prompt, all_facts_list, all_facts_emb, embedding_model)
-  print(augmented_prompt)
+  print(augmented_prompt)"""
 
 
 if __name__ == "__main__":

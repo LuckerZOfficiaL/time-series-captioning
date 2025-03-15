@@ -1,0 +1,50 @@
+general:
+  random_seed: 42
+
+data:
+  dataset_names: [air quality, border crossing, crime, demography]
+  request_augmentations: 0 # how many times to rephrase the original prompt request?
+  n_samples: 3 # how many window samples to extract per dataset? i.e. how many time series to sample?
+  save_top_k: 0 # save the top k best captions based on the ranking, if it's 0 or negative, don't do top-k. If top-k is on, caption ranking is invoked
+
+
+model:
+  all_models: [Google Gemini-2.0-Flash, OpenAI GPT-4o, Anthropic Claude-3.5, GPT-4o, Claude-3.5-Haiku, Gemini-1.5-Flash, Gemini-1.5-Pro, DeepSeek-R1-FW] # available model choices, the first two are from official APIs
+  used_models: [OpenAI GPT-4o, Anthropic Claude-3.5, Google Gemini-2.0-Flash] # models to use for generating captions
+  refinement_model: Google Gemini-2.0-Flash
+  checking_model: Google Gemini-2.0-Flash
+  ranking_model: OpenAI GPT-4o # the model used to rank the captions
+  extraction_model: Google Gemini-2.0-Flash
+  filter_model: Google Gemini-2.0-Flash #"OpenAI GPT-4o" #"Gemini-2.0-Flash"
+  embedding_model: all-MiniLM-L6-v2 # the sentence transformer model used for embeddings in RAG
+  remove_common_sense_model: Google Gemini-2.0-Flash #"OpenAI GPT-4o" #"Gemini-2.0-Flash"
+
+rag:
+  use_rag: False # whether to apply RAG on caption generation, it will only retrieve the facts that are temporally relevant to the prompt request.
+  rag_top_k: 5 # how many top-relevant facts to retrieve from the bank
+
+
+bank:
+  save_pca: True # whether to save the 2D PCA of fact embeddings as a jpeg file
+  bin_years: 10 # how long is a single period in years?
+
+
+refinement:
+  refinement_types: [add facts, change style, enrich language, factual checking]
+  refinement_target: raw #rag, refined/add facts ----- What captions to refine?
+  refinement_type: add facts
+  desired_style: casual
+  batch_size: 8 # how many facts to present to the LLM in each prompt for removing common sense?
+
+
+path: # paths that have "folder" in its name are folder paths, otherwise they are file paths
+  captions_folder_path: /home/ubuntu/thesis/data/samples/captions
+  refined_captions_folder_path: /home/ubuntu/thesis/data/samples/captions/refined
+  extracted_facts_folder_path: /home/ubuntu/thesis/data/samples/captions/extracted facts
+  filtered_facts_folder_path: /home/ubuntu/thesis/data/samples/captions/filtered facts
+  fact_bank_folder_path: /home/ubuntu/thesis/data/fact bank
+  all_facts_path: /home/ubuntu/thesis/data/fact bank/all_facts.txt
+  all_facts_no_common_sense_path: /home/ubuntu/thesis/data/fact bank/all_facts_no_common_sense.txt
+  all_facts_by_period_folder_path: /home/ubuntu/thesis/data/fact bank/by period #/{BIN_YEARS}/all_facts_by_{BIN_YEARS}years.json
+
+  
