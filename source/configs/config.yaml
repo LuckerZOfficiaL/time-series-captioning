@@ -31,10 +31,11 @@ bank:
 
 refinement:
   refinement_types: [add facts, change style, enrich language, factual checking]
-  refinement_target: raw #rag, refined/add facts ----- What captions to refine?
-  refinement_type: add facts
-  desired_style: casual
-  batch_size: 8 # how many facts to present to the LLM in each prompt for removing common sense?
+  refinement_type: factual checking
+  desired_style: casual # matters only if refinement_type == change style
+  refinement_target: refined/add facts #raw, rag, refined/add facts ----- What captions to refine?
+  batch_size: 5 # how many facts to present to the LLM in each prompt for removing common sense and checking facts?
+  factual_correction_method: llm # fill in the gap
 
 
 path: # paths that have "folder" in its name are folder paths, otherwise they are file paths

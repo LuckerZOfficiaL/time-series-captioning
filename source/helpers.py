@@ -23,11 +23,10 @@ import nltk
 from nltk.corpus import wordnet
 
 
-def load_config(filepath="/home/ubuntu/thesis/model/configs/config.yaml"):
+def load_config(filepath="/home/ubuntu/thesis/source/configs/config.yaml"):
     with open(filepath, "r") as file:
         config = yaml.safe_load(file)
     return config
-
 
 def get_response(prompt,
                  system_prompt="You are a helpful assistant and you have to generate text on my request.",
@@ -815,7 +814,9 @@ def extract_facts(caption, model="Google Gemini-2.0-Flash", return_list=False):
                             top_p=0.85)  
 
     if return_list:
-      return response.split('\n')
+      extracted_facts = response.split('\n')
+      extracted_facts = [fact for fact in extracted_facts if fact != ""]
+      return extracted_facts
 
     return response
 
@@ -837,7 +838,7 @@ def filter_facts(caption, model="Google Gemini-2.0-Flash"):
     - List each **remaining fact on a new line**, separated by an empty line.  
     - Do **not** include explanations, labels, or extra text.  
       
-    **Return only the filtered facts without additional output.**  
+    **Return only the filtered facts without additional text or explanation.**  
     """
     
     response = get_response(prompt=prompt, model=model,
@@ -1105,7 +1106,7 @@ def mask_facts(facts, mask_token="___"):
 
     return masked_facts, masked_words, are_masked 
 
-def are_synonyms(word1, word2, threshold=0.6):
+def are_synonyms(word1, word2, threshold=0.7):
     """
     Checks if two words are synonyms based on their semantic similarity. Lists of words are supported too.
 
@@ -1166,51 +1167,101 @@ def fill_gap(masked_sentence, model="Google Gemini-2.0-Flash"):
 
   response = response.split()[-1] # pick the last word if there are many
   #response = response[:-1] # to remove \n from the answer
-  return response
-                      
-def extract_and_correct_facts(caption, 
+  return '\n'.join(facts_list)
+
+def correct_facts_llm(facts_list: list[str], model="Google Gemini-2.0-Flash", batch_size=5):
+    """
+    Checks and corrects factual inaccuracies in a list of statements using an LLM.
+
+    Args:
+        facts_list (list[str]): A list of statements to check and correct.
+        model (str): The name of the LLM to use.
+        batch_size (int): The number of statements to process in each batch.
+
+    Returns:
+        list[str]: A list of corrected statements.
+    """
+
+    if not facts_list:
+        return []  # Return an empty list if input is empty
+
+    batched_facts = [facts_list[i:i + batch_size] for i in range(0, len(facts_list), batch_size)]
+    all_corrected_facts = []
+
+    for batch in batched_facts:
+        fact_str = '\n'.join(batch)
+        prompt = f"""
+        You are an expert fact-checker specializing in geopolitics, society, and history.
+
+        Here are some statements, some of which may be inaccurate or unverifiable. 
+        Statements containing numbers must be preserved because they are accurate for sure. 
+        Identify the inaccurate statements and correct them with accurate information from your knowledge. Facts that are already true must be left untouched.
+
+        Output the true and corrected statements exactly as they should appear, each on a new line, with no additional explanations. 
+
+        Statements:
+        {fact_str}
+        """
+        try:
+            response = get_response(prompt=prompt, model=model, temperature=0.2, top_p=0.85)
+            corrected_facts_list = [fact.strip() for fact in response.split("\n") if fact.strip()]
+            all_corrected_facts.extend(corrected_facts_list)
+        except Exception as e:
+            print(f"Error processing batch: {e}")
+            all_corrected_facts.extend(batch)  # Keep the original facts if there's an error
+
+    return all_corrected_facts
+
+def extract_and_correct_facts(caption: str, method="llm", 
                               model="Google Gemini-2.0-Flash",
-                              synonym_thresh=0.7):
+                              synonym_thresh = 0.7):
   facts_list = extract_facts(caption, model=model, return_list=True)
-  """ print("\nFacts:")
+
+  """print("\nOriginal Facts:")
   for fact in facts_list:
     print(fact)"""
 
-  masked_facts, masked_words, are_masked =  mask_facts(facts_list)
-  #print("\nMasked facts: ", masked_facts)
-  #print("\nMasked words: ", masked_words)
-  filled_words = []
-  for masked_fact in masked_facts:
-    filled_words.append(fill_gap(masked_fact))
+  if method == "fill in the gap":
+    masked_facts, masked_words, are_masked =  mask_facts(facts_list)
+    #print("\nMasked facts: ", masked_facts)
+    #print("\nMasked words: ", masked_words)
+    filled_words = []
+    for masked_fact in masked_facts:
+      filled_words.append(fill_gap(masked_fact))
 
-  #print("\nFilled words: ", filled_words)
-  are_synonyms_list, similarities = are_synonyms(filled_words, masked_words, synonym_thresh) 
-  #print("\nAre synonyms: ", are_synonyms_list)
+    #print("\nFilled words: ", filled_words)
+    are_synonyms_list, similarities = are_synonyms(filled_words, masked_words, synonym_thresh) 
+    #print("\nAre synonyms: ", are_synonyms_list)
 
+    for i in range(len(masked_facts)):
+      if not are_synonyms_list[i]: # the i-th filled word is not a synonym of the original word, i.e. the original fact was false, replace the original word with the new real word
+        masked_facts[i] = masked_facts[i].replace("___", filled_words[i])
+      else:
+        masked_facts[i] = masked_facts[i].replace("___", masked_words[i]) # the i-th filled word is a synonym of the original word, fill with the original masked word
 
-  for i in range(len(masked_facts)):
-    if not are_synonyms_list[i]: # the i-th filled word is not a synonym of the original word, i.e. the original fact was false, replace the original word with the new real word
-      masked_facts[i] = masked_facts[i].replace("___", filled_words[i])
-    else:
-      masked_facts[i] = masked_facts[i].replace("___", masked_words[i]) # the i-th filled word is a synonym of the original word, fill with the original masked word
+    for i in range(len(facts_list)): #replace the filled masked facts back to the list of all facts
+      if are_masked[i]: # if the i-th fact was masked, replace it with the filled one
+        facts_list[i] = masked_facts.pop(0)
+      
+    facts_list = [fact for fact in facts_list if fact != ""]
+    return facts_list
 
-  for i in range(len(facts_list)): #replace the filled masked facts back to the list of all facts
-    if are_masked[i]: # if the i-th fact was masked, replace it with the filled one
-      facts_list[i] = masked_facts.pop(0)
-
-  
-  """print("\nCorrected Facts:")
-  for fact in facts_list:
-    print(fact)"""
-
-  facts_list = [fact for fact in facts_list if fact != ""]
-  return facts_list
-
+  elif method == "llm":
+    corrected_facts = correct_facts_llm(facts_list, model=model)
+    """print("\nCorrected Facts:")
+    for fact in corrected_facts:
+      print(fact)"""
+    return corrected_facts
+ 
 def refine_caption_with_corrected_facts(caption, 
                                         model="Google Gemini-2.0-Flash",
+                                        correction_method="llm",
                                         synonym_thresh=0.7,
                                         return_corrected_facts=False):
-    facts_list = extract_and_correct_facts(caption, model=model, synonym_thresh=synonym_thresh)
+    facts_list = extract_and_correct_facts(caption, 
+                                          method=correction_method, 
+                                          model=model, 
+                                          synonym_thresh=synonym_thresh)
     facts_str = "\n".join(facts_list)
     prompt = f"""
     You are an expert editor specializing in fact-checking time series descriptions.
@@ -1254,9 +1305,13 @@ def main():
 
   #delete_samples()
 
-  caption = "From 2002 to 2018, Spain's birth rate per 1,000 people displayed a noticeable decline, starting at 10.1 in 2002 and dropping to 7.9 by 2018. This trend contrasts sharply with the global average, which was 19.6 per 1,000 people in 2002 and decreased to 18.5 by 2018 (World Bank Data). The most pronounced decline in Spain occurred after 2008, coinciding with the global financial crisis triggered by the collapse of Lehman Brothers in September 2008 (Lehman Brothers Bankruptcy Filing, September 2008), which led to a severe recession in Spain, characterized by high unemployment rates, particularly among young adults (Instituto Nacional de Estadística, Spain). Despite Spain's status as a high-income country, with a GNI per capita of $25,830 in 2018 (World Bank Data), its birth rate consistently fell below the global average, reflecting broader European trends of aging populations and lower fertility rates, such as Italy's rate of 7.3 per 1,000 in 2018 (Eurostat)."
+  caption = "From 2002 to 2018, Spain's birth rate per 1,000 people displayed a noticeable decline, starting at 10.1 in 2002 and dropping to 7.9 by 2018. This trend contrasts sharply with the global average, which was 19.6 per 1,000 people in 2002 and decreased to 18.5 by 2018 (World Bank Data). The most pronounced decline in Spain occurred after 2008, coinciding with the global financial crisis triggered by the collapse of Lehman Brothers in September 2008 (Lehman Brothers Bankruptcy Filing, September 2008), which led to a severe recession in Spain, characterized by high unemployment rates, particularly among young adults (Instituto Nacional de Estadística, Spain). Despite Spain's status as a high-income country, with a GNI per capita of $25,830 in 2018 (World Bank Data), its birth rate consistently fell below the global average, reflecting broader European trends of aging populations and lower fertility rates, such as Italy's rate of 7.3 per 1,000 in 2018 (Eurostat). Italy is a low income country."
 
-  refined_caption, corrected_facts = refine_caption_with_corrected_facts(caption, 
+  corrected_facts = extract_and_correct_facts(caption, method="llm")
+  for fact in corrected_facts:
+    print(fact)
+
+  """refined_caption, corrected_facts = refine_caption_with_corrected_facts(caption, 
                             model=config['model']['refinement_model'],
                             synonym_thresh=config['nlp']['synonym_similarity_thresh'],
                             return_corrected_facts=True)
@@ -1266,7 +1321,7 @@ def main():
 
   print("\nCorrected facts: ")
   for fact in corrected_facts:
-    print(fact)
+    print(fact)"""
 
 
 if __name__ == "__main__":

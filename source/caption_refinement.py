@@ -8,7 +8,8 @@ from helpers import (
     add_facts_to_caption,
     change_linguistic_style,
     enrich_language,
-    factual_checking,
+    #factual_checking,
+    refine_caption_with_corrected_facts,
     load_config
 )
 
@@ -60,7 +61,10 @@ def main():
                 elif refinement_type == "enrich language":
                     refined_caption = enrich_language(caption, model=refinement_model)
                 elif refinement_type == "factual checking":
-                    refined_caption = factual_checking(caption, model=checking_model)
+                    #refined_caption = factual_checking(caption, model=checking_model)
+                    refined_caption = refine_caption_with_corrected_facts(caption, 
+                                        model=refinement_model,
+                                        correction_method=config["refinement"]['factual_correction_method'])
 
                 save_folder = config['path']['refined_captions_folder_path'] #"/home/ubuntu/thesis/data/samples/captions/refined"
                 if len(refined_caption) > int(0.7 * len(caption)) and caption not in refined_caption: # if the answer is much shorter than the original caption, assume the model has refused to refine the caption, so save only if that doesn't happen
