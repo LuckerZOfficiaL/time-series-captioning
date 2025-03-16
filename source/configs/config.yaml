@@ -40,6 +40,7 @@ refinement:
 
 path: # paths that have "folder" in its name are folder paths, otherwise they are file paths
   captions_folder_path: /home/ubuntu/thesis/data/samples/captions
+  ts_folder_path: /home/ubuntu/thesis/data/samples/time series
   refined_captions_folder_path: /home/ubuntu/thesis/data/samples/captions/refined
   extracted_facts_folder_path: /home/ubuntu/thesis/data/samples/captions/extracted facts
   filtered_facts_folder_path: /home/ubuntu/thesis/data/samples/captions/filtered facts
@@ -50,4 +51,9 @@ path: # paths that have "folder" in its name are folder paths, otherwise they ar
 
 nlp:
  synonym_similarity_thresh: 0.7
+
+plot:
+  height: null
+  width: null
+
   

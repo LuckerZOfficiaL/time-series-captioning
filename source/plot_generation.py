@@ -1,12 +1,14 @@
 import os
 from helpers import (
-    generate_line_plot
+    generate_line_plot,
+    load_config
 )
 
-DATASET_NAMES = ["air quality", "border crossing", "crime", "demography"]#, "heart rate"]   
+"""DATASET_NAMES = ["air quality", "border crossing", "crime", "demography"]#, "heart rate"]   
 TS_PATH = "/home/ubuntu/thesis/data/samples/time series"
 PLOT_HEIGHT = None
-PLOT_WIDTH = None
+PLOT_WIDTH = None"""
+
 
 TITLE_MAP = {
         "air quality": "value across time",
@@ -31,12 +33,18 @@ Y_LABEL_MAP = {
     }
 
 
-def main(dataset_names):
+def main():
+    config = load_config()
+    dataset_names = config['data']['dataset_names']
+    ts_folder_path = config['path']['ts_folder_path']
+    plot_height = config['plot']['height']
+    plot_width = config['plot']['width']
+
     for dataset_name in dataset_names:
         print("\nGenerating plots for", dataset_name)
-        for filename in os.listdir(TS_PATH):
+        for filename in os.listdir(ts_folder_path):
             if dataset_name in dataset_names:
-                filepath = os.path.join(TS_PATH, filename)
+                filepath = os.path.join(ts_folder_path, filename)
                 with open(filepath, 'r') as file:
                     ts = [float(line.strip()) for line in file if line.strip()]
 
@@ -46,11 +54,11 @@ def main(dataset_names):
                                     ylabel=Y_LABEL_MAP[dataset_name],
                                     title=TITLE_MAP[dataset_name],
                                     savepath=savepath,
-                                    height=PLOT_HEIGHT,
-                                    width=PLOT_WIDTH
+                                    height=plot_height,
+                                    width=plot_width
                                     )
                     
 
 
 if __name__ == "__main__":
-    main(DATASET_NAMES)
+    main()
