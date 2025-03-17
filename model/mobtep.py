@@ -51,36 +51,36 @@ class Mobtep(torch.nn.Module):
         
         
 
-    def forward(self, ts_input, text_input, visual_input, generate_text=False):
+    def forward(self, ts_input, text_input, visual_input, output_text=False):
         # Encoding each modality
         numeric_embedding = self.ts_encoder(ts_input)
-        print("Numeric embedding: ", numeric_embedding.shape)
+        #print("Numeric embedding: ", numeric_embedding.shape)
         text_embedding = self.text_encoder(text_input)
-        print("Text embedding: ", text_embedding.shape)
+        #print("Text embedding: ", text_embedding.shape)
         visual_embedding = self.visual_encoder(visual_input)
-        print("Visual embedding: ",visual_embedding.shape)
+        #print("Visual embedding: ",visual_embedding.shape)
 
         # Fusion of embeddings (not shown in this snippet)
         fused_embedding = self.fusion_module(numeric_embedding, visual_embedding, text_embedding)
-        print("Fused: ", fused_embedding.shape)
+        #print("Fused: ", fused_embedding.shape)
         
         fused_embedding = fused_embedding.unsqueeze(1)  # Add a new dimension
-        print("Fused and unsqueezed: ", fused_embedding.shape)
-        print(compute_cosine_similarity(fused_embedding))
+        #print("Fused and unsqueezed: ", fused_embedding.shape)
+        #print(compute_cosine_similarity(fused_embedding))
         
 
         # Cross-attention with text prototypes
         x = self.prototype_attention(fused_embedding)
-        print("Prototyped: ", x.shape)
+        #print("Prototyped: ", x.shape)
 
         if self.use_linear_proj:
             # Linear projection between embedding and caption generation
             x = self.linear_proj(x)
-            print("Projected: ", x.shape)
+            #print("Projected: ", x.shape)
 
-        print(compute_cosine_similarity(x))
+        #print(compute_cosine_similarity(x))
 
-        if generate_text:
+        if output_text:
             # Generate description using GPT-2's language model
             captions = self.generate_captions(x)
             return captions
@@ -157,7 +157,7 @@ def main():
 
     # Forward pass
     with torch.no_grad():
-        output = mobtep(ts_input, text_input, visual_input, generate_text=True)
+        output = mobtep(ts_input, text_input, visual_input, output_text=True)
 
     #print(output.shape)  # Expected shape: [3, 1, 768]
     for i, caption in enumerate(output):

@@ -28,14 +28,14 @@ def main():
     random.seed(config['general']['random_seed'])
     refinement_model = config['model']['refinement_model']
     checking_model = config['model']['checking_model']
-    captions_folder_path = config['path']['captions_folder_path']
+    caption_folder_path = config['path']['caption_folder_path']
     dataset_names = config['data']['dataset_names']
     refinement_types = config['refinement']['refinement_types']
     refinement_type = config['refinement']['refinement_type']
     desired_style = config['refinement']['desired_style']
     refinement_look_at_folder = config['refinement']["refinement_target"]
 
-    look_at_captions_path = captions_folder_path + "/" + refinement_look_at_folder
+    look_at_captions_path = caption_folder_path + "/" + refinement_look_at_folder
     print("\nRefining captions from folder", refinement_look_at_folder)
 
 

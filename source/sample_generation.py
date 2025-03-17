@@ -162,25 +162,25 @@ def main(dataset_names):
             ranks = [x-1 for x in ranks] #to make the rank start from index 0 instead of 1
 
             for k in range(save_top_k):
-                caption_filepath = f"/home/ubuntu/thesis/data/samples/captions/{"rag" if RAG else "raw"}/{dataset_name}_{idx}{"_rag" if RAG else ""}.txt" 
+                caption_filepath = f"/home/ubuntu/thesis/data/samples/captions/{"rag" if RAG else "raw"}/{dataset_name}_{idx}{"_rag" if use_rag else ""}.txt" 
                 save_file(responses[rank[k]], caption_filepath)
 
                 metadata_filepath = f"/home/ubuntu/thesis/data/samples/metadata/{dataset_name}/{dataset_name}_{idx}.json" 
                 save_file([meta_and_ts[0] for meta_and_ts in samples][ranks[k]], metadata_filepath)   
 
-                series_filepath = f"/home/ubuntu/thesis/data/samples/time series/{dataset_name}/{dataset_name}_{idx}.json" 
+                series_filepath = f"/home/ubuntu/thesis/data/samples/time series/{dataset_name}/{dataset_name}_{idx}.txt" 
                 save_file([meta_and_ts[1] for meta_and_ts in samples][ranks[k]], series_filepath) 
 
                 idx += 1
         else: # just save all responses without ranking and without selecting top-k
             for i in range(len(responses)):
-                caption_filepath = f"/home/ubuntu/thesis/data/samples/captions/{"rag" if use_rag else "raw"}/{dataset_name}_{idx}.txt" 
+                caption_filepath = f"/home/ubuntu/thesis/data/samples/captions/{"rag" if use_rag else "raw"}/{dataset_name}_{idx}{"_rag" if use_rag else ""}.txt" 
                 save_file(responses[i], caption_filepath)
 
                 metadata_filepath = f"/home/ubuntu/thesis/data/samples/metadata/{dataset_name}_{idx}.json" 
                 save_file([meta_and_ts[0] for meta_and_ts in samples][i%len(samples)], metadata_filepath)   
 
-                series_filepath = f"/home/ubuntu/thesis/data/samples/time series/{dataset_name}_{idx}.json" 
+                series_filepath = f"/home/ubuntu/thesis/data/samples/time series/{dataset_name}_{idx}.txt" 
                 save_file([meta_and_ts[1] for meta_and_ts in samples][i%len(samples)], series_filepath) 
 
                 idx += 1

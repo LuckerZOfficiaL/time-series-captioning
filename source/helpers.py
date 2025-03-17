@@ -34,7 +34,7 @@ def get_response(prompt,
                  temperature=0.45,  # Controls randomness (0 = deterministic, 1 = max randomness)
                  top_p=.95,  # Nucleus sampling (0.0 to 1.0, lower = more focused sampling)
                  top_k=40,  # Filters to the top-k highest probability tokens (if supported)
-                 max_tokens=400,  # Maximum number of tokens in response
+                 max_tokens=450,  # Maximum number of tokens in response
                  ):
 
     # Check if prompt is a list or a single string
@@ -169,7 +169,7 @@ def get_response_iterative(prompt,
                  temperature=0.75,  # Controls randomness (0 = deterministic, 1 = max randomness)
                  top_p=.95,  # Nucleus sampling (0.0 to 1.0, lower = more focused sampling)
                  top_k=40,  # Filters to the top-k highest probability tokens (if supported)
-                 max_tokens=400,  # Maximum number of tokens in response
+                 max_tokens=450,  # Maximum number of tokens in response
                  ):
 
     # Check if prompt is a list or a single string
@@ -220,7 +220,7 @@ def get_response_iterative(prompt,
                 "body": json.dumps({
                     "anthropic_version": "bedrock-2023-05-31",
                     "messages": [{"role": "user", "content": p}],
-                    "max_tokens": 400,
+                    "max_tokens": 450,
                     "temperature": temperature,
                     "top_p": top_p
                 })
@@ -300,7 +300,7 @@ def get_sample(dataset_name: str, json_data, series_len = None, start_idx = None
     #print("\nMeasure: ", measure)
 
     if series_len is None:
-      series_len = random.randint(5, min(100, 5+int(len(json_data[id][measure])/8)))
+      series_len = random.randint(5, min(150, 5+int(len(json_data[id][measure])/8)))
     if start_idx is None:
       start_idx = random.randint(0, len(json_data[id][measure]) - series_len)
     #print("series len ", series_len)
@@ -351,7 +351,7 @@ def get_sample(dataset_name: str, json_data, series_len = None, start_idx = None
     town = random.choice(list(json_data.keys()))
     metadata = json_data[town]['metadata'].copy()
     if series_len is None:
-      series_len = random.randint(5, min(100, 5+int(len(json_data[town]["data"])/8)))
+      series_len = random.randint(5, min(150, 5+int(len(json_data[town]["data"])/8)))
     if start_idx is None:
       start_idx = random.randint(0, len(json_data[town]["data"]) - series_len)
 
@@ -391,7 +391,7 @@ def get_sample(dataset_name: str, json_data, series_len = None, start_idx = None
     means = random.choice(list(json_data[port]['data'].keys()))
 
     if series_len is None:
-      series_len = random.randint(5, min(100, 5+int(len(json_data[port]["data"][means])/8)))
+      series_len = random.randint(5, min(150, 5+int(len(json_data[port]["data"][means])/8)))
     if start_idx is None:
       start_idx = random.randint(0, len(json_data[port]["data"][means]) - series_len)
 
@@ -426,7 +426,7 @@ def get_sample(dataset_name: str, json_data, series_len = None, start_idx = None
     metadata = {}
     
     if series_len is None:
-      series_len = random.randint(5, min(100, 5+int(len(json_data[patient_id]["data"]["heart rate"])/8)))
+      series_len = random.randint(5, min(150, 5+int(len(json_data[patient_id]["data"]["heart rate"])/8)))
     if start_idx is None:
       start_idx = random.randint(0, len(json_data[patient_id]["data"]["heart rate"]) - series_len)
 
@@ -682,16 +682,20 @@ def save_file(data, filepath: str):
         filepath (str): The path to the file.
     """
     if isinstance(data, str):
+        #print(f"Data type is string for {filepath}.")
         with open(filepath, 'w') as file:
             file.write(data)
     elif isinstance(data, list):
+        #print(f"Data type is list for {filepath}.")
         with open(filepath, 'w') as file:
             for item in data:
                 file.write(str(item) + '\n')
     elif isinstance(data, dict):
+        #print(f"Data type is dictionary for {filepath}.")
         with open(filepath, 'w') as file:
             json.dump(data, file, indent=4, sort_keys=True)
     elif isinstance(data, torch.Tensor):
+        #print(f"Data type is tensor for {filepath}.")
         torch.save(data, filepath)
     else:
         raise ValueError("Unsupported data type")
@@ -997,13 +1001,13 @@ def split_facts_by_time(facts_list, bin_years=10): # reads through fact_list and
 
   return time_periods 
 
-def get_relevant_facts(start_year, end_year, bin_period=10): # only get facts that are temporally relevant
-  folder_path = f"/home/ubuntu/thesis/data/fact bank/by period/{bin_period}"
+def get_relevant_facts(start_year, end_year, bin_years=10): # only get facts that are temporally relevant
+  folder_path = f"/home/ubuntu/thesis/data/fact bank/by period/{bin_years}"
   relevant_facts = []
   for root, dirs, files in os.walk(folder_path):
     for dir_name in dirs:
       if end_year is not None and start_year is not None:
-        if int(dir_name)+bin_period >= start_year and int(dir_name) <= end_year+bin_period:
+        if int(dir_name)+bin_years >= start_year and int(dir_name) <= end_year+bin_years:
           subfolder_path = os.path.join(root, dir_name)
           fact_list_path = os.path.join(subfolder_path, "facts_list.txt")
           with open(fact_list_path, "r") as file:
@@ -1011,14 +1015,14 @@ def get_relevant_facts(start_year, end_year, bin_period=10): # only get facts th
             relevant_facts.extend(facts)
 
       elif start_year is None and end_year is not None:# start_year is unavailable) but end_year is available 
-        if int(dir_name)+bin_period <= end_year: # consider all facts until end_year
+        if int(dir_name)+bin_years <= end_year: # consider all facts until end_year
           subfolder_path = os.path.join(root, dir_name)
           fact_list_path = os.path.join(subfolder_path, "facts_list.txt")
           with open(fact_list_path, "r") as file:
             facts = file.read().splitlines()
             relevant_facts.extend(facts)
       elif start_year is not None and end_year is None:
-        if int(dir_name)+bin_period >= start_year: # consider all facts from the start_year on
+        if int(dir_name)+bin_years >= start_year: # consider all facts from the start_year on
           subfolder_path = os.path.join(root, dir_name)
           fact_list_path = os.path.join(subfolder_path, "facts_list.txt")
           with open(fact_list_path, "r") as file:
@@ -1027,13 +1031,17 @@ def get_relevant_facts(start_year, end_year, bin_period=10): # only get facts th
       # else: no need to specify else because relevant_facts = [] and that is returned by the function
   return relevant_facts
  
-def delete_samples(root_path = "/home/ubuntu/thesis/data/samples"): #removes all files related to created samples so that a brand new experiment can start
+def delete_files(target="samples"): #removes all files in the folder and its subfolders, preserving folders
+  if target == "samples":
+    root_path = "/home/ubuntu/thesis/data/samples"
+  elif target == "fact bank":
+    root_path = "/home/ubuntu/thesis/data/fact bank"
   for root, dirs, files in os.walk(root_path):
     for file in files:
-      if file.endswith(".txt") or file.endswith(".json") or file.endswith(".jpeg"):
+      if file.endswith(".txt") or file.endswith(".json") or file.endswith(".jpeg") or file.endswith("pth"):
         file_path = os.path.join(root, file)
         os.remove(file_path)
-  print("\nAll samples deleted. Bank files are preserved though.")
+  print(f"\nAll files are deleted in {target}")
 
 def get_most_general_adjective(adjectives):
     """
@@ -1297,6 +1305,23 @@ def refine_caption_with_corrected_facts(caption,
                       temperature=0.3,
                       top_p=0.85)
 
+def read_txt_to_num_list(filepath):
+  with open(filepath, 'r') as file:
+    lines = file.readlines()
+    lines = [float(line.strip()) for line in lines]
+  return lines
+
+def read_jpeg_to_tensor(filepath):
+  image = plt.imread(filepath)
+  image = np.array(image, copy=True)  # Make the array writable
+  tensor = torch.from_numpy(image)
+  return tensor
+
+def read_txt_to_string(filepath):
+  with open(filepath, 'r') as file:
+    text = file.read()
+  return text
+
 
 def main():
   config = load_config()
@@ -1309,7 +1334,7 @@ def main():
   masked_facts, masked_words = mask_facts(facts)
   print(masked_facts)"""
 
-  #delete_samples()
+  #delete_files(target="samples")
 
   caption = "From 2002 to 2018, Spain's birth rate per 1,000 people displayed a noticeable decline, starting at 10.1 in 2002 and dropping to 7.9 by 2018. This trend contrasts sharply with the global average, which was 19.6 per 1,000 people in 2002 and decreased to 18.5 by 2018 (World Bank Data). The most pronounced decline in Spain occurred after 2008, coinciding with the global financial crisis triggered by the collapse of Lehman Brothers in September 2008 (Lehman Brothers Bankruptcy Filing, September 2008), which led to a severe recession in Spain, characterized by high unemployment rates, particularly among young adults (Instituto Nacional de Estadística, Spain). Despite Spain's status as a high-income country, with a GNI per capita of $25,830 in 2018 (World Bank Data), its birth rate consistently fell below the global average, reflecting broader European trends of aging populations and lower fertility rates, such as Italy's rate of 7.3 per 1,000 in 2018 (Eurostat). Italy is a low income country."
 

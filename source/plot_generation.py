@@ -37,6 +37,7 @@ def main():
     config = load_config()
     dataset_names = config['data']['dataset_names']
     ts_folder_path = config['path']['ts_folder_path']
+    save_folder_path = config['path']['plot_folder_path']
     plot_height = config['plot']['height']
     plot_width = config['plot']['width']
 
@@ -48,7 +49,7 @@ def main():
                 with open(filepath, 'r') as file:
                     ts = [float(line.strip()) for line in file if line.strip()]
 
-                savepath = f"/home/ubuntu/thesis/data/samples/plots/{dataset_name}/{filename[:-5]}.jpeg" 
+                savepath = f"{save_folder_path}/{filename[:-5]}.jpeg" 
                 generate_line_plot(ts=ts, 
                                     xlabel=X_LABEL_MAP[dataset_name],
                                     ylabel=Y_LABEL_MAP[dataset_name],

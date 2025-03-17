@@ -16,21 +16,19 @@ class ViTEncoder(torch.nn.Module):
         return self.model(x)
 
 
-
-def main():
-    # Define preprocessing pipeline for line chart images
-    transform = transforms.Compose([
-        transforms.Resize((224, 224)),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
-    ])
-
-
-    def preprocess_images(path):
+def preprocess_image(path):
         """
         If the given path is a file, process and return a single image tensor.
         If the given path is a folder, process all images in the folder and return a batch tensor.
         """
+        
+        # Define preprocessing pipeline for line chart images
+        transform = transforms.Compose([
+            transforms.Resize((224, 224)),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
+        ])
+
         if os.path.isfile(path):  # Single image case
             image = Image.open(path).convert("RGB")
             return transform(image).unsqueeze(0)  # Shape: [1, C, H, W]
@@ -47,12 +45,14 @@ def main():
         else:
             raise ValueError("Invalid path: not a file or folder.")
 
+
+def main():   
     # Load encoder
     vit_encoder = ViTEncoder()
     vit_encoder.eval()
 
     # Example usage
-    image_tensor = preprocess_images("/home/ubuntu/thesis/data/samples/plots/demography_0.jpeg") # [batch size, channels, height, width]
+    image_tensor = preprocess_image("/home/ubuntu/thesis/data/samples/plots/demography_0.jpeg") # [batch size, channels, height, width]
     print("\nInput shape: ", image_tensor.shape)
     with torch.no_grad():
         embedding = vit_encoder(image_tensor)
