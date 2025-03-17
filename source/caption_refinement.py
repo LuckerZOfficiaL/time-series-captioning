@@ -64,7 +64,8 @@ def main():
                     #refined_caption = factual_checking(caption, model=checking_model)
                     refined_caption = refine_caption_with_corrected_facts(caption, 
                                         model=refinement_model,
-                                        correction_method=config["refinement"]['factual_correction_method'])
+                                        correction_method=config["refinement"]['factual_correction_method'],
+                                        skip_numeric=config['refinement']['skip_numeric'])
 
                 save_folder = config['path']['refined_captions_folder_path'] #"/home/ubuntu/thesis/data/samples/captions/refined"
                 if len(refined_caption) > int(0.7 * len(caption)) and caption not in refined_caption: # if the answer is much shorter than the original caption, assume the model has refused to refine the caption, so save only if that doesn't happen

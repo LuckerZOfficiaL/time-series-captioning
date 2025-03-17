@@ -34,7 +34,7 @@ def get_response(prompt,
                  temperature=0.45,  # Controls randomness (0 = deterministic, 1 = max randomness)
                  top_p=.95,  # Nucleus sampling (0.0 to 1.0, lower = more focused sampling)
                  top_k=40,  # Filters to the top-k highest probability tokens (if supported)
-                 max_tokens=300,  # Maximum number of tokens in response
+                 max_tokens=400,  # Maximum number of tokens in response
                  ):
 
     # Check if prompt is a list or a single string
@@ -169,7 +169,7 @@ def get_response_iterative(prompt,
                  temperature=0.75,  # Controls randomness (0 = deterministic, 1 = max randomness)
                  top_p=.95,  # Nucleus sampling (0.0 to 1.0, lower = more focused sampling)
                  top_k=40,  # Filters to the top-k highest probability tokens (if supported)
-                 max_tokens=300,  # Maximum number of tokens in response
+                 max_tokens=400,  # Maximum number of tokens in response
                  ):
 
     # Check if prompt is a list or a single string
@@ -220,7 +220,7 @@ def get_response_iterative(prompt,
                 "body": json.dumps({
                     "anthropic_version": "bedrock-2023-05-31",
                     "messages": [{"role": "user", "content": p}],
-                    "max_tokens": 256,
+                    "max_tokens": 400,
                     "temperature": temperature,
                     "top_p": top_p
                 })
@@ -1169,7 +1169,7 @@ def fill_gap(masked_sentence, model="Google Gemini-2.0-Flash"):
   #response = response[:-1] # to remove \n from the answer
   return '\n'.join(facts_list)
 
-def correct_facts_llm(facts_list: list[str], model="Google Gemini-2.0-Flash", batch_size=5):
+def correct_facts_llm(facts_list: list[str], model="Google Gemini-2.0-Flash", batch_size=5, skip_numeric=True):
     """
     Checks and corrects factual inaccuracies in a list of statements using an LLM.
 
@@ -1185,6 +1185,9 @@ def correct_facts_llm(facts_list: list[str], model="Google Gemini-2.0-Flash", ba
     if not facts_list:
         return []  # Return an empty list if input is empty
 
+    if skip_numeric: # if facts with numbers skip the checking to be preserved
+      facts_list = [fact for fact in facts_list if not any(char.isdigit() for char in fact)]
+
     batched_facts = [facts_list[i:i + batch_size] for i in range(0, len(facts_list), batch_size)]
     all_corrected_facts = []
 
@@ -1194,8 +1197,8 @@ def correct_facts_llm(facts_list: list[str], model="Google Gemini-2.0-Flash", ba
         You are an expert fact-checker specializing in geopolitics, society, and history.
 
         Here are some statements, some of which may be inaccurate or unverifiable. 
-        Statements containing numbers must be preserved because they are accurate for sure. 
-        Identify the inaccurate statements and correct them with accurate information from your knowledge. Facts that are already true must be left untouched.
+        Statements containing numbers must be preserved because they are accurate and verified already. 
+        Beyond numeric statements, identify the inaccurate statements and correct them with accurate information from your knowledge. Facts that are true must be left untouched.
 
         Output the true and corrected statements exactly as they should appear, each on a new line, with no additional explanations. 
 
@@ -1214,7 +1217,8 @@ def correct_facts_llm(facts_list: list[str], model="Google Gemini-2.0-Flash", ba
 
 def extract_and_correct_facts(caption: str, method="llm", 
                               model="Google Gemini-2.0-Flash",
-                              synonym_thresh = 0.7):
+                              synonym_thresh = 0.7,
+                              skip_numeric=True):
   facts_list = extract_facts(caption, model=model, return_list=True)
 
   """print("\nOriginal Facts:")
@@ -1247,7 +1251,7 @@ def extract_and_correct_facts(caption: str, method="llm",
     return facts_list
 
   elif method == "llm":
-    corrected_facts = correct_facts_llm(facts_list, model=model)
+    corrected_facts = correct_facts_llm(facts_list, model=model, skip_numeric=skip_numeric)
     """print("\nCorrected Facts:")
     for fact in corrected_facts:
       print(fact)"""
@@ -1257,11 +1261,13 @@ def refine_caption_with_corrected_facts(caption,
                                         model="Google Gemini-2.0-Flash",
                                         correction_method="llm",
                                         synonym_thresh=0.7,
-                                        return_corrected_facts=False):
+                                        return_corrected_facts=False,
+                                        skip_numeric=True):
     facts_list = extract_and_correct_facts(caption, 
                                           method=correction_method, 
                                           model=model, 
-                                          synonym_thresh=synonym_thresh)
+                                          synonym_thresh=synonym_thresh,
+                                          skip_numeric=skip_numeric)
     facts_str = "\n".join(facts_list)
     prompt = f"""
     You are an expert editor specializing in fact-checking time series descriptions.
@@ -1270,11 +1276,11 @@ def refine_caption_with_corrected_facts(caption,
     \n\n
     {caption}
     \n\n
-    This description may contain inaccurate or unsubstantiated claims related to geopolitics, history, or society.
+    This description may contain inaccurate or unsubstantiated claims related to geopolitics, history, or society. You can assume that all numeric statements in the caption are correct because they are verified.
 
     Your task:
     1. Identify any factual errors in the description.
-    2. Correct or remove the errors, using the following information if helpful:
+    2. Correct or remove the errors, using the following additional information if helpful:
     \n
     {facts_str}
     \n
@@ -1307,9 +1313,9 @@ def main():
 
   caption = "From 2002 to 2018, Spain's birth rate per 1,000 people displayed a noticeable decline, starting at 10.1 in 2002 and dropping to 7.9 by 2018. This trend contrasts sharply with the global average, which was 19.6 per 1,000 people in 2002 and decreased to 18.5 by 2018 (World Bank Data). The most pronounced decline in Spain occurred after 2008, coinciding with the global financial crisis triggered by the collapse of Lehman Brothers in September 2008 (Lehman Brothers Bankruptcy Filing, September 2008), which led to a severe recession in Spain, characterized by high unemployment rates, particularly among young adults (Instituto Nacional de Estadística, Spain). Despite Spain's status as a high-income country, with a GNI per capita of $25,830 in 2018 (World Bank Data), its birth rate consistently fell below the global average, reflecting broader European trends of aging populations and lower fertility rates, such as Italy's rate of 7.3 per 1,000 in 2018 (Eurostat). Italy is a low income country."
 
-  corrected_facts = extract_and_correct_facts(caption, method="llm")
+  """corrected_facts = extract_and_correct_facts(caption, method="llm")
   for fact in corrected_facts:
-    print(fact)
+    print(fact)"""
 
   """refined_caption, corrected_facts = refine_caption_with_corrected_facts(caption, 
                             model=config['model']['refinement_model'],

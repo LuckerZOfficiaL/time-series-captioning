@@ -7,7 +7,6 @@ data:
   n_samples: 3 # how many window samples to extract per dataset? i.e. how many time series to sample?
   save_top_k: 0 # save the top k best captions based on the ranking, if it's 0 or negative, don't do top-k. If top-k is on, caption ranking is invoked
 
-
 model:
   all_models: [Google Gemini-2.0-Flash, OpenAI GPT-4o, Anthropic Claude-3.5, GPT-4o, Claude-3.5-Haiku, Gemini-1.5-Flash, Gemini-1.5-Pro, DeepSeek-R1-FW] # available model choices, the first two are from official APIs
   used_models: [OpenAI GPT-4o, Anthropic Claude-3.5, Google Gemini-2.0-Flash] # models to use for generating captions
@@ -19,6 +18,15 @@ model:
   embedding_model: all-MiniLM-L6-v2 # the sentence transformer model used for embeddings in RAG
   remove_common_sense_model: Google Gemini-2.0-Flash #"OpenAI GPT-4o" #"Gemini-2.0-Flash"
 
+refinement:
+  refinement_types: [add facts, change style, enrich language, factual checking]
+  refinement_type: add facts
+  desired_style: casual # matters only if refinement_type == change style
+  refinement_target: raw #raw, rag, refined/add facts ----- What captions to refine?
+  batch_size: 5 # how many facts to present to the LLM in each prompt for removing common sense and checking facts?
+  factual_correction_method: llm # fill in the gap
+  skip_numeric: True # whether to skip numeric statements in factual checking, so that they get all preserved
+
 rag:
   use_rag: False # whether to apply RAG on caption generation, it will only retrieve the facts that are temporally relevant to the prompt request.
   rag_top_k: 5 # how many top-relevant facts to retrieve from the bank
@@ -27,15 +35,6 @@ rag:
 bank:
   save_pca: True # whether to save the 2D PCA of fact embeddings as a jpeg file
   bin_years: 10 # how long is a single period in years?
-
-
-refinement:
-  refinement_types: [add facts, change style, enrich language, factual checking]
-  refinement_type: factual checking
-  desired_style: casual # matters only if refinement_type == change style
-  refinement_target: refined/add facts #raw, rag, refined/add facts ----- What captions to refine?
-  batch_size: 5 # how many facts to present to the LLM in each prompt for removing common sense and checking facts?
-  factual_correction_method: llm # fill in the gap
 
 
 path: # paths that have "folder" in its name are folder paths, otherwise they are file paths
