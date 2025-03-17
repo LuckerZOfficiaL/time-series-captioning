@@ -20,9 +20,9 @@ model:
 
 refinement:
   refinement_types: [add facts, change style, enrich language, factual checking]
-  refinement_type: add facts
+  refinement_type: factual checking
   desired_style: casual # matters only if refinement_type == change style
-  refinement_target: raw #raw, rag, refined/add facts ----- What captions to refine?
+  refinement_target: fake #raw, rag, refined/add facts ----- What captions to refine?
   batch_size: 5 # how many facts to present to the LLM in each prompt for removing common sense and checking facts?
   factual_correction_method: llm # fill in the gap
   skip_numeric: True # whether to skip numeric statements in factual checking, so that they get all preserved

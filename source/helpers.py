@@ -1177,6 +1177,40 @@ def fill_gap(masked_sentence, model="Google Gemini-2.0-Flash"):
   #response = response[:-1] # to remove \n from the answer
   return '\n'.join(facts_list)
 
+def filter_sentences_no_non_year_numbers(sentences):
+    """
+    Filters a list of sentences, removing those containing non-year numbers.
+
+    Args:
+        sentences: A list of strings representing sentences.
+
+    Returns:
+        A list of strings containing only sentences without non-year numbers.
+    """
+
+    def contains_non_year_number(sentence):
+        """
+        Checks if a sentence contains a number that is not a year.
+
+        Args:
+            sentence: A string representing a sentence.
+
+        Returns:
+            True if the sentence contains a non-year number, False otherwise.
+        """
+        numbers = re.findall(r'\b\d+\b', sentence)  # Find all whole numbers
+
+        for num_str in numbers:
+            num = int(num_str)
+            if not (1800 <= num <= 2025):
+                return True  # Found a non-year number
+        return False  # No non-year numbers found
+
+    filtered_sentences = [
+        sentence for sentence in sentences if not contains_non_year_number(sentence)
+    ]
+    return filtered_sentences
+
 def correct_facts_llm(facts_list: list[str], model="Google Gemini-2.0-Flash", batch_size=5, skip_numeric=True):
     """
     Checks and corrects factual inaccuracies in a list of statements using an LLM.
@@ -1194,7 +1228,8 @@ def correct_facts_llm(facts_list: list[str], model="Google Gemini-2.0-Flash", ba
         return []  # Return an empty list if input is empty
 
     if skip_numeric: # if facts with numbers skip the checking to be preserved
-      facts_list = [fact for fact in facts_list if not any(char.isdigit() for char in fact)]
+      facts_list = filter_sentences_no_non_year_numbers(facts_list)
+      #facts_list = [fact for fact in facts_list if not any(char.isdigit() for char in fact)]
 
     batched_facts = [facts_list[i:i + batch_size] for i in range(0, len(facts_list), batch_size)]
     all_corrected_facts = []
@@ -1277,6 +1312,7 @@ def refine_caption_with_corrected_facts(caption,
                                           synonym_thresh=synonym_thresh,
                                           skip_numeric=skip_numeric)
     facts_str = "\n".join(facts_list)
+    #print("Corrected Facts:\n ",facts_str)
     prompt = f"""
     You are an expert editor specializing in fact-checking time series descriptions.
 
