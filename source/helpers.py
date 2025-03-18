@@ -1545,6 +1545,47 @@ def is_semantically_contained(sub_str, big_str, model="Google Gemini-2.0-Flash")
     except Exception as e:
         return f"Error during semantic containment check: {e}"
 
+def compare_correctness(str1, str2, model="Google Gemini-2.0-Flash"):
+    """
+    Compares the correctness of two strings using an LLM.
+
+    Args:
+        str1 (str): The first string.
+        str2 (str): The second string.
+        model (str): The LLM to use.
+
+    Returns:
+        int: 1 if str1 is deemed more correct, 2 if str2 is more correct, or -1 if inconclusive.
+    """
+    prompt = f"""
+    You are an expert in determining the correctness of factual statements.
+
+    Given the following two pieces of text, determine which one is more factually correct.
+
+    Text 1:
+    {str1}
+
+    Text 2:
+    {str2}
+
+    Answer with '1' if Text 1 is more correct, '2' if Text 2 is more correct, or 'inconclusive' if neither is definitively correct.
+    """
+    try:
+        response = get_response(prompt, model=model, temperature=0.15).lower()  
+        if "inconclusive" in response and response.index("inconclusive") < response.index("1") and response.index("inconclusive") < response.index("2"):
+            return -1
+        elif "1" in response and response.index("1") < response.index("2"):
+            return 1
+        elif "2" in response and response.index("2") < response.index("1"):
+            return 2
+        else:
+            return -1  # Inconclusive if response is unexpected
+
+    except Exception as e:
+        return -1  # Inconclusive in case of error
+
+
+
 def main():
   config = load_config()
 

@@ -27,6 +27,8 @@ refinement:
   factual_correction_method: llm # fill in the gap
   skip_numeric: True # whether to skip numeric statements in factual checking, so that they get all preserved
 
+factcheck:
+  start_from_files: False # If False, the benchmark starts by applying our fake detection method and save the txt files. If True, it starts by reading the txt files instead of re-generating the facts
 
 path: # paths that have "folder" in its name are folder paths, otherwise they are file paths
   caption_folder_path: /home/ubuntu/thesis/data/samples/captions
