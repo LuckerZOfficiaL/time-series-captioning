@@ -38,7 +38,7 @@ def main():
             true_facts.append(facts[i]['response'])
             gt_revised_true_facts.append(facts[i]['revised_response'])
 
-        if i+1 == 15 : break
+        if i+1 == 5 : break
     
     llm_revised_fake_facts = [] # contains revised fake facts, revised by our method
     llm_revised_true_facts = [] # contains revised true facts, revised by our method
@@ -72,17 +72,18 @@ def main():
     conflicts = 0
     equivalences = 0
 
-    print("\nEvaluating Negative Facts...")
+    print("\nEvaluating Fake Facts...")
     for llm_revised_fake_fact, gt_revised_fake_facts in zip(llm_revised_fake_facts, gt_revised_fake_facts):
         if are_semantically_equivalent(llm_revised_fake_fact, gt_revised_fake_facts):
             equivalences += 1
-        if is_semantically_contained(gt_revised_fake_facts, llm_revised_fake_fact):
+        elif is_semantically_contained(gt_revised_fake_facts, llm_revised_fake_fact):
             inclusions += 1
-        if are_semantically_conflicting(llm_revised_fake_fact, gt_revised_fake_facts):
+        elif are_semantically_conflicting(llm_revised_fake_fact, gt_revised_fake_facts):
             conflicts += 1
-            #print(f"CONFLICT! \nLLM: {llm_revised_fake_fact} \nGT: {gt_revised_fake_facts}")
+            print(f"\nCONFLICT! \nLLM: {llm_revised_fake_fact} \nGT: {gt_revised_fake_facts}")
+        else: print(f"Nothing detected! \nLLM: {llm_revised_true_fact} \nGT: {gt_revised_true_facts}")
         
-    print("\n\nFake Facts:")
+    print("\nFake Facts:")
     print(f"Equivalences: {equivalences}/{len(fake_facts)}")
     print(f"Inclusions: {inclusions}/{len(fake_facts)}")
     print(f"Conflicts: {conflicts}/{len(fake_facts)}")
@@ -96,11 +97,12 @@ def main():
     for llm_revised_true_fact, gt_revised_true_facts in zip(llm_revised_true_facts, gt_revised_true_facts):
         if are_semantically_equivalent(llm_revised_true_fact, gt_revised_true_facts):
             equivalences += 1
-        if is_semantically_contained(gt_revised_true_facts, llm_revised_true_fact):
+        elif is_semantically_contained(gt_revised_true_facts, llm_revised_true_fact):
             inclusions += 1
-        if are_semantically_conflicting(llm_revised_true_fact, gt_revised_true_facts):
+        elif are_semantically_conflicting(llm_revised_true_fact, gt_revised_true_facts):
             conflicts += 1
-            print(f"CONFLICT! \nLLM: {llm_revised_true_fact} \nGT: {gt_revised_true_facts}")
+            print(f"\nCONFLICT! \nLLM: {llm_revised_true_fact} \nGT: {gt_revised_true_facts}")
+        else: print(f"Nothing detected! \nLLM: {llm_revised_true_fact} \nGT: {gt_revised_true_facts}")
         
 
     print("\n\nTrue Facts:")
