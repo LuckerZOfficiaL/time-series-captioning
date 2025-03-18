@@ -33,18 +33,6 @@ Some important attributes of spacecraft batteries include energy density, specif
 ________________________________________________________________________________
 Firms advertise to create brand recognition and differentiation, to influence consumer preferences and behavior, to provide information about product features, benefits, and availability, to maintain or increase market share, and to create brand loyalty even when goods are interchangeable.
 ________________________________________________________________________________
-To find the best interior decorator and best price, you can follow these steps:
-
-1. Research: Research online to find interior decorators in your area. Look for their portfolios, customer reviews, and ratings.
-
-2. Shortlist: Shortlist a few decorators based on their work, experience, and reviews.
-
-3. Budget: Determine your budget for the project and discuss the same with each interior decorator. 
-
-4. Compare: Compare the quotes and services offered by each interior decorator. 
-
-5. Choose: Select the best interior decorator that suits your style, needs and budget.
-________________________________________________________________________________
 Marginal cost rate design in electric utilities refers to the pricing strategy where the customer is charged based on the cost of providing an additional unit of electricity. This allows for more accurate pricing reflecting the actual cost of providing the electricity and promotes efficiency in the electricity market.
 ________________________________________________________________________________
 The main difference between Scala Future's onComplete and andThen functions is that onComplete takes a callback function with an argument of Try[T], which gets executed when the Future completes either successfully or with an exception, whereas andThen takes a callback function with an argument of Future[T], which gets executed only when the Future completes successfully.
@@ -58,6 +46,4 @@ ________________________________________________________________________________
 When working with a small dataset for forecasting, it is important to choose a model that is appropriate for the data and avoid overfitting. Consider using methods such as moving averages, exponential smoothing, or ARIMA models. Also, try to gather additional information or external factors that might influence the variable being forecasted. This can be done through expert judgment, public data sources, or microsurveys. Finally, evaluate the accuracy of the model using appropriate metrics and adjust as needed.
 ________________________________________________________________________________
 Depeche Mode's albums are: Speak & Spell, A Broken Frame, Construction Time Again, Some Great Reward, Black Celebration, Music for the Masses, Violator, Songs of Faith and Devotion, Ultra, Exciter, Playing the Angel, Sounds of the Universe, Delta Machine, and Spirit.
-________________________________________________________________________________
-Donating, volunteering, lending a hand, offering emotional support, providing resources or information, sharing skills or expertise, doing a favor, offering encouragement, and offering a listening ear are some ways people help each other.
 ________________________________________________________________________________

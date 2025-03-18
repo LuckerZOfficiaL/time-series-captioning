@@ -1,0 +1,20 @@
+Hi Zihao, I benchmarked our fake detection method on their benchmark (FactCheck) of 94 samples.
+
+Among 94 examples, 68 are fake and 26 are true. Therefore, we expect our method to correct falsities in these 68 examples while preserving the truth in the 26.
+
+Here are our results:
+
+For the 68 FALSE EXAMPLES:
+47/68: the correction of our method agrees with the correction of their method.
+3/68: both methods are correct, but different information.
+11/68: our method is wrong
+7/68: their method is wrong
+
+
+For the 24 TRUE EXAMPLES:
+19/24: the correction of our method agrees with the correction of their method.
+3/24: both methods are correct, but different information.
+2/24: their method is wrong
+
+
+Conclusion: our method works pretty well. Although their method is much more sophisticated and tailored for their benchmark, our method is still competitive on their benchmark. However, the setting was slightly different. Their text were answers to specific questions, while we don't have questions and only care about correcting falsities. Thus, we did not consider their questions but only their factual statements for benchmark.

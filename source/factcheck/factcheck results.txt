@@ -1,0 +1,29 @@
+Fake
+wrong +3, it was nothing detected
+wrong +5, it says GT wrong but GT is right
+correct +2, it should be semantically included
+correct+8, it was nothing detected
+correct +2, they are wrong
+correct +1, they are both right
+
+This leads to:
+Equivalences: 9/68 (correct)
+Inclusions: 25/68 (correct, +2)
+Conflicts: 22/68 (correct +2)
+Inconclusive: 12/68 (correct +8 + 1)
+Wrong ground truth refinements: 12/24 (-5 because they're are right!)
+
+
+True
+nothing detected --> both correct
+conflict --> inconclusive
+
+This leads to:
+Equivalences: 16/24 (correct)
+Inclusions: 3/24 (correct)
+Conflicts: 3/24 (+1 correct)
+Inconclusive: 2/24 (+1 inconclusive)
+Wrong ground truth refinements: 2/24
+
+
+

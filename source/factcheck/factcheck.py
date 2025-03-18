@@ -34,6 +34,9 @@ def main():
         with open(facts_path, 'r') as file:
             facts = [json.loads(line) for line in file]
         
+        print(facts[0].keys())
+        for fact in facts:
+            print(fact['response_factuality'])
 
         fake_facts = []
         true_facts = []
@@ -51,10 +54,11 @@ def main():
             if facts[i]['response_factuality'] == False: # if it's a fake fact
                 fake_facts.append(facts[i]['response'])
                 gt_revised_fake_facts.append(facts[i]['revised_response'])
-            else:
+            elif facts[i]['response_factuality'] == True:
                 true_facts.append(facts[i]['response'])
                 gt_revised_true_facts.append(facts[i]['revised_response'])
-
+            else: # the factuality is non defined
+                pass
             #if i+1 == 3 : break
         
         llm_revised_fake_facts = [] # contains revised fake facts, revised by our method
