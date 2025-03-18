@@ -793,12 +793,12 @@ def generate_line_plot(ts, xlabel, ylabel, title, savepath, height=None, width=N
   plt.savefig(savepath, bbox_inches='tight')  # Save the plot
   plt.close()
   
-def extract_facts(caption, model="Google Gemini-2.0-Flash", return_list=False, extract_sentences=False):
-  if extract_sentences:
+def extract_facts(caption, model="Google Gemini-2.0-Flash", return_list=False, extract_sentences=True):
+  if extract_sentences: # if we are interested in sentences rather than facts
     prompt = f"""
-    You are an expert at extracting and decontextualizing factual statements from time series descriptions.
+    You are an expert at extracting and decontextualizing factual statements from text.
 
-    Here is a time series description containing historical events, scientific facts, or geopolitical trends:
+    Here is the text:
 
     {caption}
 
@@ -807,17 +807,15 @@ def extract_facts(caption, model="Google Gemini-2.0-Flash", return_list=False, e
     1.  Identify all factual sentences within the description.
     2.  Rewrite each factual sentence to be self-contained and understandable without any surrounding context.
     3.  Ensure each rewritten sentence is verifiable independently.
-    4.  Avoid referencing the time series itself, as it will not be available during fact verification.
 
     Formatting:
 
     -   Each decontextualized sentence should be on a new line.
-    -   Leave an empty line between each rewritten sentence.
+    -   Each sentence starts a new line.
     -   Do not include any introductory or concluding text.
 
     Return only the decontextualized factual sentences, without any explanations, extra text, or formatting.
     """
-
 
 
   else:
@@ -1276,7 +1274,7 @@ def filter_sentences_no_non_year_numbers(sentences):
     ]
     return filtered_sentences
 
-def correct_facts_llm(facts_list: list[str], model="Google Gemini-2.0-Flash", batch_size=5, skip_numeric=True):
+def correct_facts_llm(facts_list: list[str], model="Google Gemini-2.0-Flash", batch_size=5, skip_numeric=False):
     """
     Checks and corrects factual inaccuracies in a list of statements using an LLM.
 
@@ -1305,8 +1303,8 @@ def correct_facts_llm(facts_list: list[str], model="Google Gemini-2.0-Flash", ba
         You are an expert fact-checker specializing in geopolitics, society, and history.
 
         Here are some statements, some of which may be inaccurate or unverifiable. 
-        Statements containing numbers must be preserved because they are accurate and verified already. 
-        Beyond numeric statements, identify the inaccurate statements and correct them with accurate information from your knowledge. Facts that are true must be left untouched.
+        
+        Identify the inaccurate statements and correct them with accurate information from your knowledge. Facts that are true must be left untouched.
 
         Output the true and corrected statements exactly as they should appear, each on a new line, with no additional explanations. 
 
@@ -1326,7 +1324,7 @@ def correct_facts_llm(facts_list: list[str], model="Google Gemini-2.0-Flash", ba
 def extract_and_correct_facts(caption: str, method="llm", 
                               model="Google Gemini-2.0-Flash",
                               synonym_thresh = 0.7,
-                              skip_numeric=True,
+                              skip_numeric=False,
                               extract_sentences=True):
   facts_list = extract_facts(caption, model=model, return_list=True, extract_sentences=extract_sentences)
   #print("\nFacts list extracted:\n", facts_list)
@@ -1363,18 +1361,18 @@ def extract_and_correct_facts(caption: str, method="llm",
     return facts_list
 
   elif method == "llm":
-    corrected_facts = correct_facts_llm(facts_list, model=model, skip_numeric=skip_numeric)
+    corrected_facts_list = correct_facts_llm(facts_list, model=model, skip_numeric=skip_numeric)
     """print("\nCorrected Facts:")
     for fact in corrected_facts:
       print(fact)"""
-    return corrected_facts
+    return corrected_facts_list
  
 def refine_caption_with_corrected_facts(caption, 
                                         model="Google Gemini-2.0-Flash",
                                         correction_method="llm",
                                         synonym_thresh=0.7,
                                         return_corrected_facts=False,
-                                        skip_numeric=True,
+                                        skip_numeric=False,
                                         extract_sentences=True):
     facts_list = extract_and_correct_facts(caption, 
                                           method=correction_method, 
@@ -1384,13 +1382,13 @@ def refine_caption_with_corrected_facts(caption,
     facts_str = "\n".join(facts_list)
     #print("Corrected Facts:\n ",facts_str)
     prompt = f"""
-    You are an expert editor specializing in fact-checking time series descriptions.
+    You are an expert editor specializing in fact-checking.
 
-    Here is a time series description:
+    Here is a statement to be checked:
     \n\n
     {caption}
     \n\n
-    This description may contain inaccurate or unsubstantiated claims related to geopolitics, history, or society. You can assume that all numeric statements in the caption are correct because they are verified.
+    This text may contain inaccurate or unsubstantiated claims related to geopolitics, history, or society.
 
     Your task:
     1. Identify any factual errors in the description.
@@ -1401,11 +1399,11 @@ def refine_caption_with_corrected_facts(caption,
     3. Ensure the refined description is accurate and coherent.
     4. Maintain the original style and tone of the description.
 
-    Provide the refined time series description only, without any additional explanations.
+    Provide the corrected text only, without any additional explanations.
     """
     if return_corrected_facts:
       return get_response(prompt=prompt, model=model,
-                      temperature=0.3,
+                      temperature=0.2,
                       top_p=0.85), facts_list
     return get_response(prompt=prompt, model=model,
                       temperature=0.3,
@@ -1427,7 +1425,7 @@ def read_txt_to_string(filepath):
   with open(filepath, 'r') as file:
     text = file.read()
   return text
-
+  
 def are_semantically_equivalent(str1, str2, model="Google Gemini-2.0-Flash"):
     """
     Determines if two strings are semantically equivalent using an LLM.
