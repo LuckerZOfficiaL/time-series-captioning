@@ -689,7 +689,7 @@ def save_file(data, filepath: str):
         #print(f"Data type is list for {filepath}.")
         with open(filepath, 'w') as file:
             for item in data:
-                file.write(str(item) + '\n'+'_'*80)
+                file.write(str(item) + '\n'+'_'*80+"\n")
     elif isinstance(data, dict):
         #print(f"Data type is dictionary for {filepath}.")
         with open(filepath, 'w') as file:
