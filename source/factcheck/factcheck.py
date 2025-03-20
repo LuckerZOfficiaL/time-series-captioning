@@ -57,14 +57,20 @@ def main():
                 gt_revised_true_facts.append(facts[i]['revised_response'])
             else: # the factuality is non defined
                 pass
-            if i+1 == 35 : break
+            #if i+1 == 35 : break
         
         llm_revised_fake_facts = [] # contains revised fake facts, revised by our method
         llm_revised_true_facts = [] # contains revised true facts, revised by our method
     
 
         ############### Using Our Method #####################
-        for i in range(len(fake_facts)):
+        if os.path.exists('/home/ubuntu/thesis/source/factcheck/fake_count.txt'):
+            with open('/home/ubuntu/thesis/source/factcheck/fake_count.txt', 'r') as file:
+                start_idx = int(file.read())
+        else:
+            start_idx = 0
+
+        for i in range(start_idx, len(fake_facts)):
             revised_fact = refine_caption_with_corrected_facts(fake_facts[i],
                                                                 model=config['model']['refinement_model'],
                                                                 correction_method="llm",
@@ -75,6 +81,18 @@ def main():
             llm_revised_fake_facts.append(revised_fact)
             print(f"Refined fake fact {i+1}/{len(fake_facts)}")
 
+            if config['factcheck']['save_files']:
+                save_file(str(i), '/home/ubuntu/thesis/source/factcheck/fake_count.txt', 'w')
+                save_file(llm_revised_fake_facts, f'/home/ubuntu/thesis/source/factcheck/{config['model']['refinement_model']}_llm_revised_fake_facts.txt', 'a')
+
+
+
+
+        if os.path.exists('/home/ubuntu/thesis/source/factcheck/true_count.txt'):W
+            with open('/home/ubuntu/thesis/source/factcheck/fake_count.txt', 'r') as file:
+                start_idx = int(file.read())
+        else:
+            start_idx = 0
         for i in range(len(true_facts)):
             revised_fact = refine_caption_with_corrected_facts(true_facts[i],
                                                                 model=config['model']['refinement_model'],
@@ -84,16 +102,20 @@ def main():
                                                                 extract_sentences=True)
             llm_revised_true_facts.append(revised_fact)
             print(f"Refined true fact {i+1}/{len(true_facts)}")
+
+            if config['factcheck']['save_files']:
+                save_file(str(i), '/home/ubuntu/thesis/source/factcheck/true_count.txt', 'w')
+                save_file(llm_revised_true_facts, f'/home/ubuntu/thesis/source/factcheck/{config['model']['refinement_model']}_llm_revised_true_facts.txt', 'a')
         
 
         if config['factcheck']['save_files']:
-            save_file(fake_facts, '/home/ubuntu/thesis/source/factcheck/fake_facts.txt')
-            save_file(llm_revised_fake_facts, '/home/ubuntu/thesis/source/factcheck/llm_revised_fake_facts.txt')
-            save_file(gt_revised_fake_facts, '/home/ubuntu/thesis/source/factcheck/gt_revised_fake_facts.txt')
+            save_file(fake_facts, f'/home/ubuntu/thesis/source/factcheck/fake_facts.txt')
+            #save_file(llm_revised_fake_facts, f'/home/ubuntu/thesis/source/factcheck/{config['model']['refinement_model']}_llm_revised_fake_facts.txt')
+            save_file(gt_revised_fake_facts, f'/home/ubuntu/thesis/source/factcheck/gt_revised_fake_facts.txt')
 
-            save_file(true_facts, '/home/ubuntu/thesis/source/factcheck/true_facts.txt')
-            save_file(llm_revised_true_facts, '/home/ubuntu/thesis/source/factcheck/llm_revised_true_facts.txt')
-            save_file(gt_revised_true_facts, '/home/ubuntu/thesis/source/factcheck/gt_revised_true_facts.txt')
+            save_file(true_facts, f'/home/ubuntu/thesis/source/factcheck/true_facts.txt')
+            #save_file(llm_revised_true_facts, f'/home/ubuntu/thesis/source/factcheck//{config['model']['refinement_model']}_llm_revised_true_facts.txt')
+            save_file(gt_revised_true_facts, f'/home/ubuntu/thesis/source/factcheck/gt_revised_true_facts.txt')
     
     else:
         fake_facts = []

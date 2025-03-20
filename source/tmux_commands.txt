@@ -1,0 +1,8 @@
+tmux: Start a new tmux session.
+tmux new-session -s [session_name]: Start a new named session.
+tmux attach-session -t [session_name]: Attach to an existing session.
+tmux attach: Attach to the most recently used session (if only one).
+tmux ls: List all running tmux sessions.
+tmux kill-session -t [session_name]: Kill a specific session.
+tmux kill-server: Kill all tmux sessions and the server.
+Ctrl+b d: Detach from the current session.

@@ -30,7 +30,7 @@ refinement:
 
 factcheck:
   start_from_files: False # If False, the benchmark starts by applying our fake detection method and save the txt files. If True, it starts by reading the txt files instead of re-generating the facts
-  save_files: False # whether to store the facts into files
+  save_files: True # whether to store the facts into files
 
 path: # paths that have "folder" in its name are folder paths, otherwise they are file paths
   caption_folder_path: /home/ubuntu/thesis/data/samples/captions
