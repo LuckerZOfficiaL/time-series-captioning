@@ -10,14 +10,14 @@ data:
 model:
   all_models: [Google Gemini-2.0-Flash, OpenAI GPT-4o, Anthropic Claude-3.5, Ollama llama3.3, GPT-4o, Claude-3.5-Haiku, Gemini-1.5-Flash, Gemini-1.5-Pro, DeepSeek-R1-FW] # available model choices, the first two are from official APIs
   used_models: [OpenAI GPT-4o, Anthropic Claude-3.5, Google Gemini-2.0-Flash] # models to use for generating captions
-  refinement_model: Google Gemini-2.0-Flash
-  checking_model: Google Gemini-2.0-Flash
+  refinement_model: Ollama llama3.3
+  checking_model: Ollama llama3.3
   ranking_model: OpenAI GPT-4o # the model used to rank the captions
   extraction_model: Google Gemini-2.0-Flash
   filter_model: Google Gemini-2.0-Flash #"OpenAI GPT-4o" #"Gemini-2.0-Flash"
   embedding_model: all-MiniLM-L6-v2 # the sentence transformer model used for embeddings in RAG
   remove_common_sense_model: Google Gemini-2.0-Flash #"OpenAI GPT-4o" #"Gemini-2.0-Flash"
-  gemini_online: False
+  gemini_online: False # of Gemini's online search is enabled
 
 refinement:
   refinement_types: [add facts, change style, enrich language, factual checking]
@@ -30,6 +30,7 @@ refinement:
 
 factcheck:
   start_from_files: False # If False, the benchmark starts by applying our fake detection method and save the txt files. If True, it starts by reading the txt files instead of re-generating the facts
+  save_files: False # whether to store the facts into files
 
 path: # paths that have "folder" in its name are folder paths, otherwise they are file paths
   caption_folder_path: /home/ubuntu/thesis/data/samples/captions

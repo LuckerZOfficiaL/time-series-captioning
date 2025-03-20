@@ -135,6 +135,8 @@ def get_response(prompt,
           online_agent = OnlineAgent(llm)
 
           resp = online_agent.search(p)
+          if resp.startswith("Based on information from the internet, "):
+            resp = resp[len("Based on information from the internet, "):]
           return resp
 
         else:  # the model is one of the self-hosted

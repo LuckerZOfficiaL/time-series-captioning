@@ -34,14 +34,7 @@ def main():
 
         with open(facts_path, 'r') as file:
             facts = [json.loads(line) for line in file]
-        
-        #print(facts[1].keys())
-        
-        print(f"{i}/{len(facts)}")
-        exit()
-
-        for fact in facts:
-            print(fact['response_factuality'])
+    
 
         fake_facts = []
         true_facts = []
@@ -64,7 +57,7 @@ def main():
                 gt_revised_true_facts.append(facts[i]['revised_response'])
             else: # the factuality is non defined
                 pass
-            #if i+1 == 3 : break
+            if i+1 == 35 : break
         
         llm_revised_fake_facts = [] # contains revised fake facts, revised by our method
         llm_revised_true_facts = [] # contains revised true facts, revised by our method
@@ -77,7 +70,8 @@ def main():
                                                                 correction_method="llm",
                                                                 return_corrected_facts=False,
                                                                 skip_numeric=False,
-                                                                extract_sentences=True)
+                                                                extract_sentences=True,
+                                                                )
             llm_revised_fake_facts.append(revised_fact)
             print(f"Refined fake fact {i+1}/{len(fake_facts)}")
 
@@ -92,13 +86,14 @@ def main():
             print(f"Refined true fact {i+1}/{len(true_facts)}")
         
 
-        save_file(fake_facts, '/home/ubuntu/thesis/source/factcheck/fake_facts.txt')
-        save_file(llm_revised_fake_facts, '/home/ubuntu/thesis/source/factcheck/llm_revised_fake_facts.txt')
-        save_file(gt_revised_fake_facts, '/home/ubuntu/thesis/source/factcheck/gt_revised_fake_facts.txt')
+        if config['factcheck']['save_files']:
+            save_file(fake_facts, '/home/ubuntu/thesis/source/factcheck/fake_facts.txt')
+            save_file(llm_revised_fake_facts, '/home/ubuntu/thesis/source/factcheck/llm_revised_fake_facts.txt')
+            save_file(gt_revised_fake_facts, '/home/ubuntu/thesis/source/factcheck/gt_revised_fake_facts.txt')
 
-        save_file(true_facts, '/home/ubuntu/thesis/source/factcheck/true_facts.txt')
-        save_file(llm_revised_true_facts, '/home/ubuntu/thesis/source/factcheck/llm_revised_true_facts.txt')
-        save_file(gt_revised_true_facts, '/home/ubuntu/thesis/source/factcheck/gt_revised_true_facts.txt')
+            save_file(true_facts, '/home/ubuntu/thesis/source/factcheck/true_facts.txt')
+            save_file(llm_revised_true_facts, '/home/ubuntu/thesis/source/factcheck/llm_revised_true_facts.txt')
+            save_file(gt_revised_true_facts, '/home/ubuntu/thesis/source/factcheck/gt_revised_true_facts.txt')
     
     else:
         fake_facts = []
@@ -133,13 +128,13 @@ def main():
     for original_fake_fact, llm_revised_fake_fact, gt_revised_fake_fact in zip(fake_facts, llm_revised_fake_facts, gt_revised_fake_facts):
         print(f"\nEvaluating {i}/{len(fake_facts)})")
         i += 1
-        if are_semantically_equivalent(llm_revised_fake_fact, gt_revised_fake_fact):
+        if are_semantically_equivalent(llm_revised_fake_fact, gt_revised_fake_fact, model=config['model']['checking_model']):
             equivalences += 1
             print("\nSEMANTICALLY EQUIVALENT!")
-        elif is_semantically_contained(gt_revised_fake_fact, llm_revised_fake_fact):
+        elif is_semantically_contained(gt_revised_fake_fact, llm_revised_fake_fact, model=config['model']['checking_model']):
             inclusions += 1
             print("\nSEMANTICALLY INCLUDED!")
-        elif are_semantically_conflicting(llm_revised_fake_fact, gt_revised_fake_fact):
+        elif are_semantically_conflicting(llm_revised_fake_fact, gt_revised_fake_fact, model=config['model']['checking_model']):
             conflicts += 1
             print("\nCONFLICT!")
             comparison = compare_correctness(llm_revised_fake_fact, gt_revised_fake_fact, model=config['model']['checking_model'])
@@ -202,11 +197,12 @@ def main():
 
 if __name__ == "__main__":
     #main()
-    with open('/home/ubuntu/thesis/source/factcheck/output_log.txt', 'w') as log_file:
+    config = load_config()
+    with open(f'/home/ubuntu/thesis/source/factcheck/{config['model']['refinement_model']}_output_log.txt', 'w') as log_file:
         dual_stdout = DualStdout(log_file)
         original_stdout = sys.stdout
         sys.stdout = dual_stdout
 
         main()
         sys.stdout = original_stdout  # Reset standard output to its original value.
-    print("Log file 'output_log.txt' created.")
+    print(f"Log file '{config['model']['refinement_model']}_output_log.txt' created.")
