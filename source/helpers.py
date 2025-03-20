@@ -688,7 +688,7 @@ def get_captions(prompt: str, model_list):
                   ))
   return captions
 
-def save_file(data, filepath: str):
+def save_file(data, filepath: str, mode: "w"):
     """
     Saves data to a file, supporting strings, lists, dictionaries, and tensors.
 
@@ -698,16 +698,16 @@ def save_file(data, filepath: str):
     """
     if isinstance(data, str):
         #print(f"Data type is string for {filepath}.")
-        with open(filepath, 'w') as file:
+        with open(filepath, mode) as file:
             file.write(data)
     elif isinstance(data, list):
         #print(f"Data type is list for {filepath}.")
-        with open(filepath, 'w') as file:
+        with open(filepath, mode) as file:
             for item in data:
-                file.write(str(item) + '\n')
+                file.write(str(item) + '\n'+'_'*80+"\n")
     elif isinstance(data, dict):
         #print(f"Data type is dictionary for {filepath}.")
-        with open(filepath, 'w') as file:
+        with open(filepath, mode) as file:
             json.dump(data, file, indent=4, sort_keys=True)
     elif isinstance(data, torch.Tensor):
         #print(f"Data type is tensor for {filepath}.")

@@ -1,6 +1,8 @@
+
+Reading FactCheck Data...
+
+Falsity Detection & Correction Running...
 Refined fake fact 1/68
 Refined fake fact 2/68
-Error processing batch: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
 Refined fake fact 3/68
 Refined fake fact 4/68
-Refined fake fact 5/68

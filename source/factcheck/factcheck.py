@@ -1,5 +1,6 @@
 import json
 import sys
+import os
 from factcheck_helpers import(
     are_semantically_equivalent,
     are_semantically_conflicting,
@@ -42,6 +43,7 @@ def main():
         gt_revised_fake_facts = [] # the ground truth revised fake facts from the factcheck
         gt_revised_true_facts = [] # the ground truth revised true facts from the factcheck
 
+        print("\nReading FactCheck Data...")
         for i in range(len(facts)):
             #print("\n\nPrompt: ", facts[0]['prompt'])
             #print("\n\nResponse: ", facts[i]['response'])
@@ -64,6 +66,7 @@ def main():
     
 
         ############### Using Our Method #####################
+        print("\nFalsity Detection & Correction Running...")
         if os.path.exists('/home/ubuntu/thesis/source/factcheck/fake_count.txt'):
             with open('/home/ubuntu/thesis/source/factcheck/fake_count.txt', 'r') as file:
                 start_idx = int(file.read())
@@ -82,18 +85,18 @@ def main():
             print(f"Refined fake fact {i+1}/{len(fake_facts)}")
 
             if config['factcheck']['save_files']:
-                save_file(str(i), '/home/ubuntu/thesis/source/factcheck/fake_count.txt', 'w')
+                save_file(str(i+1), '/home/ubuntu/thesis/source/factcheck/fake_count.txt', 'w')
                 save_file(llm_revised_fake_facts, f'/home/ubuntu/thesis/source/factcheck/{config['model']['refinement_model']}_llm_revised_fake_facts.txt', 'a')
 
 
 
 
-        if os.path.exists('/home/ubuntu/thesis/source/factcheck/true_count.txt'):W
-            with open('/home/ubuntu/thesis/source/factcheck/fake_count.txt', 'r') as file:
+        if os.path.exists('/home/ubuntu/thesis/source/factcheck/true_count.txt'):
+            with open('/home/ubuntu/thesis/source/factcheck/true_count.txt', 'r') as file:
                 start_idx = int(file.read())
         else:
             start_idx = 0
-        for i in range(len(true_facts)):
+        for i in range(start_idx, len(true_facts)):
             revised_fact = refine_caption_with_corrected_facts(true_facts[i],
                                                                 model=config['model']['refinement_model'],
                                                                 correction_method="llm",
@@ -104,7 +107,7 @@ def main():
             print(f"Refined true fact {i+1}/{len(true_facts)}")
 
             if config['factcheck']['save_files']:
-                save_file(str(i), '/home/ubuntu/thesis/source/factcheck/true_count.txt', 'w')
+                save_file(str(i+1), '/home/ubuntu/thesis/source/factcheck/true_count.txt', 'w')
                 save_file(llm_revised_true_facts, f'/home/ubuntu/thesis/source/factcheck/{config['model']['refinement_model']}_llm_revised_true_facts.txt', 'a')
         
 
