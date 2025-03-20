@@ -86,7 +86,7 @@ def main():
 
             if config['factcheck']['save_files']:
                 save_file(str(i+1), '/home/ubuntu/thesis/source/factcheck/fake_count.txt', 'w')
-                save_file(llm_revised_fake_facts, f'/home/ubuntu/thesis/source/factcheck/{config['model']['refinement_model']}_llm_revised_fake_facts.txt', 'a')
+                save_file(llm_revised_fake_facts[-1], f'/home/ubuntu/thesis/source/factcheck/{config['model']['refinement_model']}_llm_revised_fake_facts.txt', 'a')
 
 
 
@@ -108,7 +108,7 @@ def main():
 
             if config['factcheck']['save_files']:
                 save_file(str(i+1), '/home/ubuntu/thesis/source/factcheck/true_count.txt', 'w')
-                save_file(llm_revised_true_facts, f'/home/ubuntu/thesis/source/factcheck/{config['model']['refinement_model']}_llm_revised_true_facts.txt', 'a')
+                save_file(llm_revised_true_facts[-1], f'/home/ubuntu/thesis/source/factcheck/{config['model']['refinement_model']}_llm_revised_true_facts.txt', 'a')
         
 
         if config['factcheck']['save_files']:

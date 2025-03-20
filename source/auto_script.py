@@ -4,16 +4,15 @@ import time
 def run_script(script_path):
     while True:
         try:
-            # Replace 'your_script.py' with the actual name of your script
             subprocess.run(['python', script_path], check=True)
-            print("Script completed successfully!")
-            break  # Exit the loop if the script runs without errors
+            print("\nScript completed successfully!")
+            break  # Exit the loop if the script has succesfully terminated
         except subprocess.CalledProcessError as e:
-            print(f"Error occurred: {e}")
+            print(f"\nError occurred: {e}")
             print("Restarting script in 5 seconds...")
-            time.sleep(5)  # Wait for 5 seconds before restarting
+            time.sleep(5)
         except Exception as e: # Catch any other exceptions
-            print(f"Unexpected error: {e}")
+            print(f"\nUnexpected error: {e}")
             print("Restarting script in 5 seconds...")
             time.sleep(5)
 
