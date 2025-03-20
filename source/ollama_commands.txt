@@ -1,0 +1,32 @@
+Start Ollama:
+sudo systemctl start ollama
+
+Stop Ollama:
+sudo systemctl stop ollama
+
+Restart Ollama:
+sudo systemctl restart ollama
+
+Disable Ollama from starting on boot:
+sudo systemctl disable ollama
+
+
+Pull a Model:
+ollama pull <model_name>
+
+
+Run a Model (Interactive Session):
+ollama run <model_name>
+
+
+List Pulled Models:
+ollama list
+
+Remove a Model:
+ollama rm <model_name>
+
+Exit an Interactive Model Session:
+/bye
+
+GPU Monitoring (NVIDIA):
+nvidia-smi -l 1

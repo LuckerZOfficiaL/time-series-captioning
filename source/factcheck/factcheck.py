@@ -29,12 +29,17 @@ def main():
     config = load_config()
 
     if config['factcheck']['start_from_files'] == False: # if we want to re-generate the data instead of reading factsfrom the files
-        facts_path = '/home/ubuntu/thesis/data/factcheck/factcheck-GPT-benchmark.jsonl'#'/home/ubuntu/thesis/data/factcheck/Factbench.jsonl'
+        facts_path = '/home/ubuntu/thesis/data/factcheck/factcheck-GPT-benchmark.jsonl'
+        #facts_path = '/home/ubuntu/thesis/data/factcheck/Factbench.jsonl'
 
         with open(facts_path, 'r') as file:
             facts = [json.loads(line) for line in file]
         
-        print(facts[0].keys())
+        #print(facts[1].keys())
+        
+        print(f"{i}/{len(facts)}")
+        exit()
+
         for fact in facts:
             print(fact['response_factuality'])
 

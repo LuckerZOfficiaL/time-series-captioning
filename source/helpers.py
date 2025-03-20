@@ -21,6 +21,9 @@ import os
 import spacy
 import nltk
 from nltk.corpus import wordnet
+from llm_axe.agents import OnlineAgent
+from llm_axe.models import OllamaChat
+from llm_axe import OnlineAgent, OllamaChat
 
 
 def load_config(filepath="/home/ubuntu/thesis/source/configs/config.yaml"):
@@ -34,7 +37,8 @@ def get_response(prompt,
                  temperature=0.45,  # Controls randomness (0 = deterministic, 1 = max randomness)
                  top_p=.95,  # Nucleus sampling (0.0 to 1.0, lower = more focused sampling)
                  top_k=40,  # Filters to the top-k highest probability tokens (if supported)
-                 max_tokens=450,  # Maximum number of tokens in response
+                 max_tokens=450,
+                 online=False  # Maximum number of tokens in response
                  ):
 
     # Check if prompt is a list or a single string
@@ -105,24 +109,33 @@ def get_response(prompt,
               google_api_key = file.read().strip()
           client = genai.Client(api_key=google_api_key)
 
-          google_search_tool = Tool(
-            google_search = GoogleSearch()
-        )
-
+          tools = []
+          if online:
+            google_search_tool = Tool(
+              google_search = GoogleSearch()
+            )
+            tools = [google_search_tool]
+     
           response = client.models.generate_content(
             model="gemini-2.0-flash",
             contents=p,
             config=types.GenerateContentConfig(
                 max_output_tokens=max_tokens,
                 temperature=temperature,
-                tools=[google_search_tool],
+                tools=tools,
                 response_modalities=["TEXT"],
             )
           )
-
           text_response = response.text
           #web_metadata = response.candidates[0].grounding_metadata.search_entry_point.rendered_content # To get grounding metadata as web content.
           return text_response
+
+        elif model == "Ollama llama3.3":
+          llm = OllamaChat(model="llama3.3")
+          online_agent = OnlineAgent(llm)
+
+          resp = online_agent.search(p)
+          return resp
 
         else:  # the model is one of the self-hosted
             with open("/home/ubuntu/thesis/.credentials/openai", "r") as file:
@@ -1603,6 +1616,13 @@ def main():
   config = load_config()
 
   random.seed(config['general']['random_seed'])
+
+  prompts = ["Continue this sentence for the next three steps: 1, 4, 9, 16",
+              "Who is the president of Italy in 2016?",
+              "What is the best national park in California?"]
+
+  responses = get_response(prompts, model="Ollama llama3.3")
+  print(responses)
 
   
   """facts = ["The Canadian dollar had a relatively low exchange rate against USD in 2007.",
