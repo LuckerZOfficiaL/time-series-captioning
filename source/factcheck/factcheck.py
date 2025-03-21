@@ -86,7 +86,8 @@ def main():
             
             if config['factcheck']['save_files']:
                 save_file(str(i+1), '/home/ubuntu/thesis/source/factcheck/fake_count.txt', 'w')
-                save_file(llm_revised_fake_facts[-1]+"\n"+"_"*80+"\n", f'/home/ubuntu/thesis/source/factcheck/{config['model']['refinement_model']}_llm_revised_fake_facts.txt', 'a')
+                str_to_save = llm_revised_fake_facts[-1]+"\n"+"_"*80+"\n"
+                save_file(str_to_save, f'/home/ubuntu/thesis/source/factcheck/{config['model']['refinement_model']}_llm_revised_fake_facts.txt', 'a')
 
 
 
@@ -108,11 +109,12 @@ def main():
             
             if config['factcheck']['save_files']:
                 save_file(str(i+1), '/home/ubuntu/thesis/source/factcheck/true_count.txt', 'w')
-                save_file(llm_revised_true_facts[-1]+"\n"+"_"*80+"\n", f'/home/ubuntu/thesis/source/factcheck/{config['model']['refinement_model']}_llm_revised_true_facts.txt', 'a')
+                str_to_save = llm_revised_true_facts[-1]+"\n"+"_"*80+"\n"
+                save_file(str_to_save, f'/home/ubuntu/thesis/source/factcheck/{config['model']['refinement_model']}_llm_revised_true_facts.txt', 'a')
         
 
         if config['factcheck']['save_files']:
-            save_file(fake_facts, f'/home/ubuntu/thesis/source/factcheck/fake_facts.txt')
+            save_file(fake_facts, f'/home/ubuntu/thesis/source/factcheck/fake_facts.txt', 'r')
             #save_file(llm_revised_fake_facts, f'/home/ubuntu/thesis/source/factcheck/{config['model']['refinement_model']}_llm_revised_fake_facts.txt')
             save_file(gt_revised_fake_facts, f'/home/ubuntu/thesis/source/factcheck/gt_revised_fake_facts.txt')
 
@@ -120,26 +122,38 @@ def main():
             #save_file(llm_revised_true_facts, f'/home/ubuntu/thesis/source/factcheck//{config['model']['refinement_model']}_llm_revised_true_facts.txt')
             save_file(gt_revised_true_facts, f'/home/ubuntu/thesis/source/factcheck/gt_revised_true_facts.txt')
     
-    else:
+    else: # Load the saved txt files instead of creating them again
         fake_facts = []
         with open('/home/ubuntu/thesis/source/factcheck/fake_facts.txt', 'r') as file:
-            fake_facts = [line.strip() for line in file]
+            fake_facts = file.read().split('________________________________________________________________________________')    
+        fake_facts = [fact.strip() for fact in fake_facts if fact.strip()] 
+
         llm_revised_fake_facts = []
-        with open('/home/ubuntu/thesis/source/factcheck/llm_revised_fake_facts.txt', 'r') as file:
-            llm_revised_fake_facts = [line.strip() for line in file]
+        with open(f'/home/ubuntu/thesis/source/factcheck/_{config['model']['refinement_model']}_llm_revised_fake_facts.txt', 'r') as file:
+            llm_revised_fake_facts = file.read().split('________________________________________________________________________________')
+        llm_revised_fake_facts = [fact.strip() for fact in llm_revised_fake_facts if fact.strip()]         
+
         gt_revised_fake_facts = []
         with open('/home/ubuntu/thesis/source/factcheck/gt_revised_fake_facts.txt', 'r') as file:
-            gt_revised_fake_facts = [line.strip() for line in file]
+            gt_revised_fake_facts = file.read().split('________________________________________________________________________________')  
+        gt_revised_fake_facts = [fact.strip() for fact in gt_revised_fake_facts if fact.strip()] 
+
+
 
         true_facts = []
         with open('/home/ubuntu/thesis/source/factcheck/true_facts.txt', 'r') as file:
-            true_facts = [line.strip() for line in file]
+            true_facts = file.read().split('________________________________________________________________________________')  
+        true_facts = [fact.strip() for fact in true_facts if fact.strip()] 
+     
         llm_revised_true_facts = []
-        with open('/home/ubuntu/thesis/source/factcheck/llm_revised_true_facts.txt', 'r') as file:
-            llm_revised_true_facts = [line.strip() for line in file]
+        with open('/home/ubuntu/thesis/source/factcheck/_Ollama llama3.3_llm_revised_true_facts.txt', 'r') as file:
+            llm_revised_true_facts = file.read().split('________________________________________________________________________________')
+        llm_revised_true_facts = [fact.strip() for fact in llm_revised_true_facts if fact.strip()] 
+
         gt_revised_true_facts = []
         with open('/home/ubuntu/thesis/source/factcheck/gt_revised_true_facts.txt', 'r') as file:
-            gt_revised_true_facts = [line.strip() for line in file]
+            gt_revised_true_facts = file.read().split('________________________________________________________________________________')
+        gt_revised_true_facts = [fact.strip() for fact in gt_revised_true_facts if fact.strip()] 
 
 
 
@@ -164,12 +178,11 @@ def main():
     wrong_gts = fake_evals['wrong_gts']
     start_idx = fake_evals['count']
 
-    llm_revised_fake_facts = []
-    with open('/home/ubuntu/thesis/source/factcheck/_Ollama llama3.3_llm_revised_fake_facts.txt', 'r') as file:
-        llm_revised_fake_facts = file.read().split('________________________________________________________________________________')
-    llm_revised_fake_facts = [fact.strip() for fact in llm_revised_fake_facts if fact.strip()]    
 
-
+    #print(len(fake_facts))
+    #print(len(llm_revised_fake_facts))
+    #print(len(gt_revised_fake_facts))
+    #exit()
     print("\n\nEvaluating Fake Facts...")
     for i in range(start_idx, len(fake_facts)):
         print(f"\nEvaluating {i+1}/{len(fake_facts)})")
@@ -190,10 +203,10 @@ def main():
                 print("Your method got it wrong! :(")
             else:
                 print("Failed to compare the two head-to-head.")
-            fake_evals['count'] += 1
-
+        
         else: print("\nNOTHING DETECTED!")
-        print(f"Original Fake Fact: {original_fake_facts[i]} \nLLM: {llm_revised_fake_facts[i]} \nGT: {gt_revised_fake_facts[i]}")
+        fake_evals['count'] += 1
+        print(f"Original Fake Fact: {fake_facts[i]} \nLLM: {llm_revised_fake_facts[i]} \nGT: {gt_revised_fake_facts[i]}")
         save_file(fake_evals, '/home/ubuntu/thesis/source/factcheck/fake_evals.json')
         
     print("\nFake Facts:")
@@ -223,11 +236,7 @@ def main():
     equivalences = true_evals['equivalences']
     wrong_gts = true_evals['wrong_gts']
     start_idx = true_evals['count']
-
-    llm_revised_true_facts = []
-    with open('/home/ubuntu/thesis/source/factcheck/Ollama llama3.3_llm_revised_true_facts.txt', 'r') as file:
-        llm_revised_true_facts = file.read().split('________________________________________________________________________________')
-    llm_revised_true_facts = [fact.strip() for fact in llm_revised_true_facts if fact.strip()]  
+     
     
     print("\n\nEvaluating True Facts...")
     for i in range(start_idx, len(true_facts)):
@@ -250,7 +259,8 @@ def main():
             else:
                 print("Failed to compare the two head-to-head.")
         else: print("\nNOTHING DETECTED!")
-        print(f"Original True Fact: {original_true_facts[i]} \nLLM: {llm_revised_true_facts[i]} \nGT: {gt_revised_true_facts[i]}")
+        true_evals['count'] += 1
+        print(f"Original True Fact: {true_facts[i]} \nLLM: {llm_revised_true_facts[i]} \nGT: {gt_revised_true_facts[i]}")
         save_file(fake_evals, '/home/ubuntu/thesis/source/factcheck/true_evals.json')
         
 

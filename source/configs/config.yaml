@@ -17,7 +17,7 @@ model:
   filter_model: Google Gemini-2.0-Flash #"OpenAI GPT-4o" #"Gemini-2.0-Flash"
   embedding_model: all-MiniLM-L6-v2 # the sentence transformer model used for embeddings in RAG
   remove_common_sense_model: Google Gemini-2.0-Flash #"OpenAI GPT-4o" #"Gemini-2.0-Flash"
-  gemini_online: False # of Gemini's online search is enabled
+  gemini_online: False # whether Gemini's online search is enabled
 
 refinement:
   refinement_types: [add facts, change style, enrich language, factual checking]
@@ -29,7 +29,7 @@ refinement:
   skip_numeric: True # whether to skip numeric statements in factual checking, so that they get all preserved
 
 factcheck:
-  start_from_files: False # If False, the benchmark starts by applying our fake detection method and save the txt files. If True, it starts by reading the txt files instead of re-generating the facts
+  start_from_files: True # If False, the benchmark starts by applying our fake detection method and save the txt files. If True, it starts by reading the txt files instead of re-generating the facts
   save_files: True # whether to store the facts into files
 
 path: # paths that have "folder" in its name are folder paths, otherwise they are file paths

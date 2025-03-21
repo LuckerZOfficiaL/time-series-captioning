@@ -689,7 +689,7 @@ def get_captions(prompt: str, model_list):
                   ))
   return captions
 
-def save_file(data, filepath: str, mode: "w"):
+def save_file(data, filepath: str, mode= "w"):
     """
     Saves data to a file, supporting strings, lists, dictionaries, and tensors.
 
