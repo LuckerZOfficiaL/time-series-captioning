@@ -86,7 +86,7 @@ def main():
             
             if config['factcheck']['save_files']:
                 save_file(str(i+1), '/home/ubuntu/thesis/source/factcheck/fake_count.txt', 'w')
-                save_file(llm_revised_fake_facts[-1], f'/home/ubuntu/thesis/source/factcheck/{config['model']['refinement_model']}_llm_revised_fake_facts.txt', 'a')
+                save_file(llm_revised_fake_facts[-1]+"\n"+"_"*80+"\n", f'/home/ubuntu/thesis/source/factcheck/{config['model']['refinement_model']}_llm_revised_fake_facts.txt', 'a')
 
 
 
@@ -108,7 +108,7 @@ def main():
             
             if config['factcheck']['save_files']:
                 save_file(str(i+1), '/home/ubuntu/thesis/source/factcheck/true_count.txt', 'w')
-                save_file(llm_revised_true_facts[-1], f'/home/ubuntu/thesis/source/factcheck/{config['model']['refinement_model']}_llm_revised_true_facts.txt', 'a')
+                save_file(llm_revised_true_facts[-1]+"\n"+"_"*80+"\n", f'/home/ubuntu/thesis/source/factcheck/{config['model']['refinement_model']}_llm_revised_true_facts.txt', 'a')
         
 
         if config['factcheck']['save_files']:
@@ -146,7 +146,8 @@ def main():
     ############### Metric EVALUATION #####################
     if os.path.exists('/home/ubuntu/thesis/source/factcheck/fake_evals.json'):
             with open('/home/ubuntu/thesis/source/factcheck/fake_evals.json', 'r') as file:
-                fake_evals = json.load(file)
+                fake_evals = json.load(file)    
+    
     else:
         fake_evals = {
             "inclusions": 0,
@@ -155,13 +156,19 @@ def main():
             "wrong_gts": 0,
             "count": 0
 
-        }
+        }  
 
     inclusions = fake_evals['inclusions']
     conflicts = fake_evals['conflicts']
     equivalences = fake_evals['equivalences']
     wrong_gts = fake_evals['wrong_gts']
     start_idx = fake_evals['count']
+
+    llm_revised_fake_facts = []
+    with open('/home/ubuntu/thesis/source/factcheck/_Ollama llama3.3_llm_revised_fake_facts.txt', 'r') as file:
+        llm_revised_fake_facts = file.read().split('________________________________________________________________________________')
+    llm_revised_fake_facts = [fact.strip() for fact in llm_revised_fake_facts if fact.strip()]    
+
 
     print("\n\nEvaluating Fake Facts...")
     for i in range(start_idx, len(fake_facts)):
@@ -216,6 +223,11 @@ def main():
     equivalences = true_evals['equivalences']
     wrong_gts = true_evals['wrong_gts']
     start_idx = true_evals['count']
+
+    llm_revised_true_facts = []
+    with open('/home/ubuntu/thesis/source/factcheck/Ollama llama3.3_llm_revised_true_facts.txt', 'r') as file:
+        llm_revised_true_facts = file.read().split('________________________________________________________________________________')
+    llm_revised_true_facts = [fact.strip() for fact in llm_revised_true_facts if fact.strip()]  
     
     print("\n\nEvaluating True Facts...")
     for i in range(start_idx, len(true_facts)):
