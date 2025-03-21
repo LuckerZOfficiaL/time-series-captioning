@@ -1617,17 +1617,17 @@ def compare_correctness(str1: str, str2: str, model: str = "Google Gemini-2.0-Fl
 
 def check_single_fact(fact, checking_model="Google Gemini-2.0-Flash"):
    prompt = f"""
-     Here is a statement, please check if it's true.
+     Here is a statement, your task is to check whether it's true, falase or inconclusive.
      \n
     {fact}
     \n
 
-    Answer with either "yes", "no", or "inconclusive", without adding any more text. If it is generally true, still consider it as yes.
+    Answer with either "true", "false", or "inconclusive", without adding any more text. If the statement is not always but generally true, still consider it as true.
   """
-   response = get_response(prompt, model=checking_model, temperature=0.15)
-   if "yes" in response and ("no" not in response or response.index("yes") < response.index("no")):
+   response = get_response(prompt, model=checking_model, temperature=0.15).lower()
+   if "true" in response and ("false" not in response or response.index("true") < response.index("false")):
      return True
-   elif "no" in response and ("yes" not in response or response.index("no") < response.index("yes")):
+   elif "false" in response and ("true" not in response or response.index("false") < response.index("true")):
      return False
    else:
      return None

@@ -18,7 +18,7 @@ SAVE_PATH = "/home/ubuntu/thesis/data/samples/captions/extracted facts"
 def main():
     config = load_config()
     random.seed(config['general']['random_seed'])
-    words_to_skip = ['average', 'mean', 'standard deviation', 'above', 'below', 'all-time', 'increase','decline','decrease', 'series']
+    words_to_skip = ['average', 'mean', 'standard deviation', 'above', 'below', 'all-time', 'increase','decline','decrease', 'series', 'fluctuations']
 
     dataset_names = config['data']['dataset_names']
     extraction_model = config['model']['extraction_model']
