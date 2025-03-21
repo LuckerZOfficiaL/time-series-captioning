@@ -131,8 +131,10 @@ def get_response(prompt,
           #web_metadata = response.candidates[0].grounding_metadata.search_entry_point.rendered_content # To get grounding metadata as web content.
           return text_response
 
-        elif model == "Ollama llama3.3":
-          llm = OllamaChat(model="llama3.3")
+        elif "llama3.3" in model or "gemma3" in model:
+          if "llama3.3" in model: model_name = "llama3.3"
+          elif "gemma3" in model: model_name = "gemma3:27b"
+          llm = OllamaChat(model=model_name)
           online_agent = OnlineAgent(llm)
 
           resp = online_agent.search(p)
@@ -1620,7 +1622,7 @@ def check_single_fact(fact, checking_model="Google Gemini-2.0-Flash"):
     {fact}
     \n
 
-    Answer with either "yes", "no", or "inconclusive", without adding any more text.
+    Answer with either "yes", "no", or "inconclusive", without adding any more text. If it is generally true, still consider it as yes.
   """
    response = get_response(prompt, model=checking_model, temperature=0.15)
    if "yes" in response and ("no" not in response or response.index("yes") < response.index("no")):
@@ -1636,10 +1638,19 @@ def main():
 
   random.seed(config['general']['random_seed'])
 
+  caption = """Between 2007 and 2016, the Syrian Arab Republic experienced a noticeable decline in birth rates, dropping from 30.78 to 18.87 births per 1000 people. This trend is significantly sharper than the global average decline in birth rates for the same period, which saw a decrease from approximately 20.0 to 18.5 births per 1000 people globally (World Bank Data, 2007-2016). The steepest declines occurred after 2011, coinciding with the onset of the Syrian Civil War, a conflict that began following the Arab Spring uprisings and escalating government crackdowns on protests (BBC News, "Syria: The story of the conflict"). This likely contributed to the reduced birth rate due to the resulting humanitarian crisis, including over 5 million registered refugees by 2016 (UNHCR data) and internal displacement of over 6 million people (IDMC data). Compared to the average decline in low and middle-income countries, which experienced a more moderate decrease from around 25 to 22 births per 1000 people (World Bank Data, 2007-2016), Syria's decline was both more rapid and more pronounced, indicating the profound impact of regional instability and the specific consequences of the Syrian Civil War on demographic trends."""
 
-  print(get_response("Is the sun bigger than the Earch?", model="Ollama llama3.3", temperature=0.2))
+  """facts = extract_facts(caption, model="Ollama", return_list=True)
+  print("Original facts: ", facts)
+  facts = filter_sentences_no_non_year_numbers(facts)
+  print("Without numeric facts: ", facts)
 
-  #print(check_single_fact("The sun is smaller than the Earth.", checking_model="Ollama llama3.3"))
+  for fact in facts:
+    print("\n", fact, "\n", check_single_fact(fact, checking_model="Ollama llama3.3"))"""
+
+  #print(get_response("Is the sun bigger than the Earch?", model="Ollama llama3.3", temperature=0.2))
+
+  print(check_single_fact('The Ministry of Road Transport and Highways published a report on "Urban Commute Patterns in India" in 2022.', checking_model="Ollama gemma3"))
 
 
   """prompts = ["Continue this sentence for the next three steps: 1, 4, 9, 16",

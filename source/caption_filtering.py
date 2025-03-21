@@ -18,6 +18,7 @@ SAVE_PATH = "/home/ubuntu/thesis/data/samples/captions/extracted facts"
 def main():
     config = load_config()
     random.seed(config['general']['random_seed'])
+    words_to_skip = ['average', 'mean', 'standard deviation', 'above', 'below', 'all-time', 'increase','decline','decrease', 'series']
 
     dataset_names = config['data']['dataset_names']
     extraction_model = config['model']['extraction_model']
@@ -32,21 +33,30 @@ def main():
                 filepath = os.path.join(look_at_captions_path, filename)
                 with open(filepath, 'r') as file:
                     caption = file.read()
+
+                print("\nCaption: ", caption)
                 extracted_facts = extract_facts(caption, model=extraction_model, return_list=True)
                 extracted_facts = filter_sentences_no_non_year_numbers(extracted_facts)
-                
+                extracted_facts = [fact for fact in extracted_facts if not any(word in fact for word in words_to_skip)]
+                print("\nExtracted facts: ", extracted_facts)
+
                 is_true = True
                 for fact in extracted_facts:
-                    outcome = check_single_fact(fact, checking_model=checking_model)
-                    if outcome == False:
+                    try:
+                        outcome = check_single_fact(fact, checking_model=checking_model)
+                        if outcome == False:
+                            is_true = False
+                            print(f"\nFalse: {fact}")
+                            break
+                        elif outcome is None:
+                            print(f"\nInconclusive but we keep it: {fact}")   
+                        else:
+                            print(f"\nTrue: {fact}")  
+                    except Exception as e:
+                        print(f"\nGot Exception on fact:\n{fact} \n{e} ")
                         is_true = False
-                        print(f"\nFalse: {fact}")
                         break
-                    elif outcome is None:
-                        is_true = False
-                        print(f"\nInconclusive: {fact}")
-                        break
-                       
+                                            
                 
                 if is_true == True:
                     save_path = save_folder_path + f"/{filename}" 

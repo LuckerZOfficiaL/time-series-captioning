@@ -8,10 +8,10 @@ data:
   save_top_k: 0 # save the top k best captions based on the ranking, if it's 0 or negative, don't do top-k. If top-k is on, caption ranking is invoked
 
 model:
-  all_models: [Google Gemini-2.0-Flash, OpenAI GPT-4o, Anthropic Claude-3.5, Ollama llama3.3, GPT-4o, Claude-3.5-Haiku, Gemini-1.5-Flash, Gemini-1.5-Pro, DeepSeek-R1-FW] # available model choices, the first two are from official APIs
+  all_models: [Google Gemini-2.0-Flash, OpenAI GPT-4o, Anthropic Claude-3.5, Ollama llama3.3, Ollama gemma3, GPT-4o, Claude-3.5-Haiku, Gemini-1.5-Flash, Gemini-1.5-Pro, DeepSeek-R1-FW] # available model choices, the first two are from official APIs
   used_models: [OpenAI GPT-4o, Anthropic Claude-3.5, Google Gemini-2.0-Flash] # models to use for generating captions
   refinement_model: Ollama llama3.3
-  checking_model: Google Gemini-2.0-Flash
+  checking_model: Ollama gemma3
   extraction_model: Google Gemini-2.0-Flash
   ranking_model: OpenAI GPT-4o # the model used to rank the captions
   embedding_model: all-MiniLM-L6-v2 # the sentence transformer model used for embeddings in RAG
