@@ -3,3 +3,22 @@ Reading FactCheck Data...
 
 Falsity Detection & Correction Running...
 Refining true fact 1/24
+Refining true fact 2/24
+Refining true fact 3/24
+Refining true fact 4/24
+Refining true fact 5/24
+Refining true fact 6/24
+Refining true fact 7/24
+Refining true fact 8/24
+Refining true fact 9/24
+Refining true fact 10/24
+Refining true fact 11/24
+Refining true fact 12/24
+Refining true fact 13/24
+Refining true fact 14/24
+Refining true fact 15/24
+Refining true fact 16/24
+Refining true fact 17/24
+Refining true fact 18/24
+Refining true fact 19/24
+Refining true fact 20/24
