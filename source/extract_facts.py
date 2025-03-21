@@ -20,7 +20,7 @@ def main():
     dataset_names = config['data']['dataset_names']
     extraction_model = config['model']['extraction_model']
     look_at_captions_path = config['path']["refined_captions_folder_path"] + "/add facts"
-    save_folder_path = config['path']['extracted_facts_folder_path']
+    save_folder_path = config['path']['filtered_captions_path']
 
     for dataset_name in dataset_names:
         for filename in os.listdir(look_at_captions_path):
@@ -29,12 +29,15 @@ def main():
                 with open(filepath, 'r') as file:
                     caption = file.read()
                     extracted_facts = extract_facts(caption, model=extraction_model)
-                    
-                    
+
                 extracted_facts = extracted_facts.split("\n")
                 if extracted_facts[0].endswith(":"): # drop the first line if it ends with ":", as it's probably an introduction to the LLM's answer
                     extracted_facts = extracted_facts[1:]
                 extracted_facts = "\n".join(extracted_facts)
+
+                
+
+
 
                 save_path = save_folder_path + f"/{dataset_name}/{filename[:-4]}_facts.txt" 
                 save_file(extracted_facts, save_path)

@@ -14,7 +14,7 @@ SAVE_PATH = "/home/ubuntu/thesis/data/samples/captions/filtered facts"
 
 def main():
     config = load_config()
-    filder_model = config['model']['filter_model']
+    filder_model = config['model']['checking_model']
     facts_path = config['path']["extracted_facts_folder_path"]
     dataset_names = config['data']['dataset_names']
     save_folder_path = config['path']['filtered_facts_folder_path']

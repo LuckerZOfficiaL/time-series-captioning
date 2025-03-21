@@ -11,10 +11,9 @@ model:
   all_models: [Google Gemini-2.0-Flash, OpenAI GPT-4o, Anthropic Claude-3.5, Ollama llama3.3, GPT-4o, Claude-3.5-Haiku, Gemini-1.5-Flash, Gemini-1.5-Pro, DeepSeek-R1-FW] # available model choices, the first two are from official APIs
   used_models: [OpenAI GPT-4o, Anthropic Claude-3.5, Google Gemini-2.0-Flash] # models to use for generating captions
   refinement_model: Ollama llama3.3
-  checking_model: Ollama llama3.3
-  ranking_model: OpenAI GPT-4o # the model used to rank the captions
+  checking_model: Google Gemini-2.0-Flash
   extraction_model: Google Gemini-2.0-Flash
-  filter_model: Google Gemini-2.0-Flash #"OpenAI GPT-4o" #"Gemini-2.0-Flash"
+  ranking_model: OpenAI GPT-4o # the model used to rank the captions
   embedding_model: all-MiniLM-L6-v2 # the sentence transformer model used for embeddings in RAG
   remove_common_sense_model: Google Gemini-2.0-Flash #"OpenAI GPT-4o" #"Gemini-2.0-Flash"
   gemini_online: False # whether Gemini's online search is enabled
@@ -37,6 +36,7 @@ path: # paths that have "folder" in its name are folder paths, otherwise they ar
   ts_folder_path: /home/ubuntu/thesis/data/samples/time series
   plot_folder_path: /home/ubuntu/thesis/data/samples/plots
   refined_captions_folder_path: /home/ubuntu/thesis/data/samples/captions/refined
+  verified_captions_folder_path: /home/ubuntu/thesis/data/samples/captions/verified
   extracted_facts_folder_path: /home/ubuntu/thesis/data/samples/captions/extracted facts
   filtered_facts_folder_path: /home/ubuntu/thesis/data/samples/captions/filtered facts
   fact_bank_folder_path: /home/ubuntu/thesis/data/fact bank

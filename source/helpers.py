@@ -17,13 +17,14 @@ from sentence_transformers import SentenceTransformer
 from sklearn.decomposition import PCA
 import re
 import yaml
-import os
 import spacy
 import nltk
 from nltk.corpus import wordnet
 from llm_axe.agents import OnlineAgent
 from llm_axe.models import OllamaChat
 from llm_axe import OnlineAgent, OllamaChat
+import re
+from typing import Optional
 
 
 def load_config(filepath="/home/ubuntu/thesis/source/configs/config.yaml"):
@@ -688,7 +689,7 @@ def get_captions(prompt: str, model_list):
                   ))
   return captions
 
-def save_file(data, filepath: str, mode: "w"):
+def save_file(data, filepath: str, mode= "w"):
     """
     Saves data to a file, supporting strings, lists, dictionaries, and tensors.
 
@@ -1307,7 +1308,7 @@ def correct_facts_llm(facts_list: list[str], model="Google Gemini-2.0-Flash", ba
     if not facts_list:
         return []  # Return an empty list if input is empty
 
-    if skip_numeric: # if facts with numbers skip the checking to be preserved
+    if skip_numeric: # for facts with numbers, skip the checking because numbers from metadata are always correct
       facts_list = filter_sentences_no_non_year_numbers(facts_list)
       #facts_list = [fact for fact in facts_list if not any(char.isdigit() for char in fact)]
 
@@ -1612,6 +1613,22 @@ def compare_correctness(str1: str, str2: str, model: str = "Google Gemini-2.0-Fl
         print(f"Error comparing correctness: {e}")
         return -1  # Inconclusive in case of error
 
+def check_single_fact(fact, checking_model="Google Gemini-2.0-Flash"):
+   prompt = f"""
+     Here is a statement, please check if it's true.
+     \n
+    {fact}
+    \n
+
+    Answer with either "yes", "no", or "inconclusive", without adding any more text.
+  """
+   response = get_response(prompt, model=checking_model, temperature=0.15)
+   if "yes" in response and ("no" not in response or response.index("yes") < response.index("no")):
+     return True
+   elif "no" in response and ("yes" not in response or response.index("no") < response.index("yes")):
+     return False
+   else:
+     return None
 
 
 def main():
@@ -1619,12 +1636,18 @@ def main():
 
   random.seed(config['general']['random_seed'])
 
-  prompts = ["Continue this sentence for the next three steps: 1, 4, 9, 16",
+
+  print(get_response("Is the sun bigger than the Earch?", model="Ollama llama3.3", temperature=0.2))
+
+  #print(check_single_fact("The sun is smaller than the Earth.", checking_model="Ollama llama3.3"))
+
+
+  """prompts = ["Continue this sentence for the next three steps: 1, 4, 9, 16",
               "Who is the president of Italy in 2016?",
               "What is the best national park in California?"]
 
   responses = get_response(prompts, model="Ollama llama3.3")
-  print(responses)
+  print(responses)"""
 
   
   """facts = ["The Canadian dollar had a relatively low exchange rate against USD in 2007.",

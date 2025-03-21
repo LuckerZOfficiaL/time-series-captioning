@@ -30,3 +30,11 @@ APPROACH 2 (simpler and works better, no bank needed):
 3. plot_generation.py (OPTIONAL): create line charts of all time series samples
 4. caption_refinement.py: run "add fact" option on raw captions
 5. caption_refinement.py: run "factual checking" option on "add fact" captions from step 4.
+
+
+APPROACH 3 (even simpler, no falsity correction needed but you might need to generate more raw captions):
+1. process_data.py: converts raw datasets into json files inside the folder "./data/processed"
+2. sample_generation.py: generates random samples with RAG=False and stores the different files in their own folders in ./data/raw
+3. plot_generation.py (OPTIONAL): create line charts of all time series samples
+4. caption_refinement.py: run "add fact" option on raw captions
+5. caption_filtering.py: run "factual checking" option on "add fact" captions from step 4. It checks all captions and removes those with falsities.
