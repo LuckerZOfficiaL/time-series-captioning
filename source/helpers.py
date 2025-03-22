@@ -1213,7 +1213,7 @@ def are_synonyms(word1, word2, threshold=0.7):
         nlp = spacy.load("en_core_web_md")
     except OSError:
         print("spaCy model not found. Downloading...")
-        import subprocess
+        
         subprocess.run(["python", "-m", "spacy", "download", "en_core_web_md"])
         nlp = spacy.load("en_core_web_md")
 
@@ -1636,7 +1636,7 @@ def check_whole_caption(caption, extraction_model="Google Gemini-2.0-Flash", che
   extracted_facts = extract_facts(caption, model=extraction_model, return_list=True)
   extracted_facts = filter_sentences_no_non_year_numbers(extracted_facts)
   extracted_facts = [fact for fact in extracted_facts if not any(word in fact for word in words_to_skip)]
-  #àprint(extracted_facts)
+  #print(extracted_facts)
   is_true = True
   for fact in extracted_facts:
       try:
@@ -1651,12 +1651,19 @@ def check_whole_caption(caption, extraction_model="Google Gemini-2.0-Flash", che
               #print("Inconclusive: ", fact)
             else:
               is_true = False
+              print("Inconclusive!")
               break
       except Exception as e:
           #print(f"\nGot Exception on fact:\n{fact} \n{e} ")
           is_true = False
-          break                         
-  return is_true
+          break      
+  if not is_true:
+    return False, fact                   
+  return is_true, None
+
+def remove_source(text):
+    modified_text = re.sub(r'\s*\(Source: .*?\)', '', text)
+    return modified_text
 
 def main():
   config = load_config()
@@ -1675,7 +1682,7 @@ def main():
 
   #print(get_response("Is the sun bigger than the Earch?", model="Ollama llama3.3", temperature=0.2))
 
-  print(check_whole_caption('Football is globally the most popular sport. The global population has halved in the last decade. The Chinese population has been increasing drastically lately.', extraction_model="Google Gemini-2.0-Flash", checking_model="Ollama llama3.3"))
+  #print(check_whole_caption('Football is globally the most popular sport. The global population has halved in the last decade. The Chinese population has been increasing drastically lately.', extraction_model="Google Gemini-2.0-Flash", checking_model="Ollama llama3.3"))
 
 
   """prompts = ["Continue this sentence for the next three steps: 1, 4, 9, 16",
@@ -1691,7 +1698,7 @@ def main():
   masked_facts, masked_words = mask_facts(facts)
   print(masked_facts)"""
 
-  #delete_files(target="samples")
+  delete_files(target="samples")
 
   caption = "From 2002 to 2018, Spain's birth rate per 1,000 people displayed a noticeable decline, starting at 10.1 in 2002 and dropping to 7.9 by 2018. This trend contrasts sharply with the global average, which was 19.6 per 1,000 people in 2002 and decreased to 18.5 by 2018 (World Bank Data). The most pronounced decline in Spain occurred after 2008, coinciding with the global financial crisis triggered by the collapse of Lehman Brothers in September 2008 (Lehman Brothers Bankruptcy Filing, September 2008), which led to a severe recession in Spain, characterized by high unemployment rates, particularly among young adults (Instituto Nacional de Estadística, Spain). Despite Spain's status as a high-income country, with a GNI per capita of $25,830 in 2018 (World Bank Data), its birth rate consistently fell below the global average, reflecting broader European trends of aging populations and lower fertility rates, such as Italy's rate of 7.3 per 1,000 in 2018 (Eurostat). Italy is a low income country."
 

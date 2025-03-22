@@ -10,7 +10,8 @@ from helpers import (
     enrich_language,
     #factual_checking,
     refine_caption_with_corrected_facts,
-    load_config
+    load_config,
+    remove_source
 )
 
 """REFINEMENT_MODEL = "Google Gemini-2.0-Flash" #"OpenAI GPT-4o" #"Gemini-2.0-Flash"
@@ -55,6 +56,8 @@ def main():
                     if len(refined_caption.split('\n\n')) > 1: # if there are more than one paragraph, discard the first as it is likely an introduction to the answer from the refiner model
                             paragraphs = refined_caption.split('\n\n')
                             refined_caption = paragraphs[1:]
+                    if config['refinement']['remove_source']:
+                        refined_caption = remove_source(refined_caption)
                         
                 elif refinement_type == "change style":
                     refined_caption = change_linguistic_style(caption, model=refinement_model)

@@ -4,13 +4,13 @@ general:
 data:
   dataset_names: [air quality, border crossing, crime, demography]
   request_augmentations: 0 # how many times to rephrase the original prompt request?
-  n_samples: 5 # how many window samples to extract per dataset? i.e. how many time series to sample? Note that this is just the number of real samples and not the number of captions because each model in used_models generates its version of the caption. So, the number of captions generated will be n_samples*len(used_models).
+  n_samples: 3 # how many window samples to extract per dataset? i.e. how many time series to sample? Note that this is just the number of real samples and not the number of captions because each model in used_models generates its version of the caption. So, the number of captions generated will be n_samples*len(used_models).
   save_top_k: 0 # save the top k best captions based on the ranking, if it's 0 or negative, don't do top-k. If top-k is on, caption ranking is invoked
 
 model:
   all_models: [Google Gemini-2.0-Flash, OpenAI GPT-4o, Anthropic Claude-3.5, Ollama llama3.3, Ollama gemma3, GPT-4o, Claude-3.5-Haiku, Gemini-1.5-Flash, Gemini-1.5-Pro, DeepSeek-R1-FW] # available model choices, the first two are from official APIs
   used_models: [OpenAI GPT-4o, Anthropic Claude-3.5, Google Gemini-2.0-Flash] # models to use for generating captions
-  refinement_model: Ollama llama3.3
+  refinement_model: Google Gemini-2.0-Flash
   checking_model: Ollama llama3.3
   extraction_model: Google Gemini-2.0-Flash
   ranking_model: OpenAI GPT-4o # the model used to rank the captions
@@ -20,13 +20,14 @@ model:
 
 refinement:
   refinement_types: [add facts, change style, enrich language, factual checking]
-  refinement_type: factual checking
+  refinement_type: add facts
   desired_style: casual # matters only if refinement_type == change style
-  refinement_target: fake #raw, rag, refined/add facts ----- What captions to refine?
+  refinement_target: raw  #raw, rag, refined/add facts ----- What captions to refine?
   batch_size: 5 # how many facts to present to the LLM in each prompt for removing common sense and checking facts?
   factual_correction_method: llm # fill in the gap
   skip_numeric: True # whether to skip numeric statements in factual checking, so that they get all preserved
   words_to_skip: [average, mean, standard deviation, above, below, all-time, increas,declin,decreas, series, fluctuat, half, double, triple]
+  remove_source: True
 
 
 factcheck:

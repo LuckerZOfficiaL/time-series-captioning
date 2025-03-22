@@ -6,6 +6,7 @@ from helpers import (
     extract_facts,
     load_config,
     check_whole_caption,
+    remove_source
 )
 
 """EXTRACTION_MODEL = "Google Gemini-2.0-Flash" #"OpenAI GPT-4o" #"Gemini-2.0-Flash"
@@ -33,14 +34,15 @@ def main():
                     caption = file.read()
 
                 print("\nCaption: ", caption) 
-                correctness = check_whole_caption(caption, extraction_model=extraction_model, checking_model=checking_model, words_to_skip=config['refinement']['words_to_skip'])
+                correctness, fact = check_whole_caption(caption, extraction_model=extraction_model, checking_model=checking_model, words_to_skip=config['refinement']['words_to_skip'], tolerate_inconclusive=False)
                                         
                 if correctness == True:
                     save_path = save_folder_path + f"/{filename}" 
                     save_file(caption, save_path)
                     print(f"\n{filename} is verified and stored.")
                 else:
-                    print(f"\n{filename} is out due to falsity!")
+                    print(f"\n{filename} is out due to falsity:")
+                    print(fact)
                     
                                           
 if __name__ == "__main__":

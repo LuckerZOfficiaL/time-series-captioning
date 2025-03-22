@@ -47,9 +47,10 @@ def main():
             if dataset_name in filename:
                 filepath = os.path.join(ts_folder_path, filename)
                 with open(filepath, 'r') as file:
-                    ts = [float(line.strip()) for line in file if line.strip()]
+                    ts = [float(line.strip()) for line in file.read().split('_'*80) if line.strip()]
+                    #ts = [float(line.strip()) for line in file if line.strip()]
 
-                savepath = f"{save_folder_path}/{filename[:-5]}.jpeg" 
+                savepath = f"{save_folder_path}/{filename[:-4]}.jpeg" 
                 generate_line_plot(ts=ts, 
                                     xlabel=X_LABEL_MAP[dataset_name],
                                     ylabel=Y_LABEL_MAP[dataset_name],
