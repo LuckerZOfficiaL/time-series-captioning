@@ -1744,7 +1744,7 @@ def main():
 
   #print(get_response("Is the sun bigger than the Earch?", model="Ollama llama3.3", temperature=0.2))
 
-  print(check_whole_caption_confidence('Football is globally the most popular sport. The global population has halved in the last decade. The Chinese population has been increasing drastically lately.', extraction_model="Google Gemini-2.0-Flash", checking_model="Ollama llama3.3"))
+  print(check_whole_caption_confidence('Football is globally the most popular sport. The global population has halved in the last decade. The Chinese population has been increasing drastically lately.', extraction_model="Google Gemini-2.0-Flash", checking_model="Ollama llama3.3", confidence_thresh=0.7))
 
 
   """prompts = ["Continue this sentence for the next three steps: 1, 4, 9, 16",

@@ -28,6 +28,8 @@ refinement:
   skip_numeric: True # whether to skip numeric statements in factual checking, so that they get all preserved
   words_to_skip: [average, mean, standard deviation, above, below, all-time, increas,declin,decreas, series, fluctuat, half, double, triple]
   remove_source: True
+  use_confidence_checking: True
+  confidence_thresh: 0.7
 
 
 factcheck:

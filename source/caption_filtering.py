@@ -34,7 +34,10 @@ def main():
                     caption = file.read()
 
                 print("\nCaption: ", caption)
-                correctness, fact = check_whole_caption(caption, extraction_model=extraction_model, checking_model=checking_model, words_to_skip=config['refinement']['words_to_skip'], tolerate_inconclusive=False)
+                if config['refinement']['use_confidence_checking']:
+                    correctness, fact = check_whole_captionconfidence(caption, extraction_model=extraction_model, checking_model=checking_model, words_to_skip=config['refinement']['words_to_skip'], confidence_thresh=config['refinement']['confidence_thresh'])
+                else:
+                    correctness, fact = check_whole_caption(caption, extraction_model=extraction_model, checking_model=checking_model, words_to_skip=config['refinement']['words_to_skip'], tolerate_inconclusive=False)
                                         
                 if correctness == True:
                     save_path = save_folder_path + f"/{filename}" 

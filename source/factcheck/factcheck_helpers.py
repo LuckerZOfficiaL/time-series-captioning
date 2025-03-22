@@ -1680,6 +1680,37 @@ def check_single_fact(fact, checking_model="Google Gemini-2.0-Flash"):
    else:
      return None
 
+def check_single_fact_confidence(fact, checking_model="Google Gemini-2.0-Flash"):
+  prompt = f"""Please analyze the following statement and determine its factual correctness. Provide a confidence score (on a scale of 0 to 100, where 0 is completely incorrect and 100 is completely correct) for your assessment.
+
+  Statement: {fact}
+
+  Provide your response in the following format:
+
+  Factual Correctness: True/False
+  Confidence Score: 0-100"""
+
+  response = get_response(prompt, model=checking_model, temperature=0.15)
+  #print("Response: ", response)
+  # Extract factual correctness and confidence as two variables
+  correctness = None
+  confidence = None
+
+  # Check the response for correctness and confidence
+  if "true" in response.lower():
+    correctness = True
+  elif "false" in response.lower():
+    correctness = False
+
+  # Extract the confidence score from the response
+  confidence_index = response.lower().find("confidence score:")
+  if confidence_index != -1:
+    confidence_start = confidence_index + len("confidence score:")
+    confidence_end = response.find("]", confidence_start)
+    confidence = int(response[confidence_start:confidence_end])
+
+  return correctness, confidence
+
 def check_whole_caption(caption, extraction_model="Google Gemini-2.0-Flash", checking_model="Google Gemini-2.0-Flash", words_to_skip=[], tolerate_inconclusive=True):
   extracted_facts = extract_facts(caption, model=extraction_model, return_list=True)
   extracted_facts = filter_sentences_no_non_year_numbers(extracted_facts)
@@ -1706,6 +1737,35 @@ def check_whole_caption(caption, extraction_model="Google Gemini-2.0-Flash", che
           break                         
   return is_true
 
+def check_whole_caption_confidence(caption, extraction_model="Google Gemini-2.0-Flash", checking_model="Google Gemini-2.0-Flash", words_to_skip=[], confidence_thresh=60):
+  extracted_facts = extract_facts(caption, model=extraction_model, return_list=True)
+  extracted_facts = filter_sentences_no_non_year_numbers(extracted_facts)
+  extracted_facts = [fact for fact in extracted_facts if not any(word in fact for word in words_to_skip)]
+  #print(extracted_facts)
+  is_true = True
+  for fact in extracted_facts:
+      try:
+          outcome, confidence = check_single_fact_confidence(fact, checking_model=checking_model)
+          if outcome == False:
+              is_true = False
+              #print("False: ", fact)
+              break
+          elif outcome is True:
+            if confidence > confidence_thresh: # a fact is true if it's classified as true with at least some confidence
+              pass
+              #print("Inconclusive: ", fact)
+            else:
+              is_true = False
+              print("Unexpected outcome!")
+              break
+      except Exception as e:
+          #print(f"\nGot Exception on fact:\n{fact} \n{e} ")
+          is_true = False
+          break      
+  if not is_true:
+    return False, fact # return False along with the fact that is either false or problematic                   
+  return True, None # return True and None because no fact was problematic
+  
 def main():
   config = load_config()
 
