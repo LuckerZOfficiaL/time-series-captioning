@@ -16,7 +16,7 @@ model:
   ranking_model: OpenAI GPT-4o # the model used to rank the captions
   embedding_model: all-MiniLM-L6-v2 # the sentence transformer model used for embeddings in RAG
   remove_common_sense_model: Google Gemini-2.0-Flash #"OpenAI GPT-4o" #"Gemini-2.0-Flash"
-  gemini_online: False # whether Gemini's online search is enabled
+  gemini_online: False # whether Gemini's online search is enabled. Rith now it's still not implemented, it's False by default. To make it True, go to helpers.py and manually change the default argument for get_response
 
 refinement:
   refinement_types: [add facts, change style, enrich language, factual checking]
@@ -26,6 +26,8 @@ refinement:
   batch_size: 5 # how many facts to present to the LLM in each prompt for removing common sense and checking facts?
   factual_correction_method: llm # fill in the gap
   skip_numeric: True # whether to skip numeric statements in factual checking, so that they get all preserved
+  words_to_skip: [average, mean, standard deviation, above, below, all-time, increas,declin,decreas, series, fluctuat, half, double, triple]
+
 
 factcheck:
   start_from_files: True # If False, the benchmark starts by applying our fake detection method and save the txt files. If True, it starts by reading the txt files instead of re-generating the facts

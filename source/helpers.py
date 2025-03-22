@@ -1632,6 +1632,31 @@ def check_single_fact(fact, checking_model="Google Gemini-2.0-Flash"):
    else:
      return None
 
+def check_whole_caption(caption, extraction_model="Google Gemini-2.0-Flash", checking_model="Google Gemini-2.0-Flash", words_to_skip=[], tolerate_inconclusive=True):
+  extracted_facts = extract_facts(caption, model=extraction_model, return_list=True)
+  extracted_facts = filter_sentences_no_non_year_numbers(extracted_facts)
+  extracted_facts = [fact for fact in extracted_facts if not any(word in fact for word in words_to_skip)]
+  #àprint(extracted_facts)
+  is_true = True
+  for fact in extracted_facts:
+      try:
+          outcome = check_single_fact(fact, checking_model=checking_model)
+          if outcome == False:
+              is_true = False
+              #print("False: ", fact)
+              break
+          elif outcome is None:
+            if tolerate_inconclusive:
+              pass
+              #print("Inconclusive: ", fact)
+            else:
+              is_true = False
+              break
+      except Exception as e:
+          #print(f"\nGot Exception on fact:\n{fact} \n{e} ")
+          is_true = False
+          break                         
+  return is_true
 
 def main():
   config = load_config()
@@ -1650,7 +1675,7 @@ def main():
 
   #print(get_response("Is the sun bigger than the Earch?", model="Ollama llama3.3", temperature=0.2))
 
-  print(check_single_fact('The Ministry of Road Transport and Highways published a report on "Urban Commute Patterns in India" in 2022.', checking_model="Ollama gemma3"))
+  print(check_whole_caption('Football is globally the most popular sport. The global population has halved in the last decade. The Chinese population has been increasing drastically lately.', extraction_model="Google Gemini-2.0-Flash", checking_model="Ollama llama3.3"))
 
 
   """prompts = ["Continue this sentence for the next three steps: 1, 4, 9, 16",

@@ -1611,6 +1611,101 @@ def compare_correctness(str1: str, str2: str, model: str = "Google Gemini-2.0-Fl
         print(f"Error comparing correctness: {e}")
         return -1  # Inconclusive in case of error
 
+def compare_correctness(str1: str, str2: str, model: str = "Google Gemini-2.0-Flash") -> int:
+    """
+    Compares the correctness of two strings using an LLM.
+
+    Args:
+        str1: The first string.
+        str2: The second string.
+        model: The LLM to use.
+
+    Returns:
+        1 if str1 is deemed more correct, 2 if str2 is more correct, or -1 if inconclusive.
+    """
+
+    prompt = f"""
+    You are an expert in determining the correctness of factual statements.
+
+    Given the following two pieces of text, determine which text is more factually correct. If both are correct or incorrect, it's inconclusive. One text wins if the it is true and the other is false.
+
+    Text 1:
+    {str1}
+
+    Text 2:
+    {str2}
+
+    Provide your response in the following JSON format:
+    {{
+      "winner": "1" or "2" or "inconclusive"
+    }}
+
+    Respond only with the JSON object.
+    """
+    try:
+        response_text = get_response(prompt, model=model, temperature=0.15).strip()
+        match = re.search(r'"winner":\s*"(\w+)"', response_text)
+
+        if match:
+            winner = match.group(1)
+            if winner == "1":
+                return 1
+            elif winner == "2":
+                return 2
+            elif winner == "inconclusive":
+                return -1
+            else:
+                return -1 #unexpected response value
+        else:
+            return -1 #no match found
+
+    except Exception as e:
+        print(f"Error comparing correctness: {e}")
+        return -1  # Inconclusive in case of error
+
+def check_single_fact(fact, checking_model="Google Gemini-2.0-Flash"):
+   prompt = f"""
+     Here is a statement, your task is to check whether it's true, falase or inconclusive.
+     \n
+    {fact}
+    \n
+
+    Answer with either "true", "false", or "inconclusive", without adding any more text. If the statement is not always but generally true, still consider it as true.
+  """
+   response = get_response(prompt, model=checking_model, temperature=0.15).lower()
+   if "true" in response and ("false" not in response or response.index("true") < response.index("false")):
+     return True
+   elif "false" in response and ("true" not in response or response.index("false") < response.index("true")):
+     return False
+   else:
+     return None
+
+def check_whole_caption(caption, extraction_model="Google Gemini-2.0-Flash", checking_model="Google Gemini-2.0-Flash", words_to_skip=[], tolerate_inconclusive=True):
+  extracted_facts = extract_facts(caption, model=extraction_model, return_list=True)
+  extracted_facts = filter_sentences_no_non_year_numbers(extracted_facts)
+  extracted_facts = [fact for fact in extracted_facts if not any(word in fact for word in words_to_skip)]
+  #àprint(extracted_facts)
+  is_true = True
+  for fact in extracted_facts:
+      try:
+          outcome = check_single_fact(fact, checking_model=checking_model)
+          if outcome == False:
+              is_true = False
+              #print("False: ", fact)
+              break
+          elif outcome is None:
+            if tolerate_inconclusive:
+              pass
+              #print("Inconclusive: ", fact)
+            else:
+              is_true = False
+              break
+      except Exception as e:
+          #print(f"\nGot Exception on fact:\n{fact} \n{e} ")
+          is_true = False
+          break                         
+  return is_true
+
 def main():
   config = load_config()
 
