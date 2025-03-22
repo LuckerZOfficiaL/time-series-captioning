@@ -1632,6 +1632,37 @@ def check_single_fact(fact, checking_model="Google Gemini-2.0-Flash"):
    else:
      return None
 
+def check_single_fact_confidence(fact, checking_model="Google Gemini-2.0-Flash"):
+  prompt = f"""Please analyze the following statement and determine its factual correctness. Provide a confidence score (on a scale of 0 to 100, where 0 is completely incorrect and 100 is completely correct) for your assessment.
+
+  Statement: {fact}
+
+  Provide your response in the following format:
+
+  Factual Correctness: True/False
+  Confidence Score: 0-100"""
+
+  response = get_response(prompt, model=checking_model, temperature=0.15)
+  #print("Response: ", response)
+  # Extract factual correctness and confidence as two variables
+  correctness = None
+  confidence = None
+
+  # Check the response for correctness and confidence
+  if "true" in response.lower():
+    correctness = True
+  elif "false" in response.lower():
+    correctness = False
+
+  # Extract the confidence score from the response
+  confidence_index = response.lower().find("confidence score:")
+  if confidence_index != -1:
+    confidence_start = confidence_index + len("confidence score:")
+    confidence_end = response.find("]", confidence_start)
+    confidence = int(response[confidence_start:confidence_end])
+
+  return correctness, confidence
+
 def check_whole_caption(caption, extraction_model="Google Gemini-2.0-Flash", checking_model="Google Gemini-2.0-Flash", words_to_skip=[], tolerate_inconclusive=True):
   extracted_facts = extract_facts(caption, model=extraction_model, return_list=True)
   extracted_facts = filter_sentences_no_non_year_numbers(extracted_facts)
@@ -1661,6 +1692,35 @@ def check_whole_caption(caption, extraction_model="Google Gemini-2.0-Flash", che
     return False, fact                   
   return is_true, None
 
+def check_whole_caption_confidence(caption, extraction_model="Google Gemini-2.0-Flash", checking_model="Google Gemini-2.0-Flash", words_to_skip=[], confidence_thresh=60):
+  extracted_facts = extract_facts(caption, model=extraction_model, return_list=True)
+  extracted_facts = filter_sentences_no_non_year_numbers(extracted_facts)
+  extracted_facts = [fact for fact in extracted_facts if not any(word in fact for word in words_to_skip)]
+  #print(extracted_facts)
+  is_true = True
+  for fact in extracted_facts:
+      try:
+          outcome, confidence = check_single_fact_confidence(fact, checking_model=checking_model)
+          if outcome == False:
+              is_true = False
+              #print("False: ", fact)
+              break
+          elif outcome is True:
+            if confidence > confidence_thresh: # a fact is true if it's classified as true with at least some confidence
+              pass
+              #print("Inconclusive: ", fact)
+            else:
+              is_true = False
+              print("Unexpected outcome!")
+              break
+      except Exception as e:
+          #print(f"\nGot Exception on fact:\n{fact} \n{e} ")
+          is_true = False
+          break      
+  if not is_true:
+    return False, fact # return False along with the fact that is either false or problematic                   
+  return True, None # return True and None because no fact was problematic
+
 def remove_source(text):
     modified_text = re.sub(r'\s*\(Source: .*?\)', '', text)
     return modified_text
@@ -1669,6 +1729,8 @@ def main():
   config = load_config()
 
   random.seed(config['general']['random_seed'])
+
+  #print(check_single_fact_confidence("The sun is smaller than the Earth", checking_model="Google Gemini-2.0-Flash"))
 
   caption = """Between 2007 and 2016, the Syrian Arab Republic experienced a noticeable decline in birth rates, dropping from 30.78 to 18.87 births per 1000 people. This trend is significantly sharper than the global average decline in birth rates for the same period, which saw a decrease from approximately 20.0 to 18.5 births per 1000 people globally (World Bank Data, 2007-2016). The steepest declines occurred after 2011, coinciding with the onset of the Syrian Civil War, a conflict that began following the Arab Spring uprisings and escalating government crackdowns on protests (BBC News, "Syria: The story of the conflict"). This likely contributed to the reduced birth rate due to the resulting humanitarian crisis, including over 5 million registered refugees by 2016 (UNHCR data) and internal displacement of over 6 million people (IDMC data). Compared to the average decline in low and middle-income countries, which experienced a more moderate decrease from around 25 to 22 births per 1000 people (World Bank Data, 2007-2016), Syria's decline was both more rapid and more pronounced, indicating the profound impact of regional instability and the specific consequences of the Syrian Civil War on demographic trends."""
 
@@ -1682,7 +1744,7 @@ def main():
 
   #print(get_response("Is the sun bigger than the Earch?", model="Ollama llama3.3", temperature=0.2))
 
-  #print(check_whole_caption('Football is globally the most popular sport. The global population has halved in the last decade. The Chinese population has been increasing drastically lately.', extraction_model="Google Gemini-2.0-Flash", checking_model="Ollama llama3.3"))
+  print(check_whole_caption_confidence('Football is globally the most popular sport. The global population has halved in the last decade. The Chinese population has been increasing drastically lately.', extraction_model="Google Gemini-2.0-Flash", checking_model="Ollama llama3.3"))
 
 
   """prompts = ["Continue this sentence for the next three steps: 1, 4, 9, 16",
@@ -1698,7 +1760,7 @@ def main():
   masked_facts, masked_words = mask_facts(facts)
   print(masked_facts)"""
 
-  delete_files(target="samples")
+  #delete_files(target="samples")
 
   caption = "From 2002 to 2018, Spain's birth rate per 1,000 people displayed a noticeable decline, starting at 10.1 in 2002 and dropping to 7.9 by 2018. This trend contrasts sharply with the global average, which was 19.6 per 1,000 people in 2002 and decreased to 18.5 by 2018 (World Bank Data). The most pronounced decline in Spain occurred after 2008, coinciding with the global financial crisis triggered by the collapse of Lehman Brothers in September 2008 (Lehman Brothers Bankruptcy Filing, September 2008), which led to a severe recession in Spain, characterized by high unemployment rates, particularly among young adults (Instituto Nacional de Estadística, Spain). Despite Spain's status as a high-income country, with a GNI per capita of $25,830 in 2018 (World Bank Data), its birth rate consistently fell below the global average, reflecting broader European trends of aging populations and lower fertility rates, such as Italy's rate of 7.3 per 1,000 in 2018 (Eurostat). Italy is a low income country."
 

@@ -33,7 +33,7 @@ def main():
                 with open(filepath, 'r') as file:
                     caption = file.read()
 
-                print("\nCaption: ", caption) 
+                print("\nCaption: ", caption)
                 correctness, fact = check_whole_caption(caption, extraction_model=extraction_model, checking_model=checking_model, words_to_skip=config['refinement']['words_to_skip'], tolerate_inconclusive=False)
                                         
                 if correctness == True:
