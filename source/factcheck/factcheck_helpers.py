@@ -105,13 +105,13 @@ def get_response(prompt,
             response_body = json.loads(response["body"].read().decode("utf-8"))
             return response_body['content'][0]['text']
 
-        elif model == "Google Gemini-2.0-Flash":
+        elif model == "Google Gemini-2.0-Flash" or model == "Online Google Gemini-2.0-Flash":
           with open("/home/ubuntu/thesis/.credentials/google", "r") as file:
               google_api_key = file.read().strip()
           client = genai.Client(api_key=google_api_key)
 
           tools = []
-          if online:
+          if "Online" in model:
             google_search_tool = Tool(
               google_search = GoogleSearch()
             )
@@ -1751,7 +1751,7 @@ def check_whole_caption_confidence(caption, extraction_model="Google Gemini-2.0-
               #print("False: ", fact)
               break
           elif outcome is True:
-            if confidence > confidence_thresh: # a fact is true if it's classified as true with at least some confidence
+            if confidence >= confidence_thresh: # a fact is true if it's classified as true with at least some confidence
               pass
               #print("Inconclusive: ", fact)
             else:

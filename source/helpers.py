@@ -1706,7 +1706,7 @@ def check_whole_caption_confidence(caption, extraction_model="Google Gemini-2.0-
               #print("False: ", fact)
               break
           elif outcome is True:
-            if confidence > confidence_thresh: # a fact is true if it's classified as true with at least some confidence
+            if confidence >= confidence_thresh: # a fact is true if it's classified as true with at least some confidence
               pass
               #print("Inconclusive: ", fact)
             else:
