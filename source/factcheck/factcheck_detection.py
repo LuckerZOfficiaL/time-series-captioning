@@ -108,7 +108,7 @@ def main():
 
         if outcome == True:
             true_detection_res['correct_true'] += 1
-            print(f"\nCorrectly detected as true: \n {true_facts[i]}")
+            print(f"\nCorrectly recognize as true: \n {true_facts[i]}")
         else:
             print(f"\nFailed to recognize as true: \n {true_facts[i]} \n Due to: {fact}")
 

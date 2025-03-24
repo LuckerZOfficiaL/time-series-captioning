@@ -138,7 +138,8 @@ def get_response(prompt,
         elif "Ollama" in model:
           if "llama3.3" in model: model_name = "llama3.3"
           elif "gemma3" in model: model_name = "gemma3:27b"
-          elif "mixtral" in model: model_name = "mixtral:8x7b"
+          elif "mixtral 8x7b" in model: model_name = "mixtral:8x7b"
+          elif "mixtral 8x22b" in model: model_name = "mixtral:8x22b"
           elif "qwen2.5" in model: model_name = "myaniu/qwen2.5-1m"
           elif "nemotron" in model: model_name = "nemotron"
           llm = OllamaChat(model=model_name)

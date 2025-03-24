@@ -8,7 +8,7 @@ data:
   save_top_k: 0 # save the top k best captions based on the ranking, if it's 0 or negative, don't do top-k. If top-k is on, caption ranking is invoked
 
 model:
-  all_models: [Google Gemini-2.0-Flash, Online Gemini-2.0-Flash, OpenAI GPT-4o, Anthropic Claude-3.5, Ollama llama3.3, Ollama gemma3, Ollama mixtral, Ollama qwen2.5-1m, Ollama nemotron, GPT-4o, Claude-3.5-Haiku, Gemini-1.5-Flash, Gemini-1.5-Pro, DeepSeek-R1-FW] # available model choices, the first two are from official APIs
+  all_models: [Google Gemini-2.0-Flash, Online Gemini-2.0-Flash, OpenAI GPT-4o, Anthropic Claude-3.5, Ollama llama3.3, Ollama gemma3, Ollama mixtral 8x7b, Ollama mixtral 8x22b, Ollama qwen2.5-1m, Ollama nemotron, GPT-4o, Claude-3.5-Haiku, Gemini-1.5-Flash, Gemini-1.5-Pro, DeepSeek-R1-FW] # available model choices, the first two are from official APIs
   used_models: [OpenAI GPT-4o, Anthropic Claude-3.5, Google Gemini-2.0-Flash] # models to use for generating captions
   refinement_model: Google Gemini-2.0-Flash
   checking_model: Ollama mixtral
