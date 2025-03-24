@@ -105,10 +105,14 @@ def get_response(prompt,
             response_body = json.loads(response["body"].read().decode("utf-8"))
             return response_body['content'][0]['text']
 
-        elif model == "Google Gemini-2.0-Flash":
+        elif model == "Google Gemini-2.0-Flash" or model == "Online Gemini-2.0-Flash":
           with open("/home/ubuntu/thesis/.credentials/google", "r") as file:
               google_api_key = file.read().strip()
           client = genai.Client(api_key=google_api_key)
+
+          online = False
+          if "online" in model.lower():
+            onlie = True
 
           tools = []
           if online:
@@ -131,13 +135,17 @@ def get_response(prompt,
           #web_metadata = response.candidates[0].grounding_metadata.search_entry_point.rendered_content # To get grounding metadata as web content.
           return text_response
 
-        elif "llama3.3" in model or "gemma3" in model:
+        elif "Ollama" in model:
           if "llama3.3" in model: model_name = "llama3.3"
           elif "gemma3" in model: model_name = "gemma3:27b"
+          elif "mixtral" in model: model_name = "mixtral:8x7b"
+          elif "qwen2.5" in model: model_name = "myaniu/qwen2.5-1m"
+          elif "nemotron" in model: model_name = "nemotron"
           llm = OllamaChat(model=model_name)
           online_agent = OnlineAgent(llm)
 
           resp = online_agent.search(p)
+          resp = resp.lstrip()
           if resp.startswith("Based on information from the internet, "):
             resp = resp[len("Based on information from the internet, "):]
           return resp
@@ -364,7 +372,6 @@ def get_sample(dataset_name: str, json_data, series_len = None, start_idx = None
 
     metadata["sampling frequency"] = "hourly"
 
-
   elif dataset_name == "crime":
     town = random.choice(list(json_data.keys()))
     metadata = json_data[town]['metadata'].copy()
@@ -562,6 +569,7 @@ def get_request(dataset_name, metadata, ts):
           Answer in a single paragraph of four sentences at most, without bullet points or any formatting.
 
           """
+  
   elif dataset_name == "crime":
     request = f"""Here is a time series about the number of {metadata["sampling frequency"]} crimes {metadata["town"]}, Los Angeles, from {metadata["start date of the series"]} to {metadata["end date of the series"]}: \n {ts}
           \nThe all-time statistics of {metadata["town"]} until today are: \n Mean: {metadata["general mean in the history of this town"]} \n Standard Deviation: {metadata["general standard deviation in the history of this town"]} \n Minimum: {metadata["general minimum in the history of this town"]} \n Maximum: {metadata["general maximum in the history of this town"]}
@@ -726,13 +734,13 @@ def add_facts_to_caption(caption, model="OpenAI GPT-4o", temperature=0.3, ask_ur
     \n
     The description may include vague references to scientific facts, economic, or geopolitical events.  
     1. Identify any **unclear or speculative** statements.  
-    2. **Replace** them with **concrete facts** by referring to your scientific knowledge and historical events from that period.  
-    3. For each fact added, **mention a source, historical reference, or well-documented event**.  
+    2. **Replace** them with **concrete facts** by referring to your scientific knowledge and historical events from that period. Rely only on trusted sources, not fake news.
+    3. For each fact added, **mention its source, historical reference, or well-documented event**.  
     {"4. If possible, provide URLs to support your statements. If not, ignore this request without commenting." if ask_urls else ""}
     
     **Rules:**  
     - Do NOT modify the original structure of the description beyond factual refinements.  
-    - Maintain a natural and fluent writing style.  
+    - Ensure the information you add is correct and not fake.
     - Return ONLY the refined caption in one paragraph, do not introduce your refinement but write your refinement directly.  
     """
     
@@ -1744,15 +1752,15 @@ def main():
 
   #print(get_response("Is the sun bigger than the Earch?", model="Ollama llama3.3", temperature=0.2))
 
-  print(check_whole_caption_confidence('Football is globally the most popular sport. The global population has halved in the last decade. The Chinese population has been increasing drastically lately.', extraction_model="Google Gemini-2.0-Flash", checking_model="Ollama llama3.3", confidence_thresh=0.7))
+  #print(check_whole_caption_confidence('Football is globally the most popular sport. The global population has halved in the last decade. The Chinese population has been increasing drastically lately.', extraction_model="Google Gemini-2.0-Flash", checking_model="Ollama llama3.3", confidence_thresh=0.7))
 
 
-  """prompts = ["Continue this sentence for the next three steps: 1, 4, 9, 16",
+  prompts = ["Continue this sequence: 1, 4, 9, 16",
               "Who is the president of Italy in 2016?",
               "What is the best national park in California?"]
 
-  responses = get_response(prompts, model="Ollama llama3.3")
-  print(responses)"""
+  responses = get_response(prompts, model="Ollama mixtral")
+  print(responses)
 
   
   """facts = ["The Canadian dollar had a relatively low exchange rate against USD in 2007.",

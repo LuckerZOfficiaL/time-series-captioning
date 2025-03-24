@@ -15,6 +15,7 @@ def main():
     random.seed(config['general']['random_seed'])
     extraction_model = config['model']['extraction_model']
     checking_model = config['model']['checking_model']
+    use_confidence = config['refinement']['use_confidence_checking']
     
 
     facts_path = '/home/ubuntu/thesis/data/factcheck/factcheck-GPT-benchmark.jsonl'
@@ -50,7 +51,7 @@ def main():
 
 
     ################################# TRACKING RESULTS FOR FAKE FACTS ##############################################
-    fake_detection_res_path = '/home/ubuntu/thesis/source/factcheck/conf_fake_detection_res.json'
+    fake_detection_res_path = f'/home/ubuntu/thesis/source/factcheck/{extraction_model}_{checking_model}_{"conf" if use_confidence else ""}{str(config[refinement]['confidence']) if use_confidence else ""}_fake_detection_res.json'
     if not os.path.exists(fake_detection_res_path):
         fake_detection_res= {
             "correct_fake": 0,
@@ -65,7 +66,7 @@ def main():
     start_idx = fake_detection_res['i']
 
     for i in range(start_idx, len(fake_facts)):
-        print(f"Checking fake fact {i+1}/{len(fake_facts)}")
+        print(f"\nChecking fake fact {i+1}/{len(fake_facts)}")
         if config['refinement']['use_confidence_checking']:
             outcome, fact = check_whole_caption_confidence(fake_facts[i], extraction_model=extraction_model, checking_model=checking_model, confidence_thresh=config['refinement']['confidence_thresh'])
         else:
@@ -73,18 +74,18 @@ def main():
 
         if outcome == False:
             fake_detection_res['correct_fake'] += 1
-            print(f"\nCorrectly detected as fake: \n {fake_facts[i]} \nDue to {fact}")
+            print(f"\nCorrectly detected as fake: \n {fake_facts[i]} \n\nDue to: {fact}")
         else:
             print(f"\nFailed to detect as fake: \n {fake_facts[i]}")
 
         fake_detection_res['i'] = i+1
 
-        output_file = '/home/ubuntu/thesis/source/factcheck/conf_fake_detection_res.json'
+        output_file = f'/home/ubuntu/thesis/source/factcheck/{extraction_model}_{checking_model}_{"conf" if use_confidence else ""}{str(config[refinement]['confidence']) if use_confidence else ""}_fake_detection_res.json'
         with open(output_file, 'w') as file:
             json.dump(fake_detection_res, file)
 
     ################################# TRACKING RESULTS FOR TRUE FACTS ##############################################
-    true_detection_res_path = '/home/ubuntu/thesis/source/factcheck/conf_true_detection_res.json'
+    true_detection_res_path = f'/home/ubuntu/thesis/source/factcheck/{extraction_model}_{checking_model}_{"conf" if use_confidence else ""}{str(config[refinement]['confidence']) if use_confidence else ""}_true_detection_res.json'
     if not os.path.exists(true_detection_res_path):
         true_detection_res = {
             "correct_true": 0,
@@ -113,7 +114,7 @@ def main():
 
         true_detection_res['i'] = i+1
 
-        output_file = '/home/ubuntu/thesis/source/factcheck/conf_true_detection_res.json'
+        output_file = f'/home/ubuntu/thesis/source/factcheck/{extraction_model}_{checking_model}_{"conf" if use_confidence else ""}{str(config[refinement]['confidence']) if use_confidence else ""}_true_detection_res.json'
         with open(output_file, 'w') as file:
             json.dump(true_detection_res, file)
 

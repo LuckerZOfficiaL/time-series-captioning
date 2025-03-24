@@ -38,8 +38,7 @@ def get_response(prompt,
                  temperature=0.45,  # Controls randomness (0 = deterministic, 1 = max randomness)
                  top_p=.95,  # Nucleus sampling (0.0 to 1.0, lower = more focused sampling)
                  top_k=40,  # Filters to the top-k highest probability tokens (if supported)
-                 max_tokens=450,
-                 online=False  # Maximum number of tokens in response
+                 max_tokens=450  # Maximum number of tokens in response
                  ):
 
     # Check if prompt is a list or a single string
@@ -105,13 +104,17 @@ def get_response(prompt,
             response_body = json.loads(response["body"].read().decode("utf-8"))
             return response_body['content'][0]['text']
 
-        elif model == "Google Gemini-2.0-Flash" or model == "Online Google Gemini-2.0-Flash":
+        elif model == "Google Gemini-2.0-Flash" or model == "Online Gemini-2.0-Flash" :
           with open("/home/ubuntu/thesis/.credentials/google", "r") as file:
               google_api_key = file.read().strip()
           client = genai.Client(api_key=google_api_key)
 
+          online = False
+          if "online" in model.lower():
+            onlie = True
+
           tools = []
-          if "Online" in model:
+          if online:
             google_search_tool = Tool(
               google_search = GoogleSearch()
             )
@@ -131,11 +134,17 @@ def get_response(prompt,
           #web_metadata = response.candidates[0].grounding_metadata.search_entry_point.rendered_content # To get grounding metadata as web content.
           return text_response
 
-        elif model == "Ollama llama3.3":
-          llm = OllamaChat(model="llama3.3")
+        elif "Ollama" in model:
+          if "llama3.3" in model: model_name = "llama3.3"
+          elif "gemma3" in model: model_name = "gemma3:27b"
+          elif "mixtral" in model: model_name = "mixtral:8x7b"
+          elif "qwen2.5" in model: model_name = "myaniu/qwen2.5-1m:14b"
+          elif "nemotron" in model: model_name = "nemotron"
+          llm = OllamaChat(model=model_name)
           online_agent = OnlineAgent(llm)
 
           resp = online_agent.search(p)
+          resp = resp.lstrip()
           if resp.startswith("Based on information from the internet, "):
             resp = resp[len("Based on information from the internet, "):]
           return resp
@@ -1715,7 +1724,7 @@ def check_whole_caption(caption, extraction_model="Google Gemini-2.0-Flash", che
   extracted_facts = extract_facts(caption, model=extraction_model, return_list=True)
   extracted_facts = filter_sentences_no_non_year_numbers(extracted_facts)
   extracted_facts = [fact for fact in extracted_facts if not any(word in fact for word in words_to_skip)]
-  #àprint(extracted_facts)
+  #print(extracted_facts)
   is_true = True
   for fact in extracted_facts:
       try:
@@ -1730,12 +1739,15 @@ def check_whole_caption(caption, extraction_model="Google Gemini-2.0-Flash", che
               #print("Inconclusive: ", fact)
             else:
               is_true = False
+              print("Inconclusive!")
               break
       except Exception as e:
           #print(f"\nGot Exception on fact:\n{fact} \n{e} ")
           is_true = False
-          break                         
-  return is_true
+          break      
+  if not is_true:
+    return False, fact                   
+  return is_true, None
 
 def check_whole_caption_confidence(caption, extraction_model="Google Gemini-2.0-Flash", checking_model="Google Gemini-2.0-Flash", words_to_skip=[], confidence_thresh=60):
   extracted_facts = extract_facts(caption, model=extraction_model, return_list=True)
@@ -1777,7 +1789,12 @@ def main():
   masked_facts, masked_words = mask_facts(facts)
   print(masked_facts)"""
 
-  #delete_files(target="samples")
+  prompts = ["Continue this sequence: 1, 4, 9, 16",
+              "Who is the president of Italy in 2016?",
+              "What is the best national park in California?"]
+
+  responses = get_response(prompts, model="Ollama mixtral")
+  print(responses)
 
   caption = "From 2002 to 2018, Spain's birth rate per 1,000 people displayed a noticeable decline, starting at 10.1 in 2002 and dropping to 7.9 by 2018. This trend contrasts sharply with the global average, which was 19.6 per 1,000 people in 2002 and decreased to 18.5 by 2018 (World Bank Data). The most pronounced decline in Spain occurred after 2008, coinciding with the global financial crisis triggered by the collapse of Lehman Brothers in September 2008 (Lehman Brothers Bankruptcy Filing, September 2008), which led to a severe recession in Spain, characterized by high unemployment rates, particularly among young adults (Instituto Nacional de Estadística, Spain). Despite Spain's status as a high-income country, with a GNI per capita of $25,830 in 2018 (World Bank Data), its birth rate consistently fell below the global average, reflecting broader European trends of aging populations and lower fertility rates, such as Italy's rate of 7.3 per 1,000 in 2018 (Eurostat). Italy is a low income country."
 
@@ -1799,6 +1816,4 @@ def main():
 
 
 if __name__ == "__main__":
-  #main()
-  print(compare_correctness("The 1932 Australian Grand Prix was a motorsport race held on a dirt track circuit at the Phillip Island circuit in Victoria, Australia. It was contested over 31 laps, totaling 200 miles (321.8 km), and was a handicap race which allowed slower cars to start ahead of faster ones. The race was won by driver Bill Thompson driving a Bugatti Type 37.", 
-  "The 1932 Australian Grand Prix was a motorsport race held on a dirt track circuit at the Phillip Island Grand Prix Circuit in Victoria, Australia. It was contested over a distance of 31 laps, totaling 206 miles (321.8 km). The race was a handicap race which allowed slower cars to start ahead of faster ones. The race was won by driver Bill Thompson driving a Bugatti Type 37A."))
+  main()
