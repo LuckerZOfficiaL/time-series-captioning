@@ -141,6 +141,7 @@ def get_response(prompt,
           elif "mixtral 8x22b" in model: model_name = "mixtral:8x22b"
           elif "qwen2.5" in model: model_name = "myaniu/qwen2.5-1m:14b"
           elif "nemotron" in model: model_name = "nemotron"
+          elif "llama3.2 uncensored" in model: model_name = "artifish/llama3.2-uncensored"
           llm = OllamaChat(model=model_name)
           online_agent = OnlineAgent(llm)
 
