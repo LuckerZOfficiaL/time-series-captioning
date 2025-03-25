@@ -105,14 +105,14 @@ def get_response(prompt,
             response_body = json.loads(response["body"].read().decode("utf-8"))
             return response_body['content'][0]['text']
 
-        elif model == "Google Gemini-2.0-Flash" or model == "Online Gemini-2.0-Flash":
+        elif "Gemini-2.0-Flash" in model:
           with open("/home/ubuntu/thesis/.credentials/google", "r") as file:
               google_api_key = file.read().strip()
           client = genai.Client(api_key=google_api_key)
 
           online = False
           if "online" in model.lower():
-            onlie = True
+            online = True
 
           tools = []
           if online:
@@ -143,6 +143,8 @@ def get_response(prompt,
           elif "qwen2.5" in model: model_name = "myaniu/qwen2.5-1m"
           elif "nemotron" in model: model_name = "nemotron"
           elif "llama3.2 uncensored" in model: model_name = "artifish/llama3.2-uncensored"
+          elif "qwq" in mode: model_name = "qwq"
+          elif "deepseek-r1:14b" in model: model_name = "deepseek-r1:14b"
           llm = OllamaChat(model=model_name)
           online_agent = OnlineAgent(llm)
 
