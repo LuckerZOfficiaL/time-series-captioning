@@ -552,15 +552,14 @@ def get_samples(dataset_name, json_data, n, series_len=None) -> list: # returns 
       
   return samples
 
-def get_request(dataset_name, metadata, ts):
+def get_request(dataset_name, metadata, ts, external_knowledge=True):
   if dataset_name == "air quality":
     request = f"""Here is a time series about {metadata["sampling frequency"]} {metadata["measure"]} in the Indian city of {metadata['city']}: \n {ts} \n Here is the detailed metadata: \n {str(metadata)}.
           \n Describe this time series by focusing on trends and patterns. Discuss concrete numbers you see and pay attention to the dates.
           For numerical values, ensure consistency with the provided time series. If making percentage comparisons, round to the nearest whole number.Report the dates when things happened.
           Use the statistics I provided you for comparing this example to the normalcy.
-          Use your broad knowledge of geopolitics, natural events, and economic trends to provide meaningful comparisons.
-          Be specific and factual, avoiding broad generalizations.
-          Highlight significant spikes, dips, or patterns and explain possible causes based on global or regional factors.
+          {"Use your broad knowledge of geopolitics, natural events, and economic trends to provide meaningful comparisons. Be specific and factual, avoiding broad generalizations." if external_knowledge else "Do not add any extra information beyond what is given."}
+          Highlight significant spikes, dips, or patterns{" and explain possible causes based on global or regional factors." if external_knowledge else "."}
           You don't have to explicitly report the numeric values of general statistics, you just use them for reference.
           Compare the trends in this time series to global or regional norms, explaining whether they are higher, lower, or follow expected seasonal patterns.
           When making comparisons, clearly state whether differences are minor, moderate, or significant.
@@ -579,9 +578,8 @@ def get_request(dataset_name, metadata, ts):
          \nDescribe this time series by focusing on trends and patterns. Discuss concrete   numbers you see and pay attention to the dates.
           For numerical values, ensure consistency with the provided time series. If making percentage comparisons, round to the nearest whole number.Report the dates when things happened.
           Use the statistics I provided you for comparing this example to the normalcy.
-          Use your broad knowledge of geopolitics, natural events, and economic trends to provide meaningful comparisons.
-          Be specific and factual, avoiding broad generalizations.
-          Highlight significant spikes, dips, or patterns and explain possible causes based on global or regional factors.
+          {"Use your broad knowledge of geopolitics, natural events, and economic trends to provide meaningful comparisons. Be specific and factual, avoiding broad generalizations." if external_knowledge else "Do not add any extra information beyond what is given."}
+          Highlight significant spikes, dips, or patterns{" and explain possible causes based on global or regional factors." if external_knowledge else "."}
           You don't have to explicitly report the numeric values of general statistics, you just use them for reference.
           Compare the trends in this time series to global or regional norms, explaining whether they are higher, lower, or follow expected seasonal patterns.
           When making comparisons, clearly state whether differences are minor, moderate, or significant.
@@ -601,9 +599,8 @@ def get_request(dataset_name, metadata, ts):
            \n Describe this time series by focusing on trends and patterns. Discuss concrete numbers you see and pay attention to the dates.
           For numerical values, ensure consistency with the provided time series. If making percentage comparisons, round to the nearest whole number.Report the dates when things happened.
           Use the statistics I provided you for comparing this example to the normalcy.
-          Use your broad knowledge of geopolitics, natural events, and economic trends to provide meaningful comparisons.
-          Be specific and factual, avoiding broad generalizations.
-          Highlight significant spikes, dips, or patterns and explain possible causes based on global or regional factors.
+         {"Use your broad knowledge of geopolitics, natural events, and economic trends to provide meaningful comparisons. Be specific and factual, avoiding broad generalizations." if external_knowledge else "Do not add any extra information beyond what is given."}
+          Highlight significant spikes, dips, or patterns{" and explain possible causes based on global or regional factors." if external_knowledge else "."}
           You don't have to explicitly report the numeric values of general statistics, you just use them for reference.
           Compare the trends in this time series to global or regional norms, explaining whether they are higher, lower, or follow expected seasonal patterns.
           When making comparisons, clearly state whether differences are minor, moderate, or significant.
@@ -621,9 +618,8 @@ def get_request(dataset_name, metadata, ts):
           \n Describe this time series by focusing on trends and patterns. Discuss concrete numbers you see and pay attention to the dates.
           For numerical values, ensure consistency with the provided time series. If making percentage comparisons, round to the nearest whole number.Report the dates when things happened.
           Use the statistics I provided you for comparing this example to the normalcy.
-          Use your broad knowledge of geopolitics, natural events, and economic trends to provide meaningful comparisons.
-          Be specific and factual, avoiding broad generalizations.
-          Highlight significant spikes, dips, or patterns and explain possible causes based on global or regional factors.
+          {"Use your broad knowledge of geopolitics, natural events, and economic trends to provide meaningful comparisons. Be specific and factual, avoiding broad generalizations." if external_knowledge else "Do not add any extra information beyond what is given."}
+          Highlight significant spikes, dips, or patterns{" and explain possible causes based on global or regional factors." if external_knowledge else "."}
           You don't have to explicitly report the numeric values of general statistics, you just use them for reference.
           Compare the trends in this time series to global or regional norms, explaining whether they are higher, lower, or follow expected seasonal patterns.
           When making comparisons, clearly state whether differences are minor, moderate, or significant.
@@ -643,9 +639,8 @@ def get_request(dataset_name, metadata, ts):
           \n Describe this time series by focusing on trends and patterns. Discuss concrete numbers you see and pay attention to the dates.
           For numerical values, ensure consistency with the provided time series. If making percentage comparisons, round to the nearest whole number.Report the dates when things happened.
           Use the statistics I provided you for comparing this example to the normalcy.
-          Use your broad knowledge of geopolitics, natural events, and economic trends to provide meaningful comparisons.
-          Be specific and factual, avoiding broad generalizations.
-          Highlight significant spikes, dips, or patterns and explain possible causes based on global or regional factors.
+          {"Use your broad knowledge of geopolitics, natural events, and economic trends to provide meaningful comparisons. Be specific and factual, avoiding broad generalizations." if external_knowledge else "Do not add any extra information beyond what is given."}
+          Highlight significant spikes, dips, or patterns{" and explain possible causes based on global or regional factors." if external_knowledge else "."}
           You don't have to explicitly report the numeric values of general statistics, you just use them for reference.
           Compare the trends in this time series to global or regional norms, explaining whether they are higher, lower, or follow expected seasonal patterns.
           When making comparisons, clearly state whether differences are minor, moderate, or significant.

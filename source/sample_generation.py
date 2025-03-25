@@ -83,7 +83,7 @@ def main(dataset_names):
             #print("\nMetadata: ", metadata)
             #print("\nSeries: ", ts)
             #print(metadata, ts)
-            this_sample_request = get_request(dataset_name, metadata, ts)
+            this_sample_request = get_request(dataset_name, metadata, ts, external_knowledge=config['data']['external_knowledge'])
             
             if use_rag:
                 start_keys = [key for key in metadata if "start" in key] # this is because different datasets have different keys that denominate the start time entry
@@ -156,13 +156,20 @@ def main(dataset_names):
             responses.extend(model_responses)
         #print("\n\Responses: ", responses)
         
+        
+        if use_rag:
+            save_folder = "/home/ubuntu/thesis/data/samples/captions/rag"
+        elif config['data']['external_knowledge'] == False:
+            save_folder = "/home/ubuntu/thesis/data/samples/captions/no external"
+        else: save_folder = "/home/ubuntu/thesis/data/samples/captions/raw"
+
 
         if save_top_k > 0:
             ranks = rank_responses(responses, model=ranking_model)
             ranks = [x-1 for x in ranks] #to make the rank start from index 0 instead of 1
 
             for k in range(save_top_k):
-                caption_filepath = f"/home/ubuntu/thesis/data/samples/captions/{"rag" if RAG else "raw"}/{dataset_name}_{idx}{"_rag" if use_rag else ""}.txt" 
+                caption_filepath = f"{save_folder}/{dataset_name}_{idx}.txt" 
                 save_file(responses[rank[k]], caption_filepath)
 
                 metadata_filepath = f"/home/ubuntu/thesis/data/samples/metadata/{dataset_name}/{dataset_name}_{idx}.json" 
@@ -174,7 +181,7 @@ def main(dataset_names):
                 idx += 1
         else: # just save all responses without ranking and without selecting top-k
             for i in range(len(responses)):
-                caption_filepath = f"/home/ubuntu/thesis/data/samples/captions/{"rag" if use_rag else "raw"}/{dataset_name}_{idx}{"_rag" if use_rag else ""}.txt" 
+                caption_filepath = f"{save_folder}/{dataset_name}_{idx}.txt" 
                 save_file(responses[i], caption_filepath)
 
                 metadata_filepath = f"/home/ubuntu/thesis/data/samples/metadata/{dataset_name}_{idx}.json" 

@@ -51,6 +51,7 @@ def main():
 
 
     ################################# TRACKING RESULTS FOR FAKE FACTS ##############################################
+    print("\nChecking Fake Facts...")
     fake_detection_res_path = f'/home/ubuntu/thesis/source/factcheck/{extraction_model}_{checking_model}_{"conf" if use_confidence else ""}{str(config[refinement]['confidence']) if use_confidence else ""}_fake_detection_res.json'
     if not os.path.exists(fake_detection_res_path):
         fake_detection_res= {
@@ -85,6 +86,7 @@ def main():
             json.dump(fake_detection_res, file)
 
     ################################# TRACKING RESULTS FOR TRUE FACTS ##############################################
+    print("\nChecking True Facts...")
     true_detection_res_path = f'/home/ubuntu/thesis/source/factcheck/{extraction_model}_{checking_model}_{"conf" if use_confidence else ""}{str(config[refinement]['confidence']) if use_confidence else ""}_true_detection_res.json'
     if not os.path.exists(true_detection_res_path):
         true_detection_res = {
@@ -93,9 +95,8 @@ def main():
         }
         save_file(true_detection_res, true_detection_res_path)
     else:
-        with open(fake_detection_res_path, 'r') as file:
+        with open(true_detection_res_path, 'r') as file:
             true_detection_res = json.load(file)
-
 
     start_idx = true_detection_res['i']
     
