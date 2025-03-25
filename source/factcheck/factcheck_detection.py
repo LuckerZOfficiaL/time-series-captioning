@@ -66,7 +66,7 @@ def main():
     start_idx = fake_detection_res['i']
 
     for i in range(start_idx, len(fake_facts)):
-        print(f"\nChecking fake fact {i+1}/{len(fake_facts)}")
+        print(f"\nChecking fake fact {i+1}/{len(fake_facts)} \n{fake_facts[i]}")
         if config['refinement']['use_confidence_checking']:
             outcome, fact = check_whole_caption_confidence(fake_facts[i], extraction_model=extraction_model, checking_model=checking_model, confidence_thresh=config['refinement']['confidence_thresh'])
         else:
@@ -74,9 +74,9 @@ def main():
 
         if outcome == False:
             fake_detection_res['correct_fake'] += 1
-            print(f"\nCorrectly detected as fake: \n {fake_facts[i]} \n\nDue to: {fact}")
+            print(f"\nCorrectly detected as fake :) \nDue to: {fact}")
         else:
-            print(f"\nFailed to detect as fake: \n {fake_facts[i]}")
+            print(f"\nFailed to detect as fake :(")
 
         fake_detection_res['i'] = i+1
 
@@ -100,7 +100,7 @@ def main():
     start_idx = true_detection_res['i']
     
     for i in range(start_idx, len(true_facts)):
-        print(f"Checking true fact {i+1}/{len(true_facts)}")
+        print(f"\nChecking true fact {i+1}/{len(true_facts)} \n{true_facts[i]}")
         if config['refinement']['use_confidence_checking']:
             outcome, fact = check_whole_caption_confidence(true_facts[i], extraction_model=extraction_model, checking_model=checking_model, confidence_thresh=config['refinement']['confidence_thresh'])
         else:
@@ -108,9 +108,9 @@ def main():
 
         if outcome == True:
             true_detection_res['correct_true'] += 1
-            print(f"\nCorrectly recognize as true: \n {true_facts[i]}")
+            print(f"\nCorrectly recognize as true :)")
         else:
-            print(f"\nFailed to recognize as true: \n {true_facts[i]} \n Due to: {fact}")
+            print(f"\nFailed to recognize as true :( \nDue to: {fact}")
 
         true_detection_res['i'] = i+1
 
