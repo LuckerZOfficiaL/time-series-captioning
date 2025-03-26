@@ -9,15 +9,15 @@ data:
   external_knowledge: False # if the captions should be generated with oracle's external knowledge
 
 model:
-  all_models: [Google Gemini-2.0-Flash, Online Gemini-2.0-Flash, OpenAI GPT-4o, Anthropic Claude-3.5, Ollama llama3.3, Ollama gemma3, Ollama mixtral 8x7b, Ollama mixtral 8x22b, Ollama qwen2.5-1m 14b, Ollama nemotron, Ollama llama3.2 uncensored, Ollama qwq, Ollama deepseek-r1:14b, Ollama phi4, Ollama lumimaid-v0.2:12b, GPT-4o, Claude-3.5-Haiku, Gemini-1.5-Flash, Gemini-1.5-Pro, DeepSeek-R1-FW] # available model choices, the first two are from official APIs
+  all_models: [Google Gemini-2.0-Flash, Online Gemini-2.0-Flash, OpenAI GPT-4o, Anthropic Claude-3.5, Ollama llama3.3, Ollama gemma3, Ollama mixtral 8x7b, Ollama mixtral 8x22b, Ollama qwen2.5-1m:14b, Ollama nemotron, Ollama llama3.2 uncensored, Ollama qwq, Ollama deepseek-r1:14b, Ollama phi4, Ollama lumimaid-v0.2:12b, GPT-4o, Claude-3.5-Haiku, Gemini-1.5-Flash, Gemini-1.5-Pro, DeepSeek-R1-FW] # available model choices, the first two are from official APIs
   used_models: [OpenAI GPT-4o, Anthropic Claude-3.5, Google Gemini-2.0-Flash] # models to use for generating captions
   refinement_model: Google Gemini-2.0-Flash
-  checking_model: Ollama llama3.2 uncensored
+  checking_model: Ollama qwen2.5-1m:14b
   extraction_model: Google Gemini-2.0-Flash
   ranking_model: OpenAI GPT-4o # the model used to rank the captions
   embedding_model: all-MiniLM-L6-v2 # the sentence transformer model used for embeddings in RAG
   remove_common_sense_model: Google Gemini-2.0-Flash #"OpenAI GPT-4o" #"Gemini-2.0-Flash"
-  temperature: 0.2
+  temperature: 0.2 # set this to null to keep default settings. If this is set, the temperature of all calls is forced to be this
 
 refinement:
   refinement_types: [add facts, change style, enrich language, factual checking]
