@@ -142,10 +142,14 @@ def get_response(prompt,
           elif "qwen2.5" in model: model_name = "myaniu/qwen2.5-1m:14b"
           elif "nemotron" in model: model_name = "nemotron"
           elif "llama3.2 uncensored" in model: model_name = "artifish/llama3.2-uncensored"
-          elif "qwq" in mode: model_name = "qwq"
+          elif "qwq" in model: model_name = "qwq"
           elif "deepseek-r1:14b" in model: model_name = "deepseek-r1:14b"
+          elif "phi4" in model: model_name = "phi4"
+          elif "lumimaid-v0.2:12b" in model: model_name = "leeplenty/lumimaid-v0.2:12b"
           llm = OllamaChat(model=model_name)
-          online_agent = OnlineAgent(llm)
+
+          config = load_config()
+          online_agent = OnlineAgent(llm, temperature=config['model']['temperature'])
 
           resp = online_agent.search(p)
           resp = resp.lstrip()
@@ -1794,7 +1798,7 @@ def main():
               "Who is the president of Italy in 2016?",
               "What is the best national park in California?"]
 
-  responses = get_response(prompts, model="Ollama mixtral")
+  responses = get_response(prompts, model="Ollama lumimaid-v0.2:12b")
   print(responses)
 
   caption = "From 2002 to 2018, Spain's birth rate per 1,000 people displayed a noticeable decline, starting at 10.1 in 2002 and dropping to 7.9 by 2018. This trend contrasts sharply with the global average, which was 19.6 per 1,000 people in 2002 and decreased to 18.5 by 2018 (World Bank Data). The most pronounced decline in Spain occurred after 2008, coinciding with the global financial crisis triggered by the collapse of Lehman Brothers in September 2008 (Lehman Brothers Bankruptcy Filing, September 2008), which led to a severe recession in Spain, characterized by high unemployment rates, particularly among young adults (Instituto Nacional de Estadística, Spain). Despite Spain's status as a high-income country, with a GNI per capita of $25,830 in 2018 (World Bank Data), its birth rate consistently fell below the global average, reflecting broader European trends of aging populations and lower fertility rates, such as Italy's rate of 7.3 per 1,000 in 2018 (Eurostat). Italy is a low income country."

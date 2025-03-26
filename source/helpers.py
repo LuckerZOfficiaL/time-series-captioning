@@ -143,10 +143,13 @@ def get_response(prompt,
           elif "qwen2.5" in model: model_name = "myaniu/qwen2.5-1m"
           elif "nemotron" in model: model_name = "nemotron"
           elif "llama3.2 uncensored" in model: model_name = "artifish/llama3.2-uncensored"
-          elif "qwq" in mode: model_name = "qwq"
+          elif "qwq" in model: model_name = "qwq"
           elif "deepseek-r1:14b" in model: model_name = "deepseek-r1:14b"
+          elif "phi4" in model: model_name = "phi4"
+          elif "lumimaid-v0.2:12b" in model: model_name = "leeplenty/lumimaid-v0.2:12b"
           llm = OllamaChat(model=model_name)
-          online_agent = OnlineAgent(llm)
+          config = load_config()
+          online_agent = OnlineAgent(llm, temperature=config['model']['temperature'])
 
           resp = online_agent.search(p)
           resp = resp.lstrip()
