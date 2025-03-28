@@ -44,7 +44,7 @@ def get_response(prompt,
 
     # Check if prompt is a list or a single string
     config = load_config()
-    if config['model']['temperature'] is not None:
+    if config['model']['temperature'] is not None: # force the temperature to be the value in the config file
       temperature = config['model']['temperature']
     
     is_list = isinstance(prompt, list)
@@ -158,7 +158,7 @@ def get_response(prompt,
           resp = online_agent.search(p)
           resp = resp.lstrip()
           if resp.startswith("Based on information from the internet, "):
-            resp = resp[len("Based on information from the internet, "):]W
+            resp = resp[len("Based on information from the internet, "):]
           return resp
 
         else:  # the model is one of the self-hosted

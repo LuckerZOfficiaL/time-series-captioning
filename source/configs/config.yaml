@@ -17,7 +17,7 @@ model:
   ranking_model: OpenAI GPT-4o # the model used to rank the captions
   embedding_model: all-MiniLM-L6-v2 # the sentence transformer model used for embeddings in RAG
   remove_common_sense_model: Google Gemini-2.0-Flash #"OpenAI GPT-4o" #"Gemini-2.0-Flash"
-  temperature: 0.2 # set this to null to keep default settings. If this is set, the temperature of all calls is forced to be this
+  temperature: null # set this to null to keep default settings. If this is set, the temperature of all calls is forced to be this
 
 refinement:
   refinement_types: [add facts, change style, enrich language, factual checking]

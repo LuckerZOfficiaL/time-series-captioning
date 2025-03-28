@@ -44,7 +44,7 @@ def get_response(prompt,
 
     # Check if prompt is a list or a single string
     config = load_config()
-    if config['model']['temperature'] is not None:
+    if config['model']['temperature'] is not None:  # force the temperature to be the value in the config file
       temperature = config['model']['temperature']
 
     is_list = isinstance(prompt, list)
