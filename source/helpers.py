@@ -425,10 +425,15 @@ def get_sample(dataset_name: str, json_data, series_len = None, start_idx = None
 
     metadata = {}
     means = random.choice(list(json_data[port]['data'].keys()))
+    while len(json_data[port]["data"][means]) == 0:
+      means = random.choice(list(json_data[port]['data'].keys()))
+    
 
     if series_len is None:
       series_len = random.randint(5, min(150, 5+int(len(json_data[port]["data"][means])/8)))
     if start_idx is None:
+      #print(means)
+      #print(json_data[port]["data"][means])
       start_idx = random.randint(0, len(json_data[port]["data"][means]) - series_len)
 
     ts = json_data[port]['data'][means][start_idx:start_idx + series_len]

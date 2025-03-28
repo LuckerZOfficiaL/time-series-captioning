@@ -46,10 +46,11 @@ BIN_PERIOD = 10 # the size of the bins. Each bin represents one period of time""
 
 
 
-def main(dataset_names):
+def main():
     config = load_config()
     random.seed(config['general']['random_seed'])
 
+    dataset_names = config['data']['dataset_names']
     request_augmentations = config['data']['request_augmentations']
     n_samples = config['data']['n_samples']
     all_models = config['model']['all_models']
@@ -194,8 +195,7 @@ def main(dataset_names):
 
 
 if __name__ == "__main__":
-    dataset_names = list(FILE_MAPPING.keys())
-    main(dataset_names)
+    main()
 
     # Test Code
     """prompts = [
