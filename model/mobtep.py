@@ -47,45 +47,8 @@ class CLIP_Mobtep(torch.nn.Module):
         self.caption_generator.requires_grad_(False)
         self.clip_model.requires_grad_(False)
     
-    def compute_semantic_loss(self, generated_texts, ground_truth_texts):
-        """
-        Use CLIP's text encoder to ensure generated captions are semantically close to ground-truth.
-        """
-        # Encode both generated and ground-truth texts
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        
-        generated_input = self.clip_processor(text=generated_texts, return_tensors="pt", padding=True, truncation=True).to(device)
-        gt_input = self.clip_processor(text=ground_truth_texts, return_tensors="pt", padding=True, truncation=True).to(device)
-        
-        # Get embeddings from CLIP (they are still part of the computation graph)
-        generated_embeddings = self.clip_model.get_text_features(**generated_input)
-        gt_embeddings = self.clip_model.get_text_features(**gt_input)
-
-        # Normalize embeddings before computing similarity
-        generated_embeddings = F.normalize(generated_embeddings, dim=-1)
-        gt_embeddings = F.normalize(gt_embeddings, dim=-1)
-
-        # Compute cosine similarity and loss
-        cosine_sim = F.cosine_similarity(generated_embeddings, gt_embeddings, dim=-1)
-        loss = 1 - cosine_sim.mean()  # Contrastive loss (minimize difference)
-        
-        return loss
-
-    def compute_cross_entropy_loss(self, aligned_embedding, ground_truth_texts):
-        """Calculates cross-entropy loss for caption generation."""
-        device = aligned_embedding.device
-
-        # Tokenize ground truth captions
-        encoded_gt = self.tokenizer(ground_truth_texts, return_tensors="pt", padding=True, truncation=True).to(device)
-        input_ids = encoded_gt.input_ids
-        attention_mask = encoded_gt.attention_mask
-
-        # Generate logits from GPT-2
-        outputs = self.caption_generator(inputs_embeds=aligned_embedding, attention_mask=attention_mask, labels=input_ids)
-        loss = outputs.loss
-        return loss
     
-    def forward(self, ts_input, text_input, visual_input, ground_truth_texts=None, max_length=250, output_text=False, use_teacher_forcing=False):
+    def forward(self, ts_input, text_input, visual_input, ground_truth_texts=None, max_length=250, output_text=False, teacher_forcing=False):
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         # Compute multimodal embeddings
@@ -104,8 +67,26 @@ class CLIP_Mobtep(torch.nn.Module):
 
         batch_size = x.shape[0]
 
-        if use_teacher_forcing and ground_truth_texts is not None:
-            pass
+        if teacher_forcing and ground_truth_texts is not None:
+            encoded_gt = self.tokenizer(ground_truth_texts, return_tensors="pt", padding=True, truncation=True).to(device)
+            gt_input_ids = encoded_gt.input_ids
+            attention_mask = encoded_gt.attention_mask
+
+            # Get embeddings for ground truth input ids
+            gt_embeddings = self.caption_generator.get_input_embeddings()(gt_input_ids)
+            print("\nGT embeggins: ", gt_embeddings.shape)
+
+            # Concatenate x with ground truth embeddings
+            inputs_embeds = torch.cat([x, gt_embeddings], dim=1)
+            print("\nInput embeggins: ", inputs_embeds.shape)
+
+            # Create combined attention mask
+            combined_attention_mask = torch.cat([torch.ones((batch_size, 1), dtype=torch.long, device=device), attention_mask], dim=1)
+
+            # Use multimodal embedding `x` as the initial context
+            outputs = self.caption_generator(inputs_embeds=inputs_embeds, attention_mask=combined_attention_mask, labels=gt_input_ids)
+            return outputs.logits
+            
 
         else:
             """ 🔄 Autoregressive Mode """
@@ -294,7 +275,9 @@ def main():
 
     
     with torch.no_grad():
-        output = mobtep(ts_input, text_input, images, output_text=False)
+        output = mobtep(ts_input, text_input, images, output_text=False, 
+                        ground_truth_texts=['hello world', "university of california", "sapienza university of rome"],
+                        teacher_forcing=False)
 
     print(output.shape)  # Expected shape: [3, 1, 768]
     print(output[0])

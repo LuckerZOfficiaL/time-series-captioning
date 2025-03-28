@@ -7,8 +7,6 @@ from transformers import CLIPProcessor, CLIPModel
 from helpers import(
     load_config,
     pad,
-    initialize_bert_model,
-    bert_score_loss,
     cross_entropy_loss
 )
 import torch
@@ -82,13 +80,23 @@ def train(model, train_loader, optimizer, epochs=5):
         for ts_input, text_input, image_input, ground_truth_captions in train_loader:    
             ts_input = ts_input.to(device)
 
-            ground_truth_captions = model.tokenizer(ground_truth_captions, padding=True, truncation=True, return_tensors="pt")["input_ids"].to(device) # strings are converted into indices of tokens
-            ground_truth_captions = ground_truth_captions[:, :100]
+            ground_truth_captions_emb = model.tokenizer(ground_truth_captions, padding=True, truncation=True, return_tensors="pt")["input_ids"].to(device) # strings are converted into indices of tokens
+            ground_truth_captions_emb = ground_truth_captions_emb[:, :config['mobtep']['max_output_tokens']] # remove this line and increase max_output_tokens in config, when GPU is available
 
-            print("GT shape: ", ground_truth_captions.shape)
-            logits = model(ts_input, text_input, image_input, max_length=config['mobtep']['max_output_tokens'])
+            print("GT embedding shape: ", ground_truth_captions_emb.shape)
+            if config['train']['teacher_forcing']:
+                logits = model(ts_input, text_input, image_input, 
+                            max_length=config['mobtep']['max_output_tokens'], 
+                            teacher_forcing=True,
+                            ground_truth_texts=ground_truth_captions)
+                
+            else:
+                logits = model(ts_input, text_input, image_input, 
+                            max_length=config['mobtep']['max_output_tokens'], 
+                            teacher_forcing=False)
+
             print("Logits shape: ", logits.shape)
-            loss = cross_entropy_loss(logits, ground_truth_captions, pad_token_id=model.tokenizer.pad_token_id)
+            loss = cross_entropy_loss(logits, ground_truth_captions_emb, pad_token_id=model.tokenizer.pad_token_id)
 
 
             optimizer.zero_grad()

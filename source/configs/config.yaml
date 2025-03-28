@@ -63,7 +63,7 @@ train:
   epochs: 5
   batch_size: 4
   loss_fn: cross-entropy
-  teacher_forcing: True
+  teacher_forcing: True # if False, the model generates autoregressively during training
 
 
 nlp:
