@@ -4,25 +4,169 @@ from ts_encoder import TCNEncoder
 from fusion_module import LinearFusion
 from cross_attention import CrossAttentionWithPrototypes
 from transformers import GPT2LMHeadModel, GPT2Tokenizer
+from transformers import CLIPProcessor, CLIPModel, GPT2LMHeadModel, GPT2Tokenizer
+from PIL import Image
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torchvision import transforms
+
+from helpers import(
+    compute_cosine_similarity,
+    load_config,
+)
 
 
-def compute_cosine_similarity(embeddings):
-            # Reshape the input embeddings to [batch_size, embedding_size]
-            embeddings = embeddings.view(embeddings.size(0), -1)
-            
-            # Compute the dot product of the embeddings
-            dot_product = torch.matmul(embeddings, embeddings.t())
-            
-            # Compute the norm of the embeddings
-            norm = torch.norm(embeddings, dim=1, keepdim=True)
-            
-            # Compute the cosine similarity matrix
-            cosine_similarity = dot_product / (norm * norm.t())
-            
-            return cosine_similarity
+class CLIP_Mobtep(torch.nn.Module):
+    def __init__(self, prototype_words, tcn_emb_size=64, use_linear_proj=False):
+        super(CLIP_Mobtep, self).__init__()
+        
+        # Load CLIP model
+        self.clip_model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32")
+        self.clip_processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
+        
+        # TCN encoder for numerical data
+        self.ts_encoder = TCNEncoder(embedding_size=tcn_emb_size)  # From scratch
+
+        self.fusion_module = LinearFusion(
+            input_size_numeric=tcn_emb_size, input_size_visual=512, input_size_text=512, output_size=768
+        )
+        self.prototype_attention = CrossAttentionWithPrototypes(prototype_words)
+        
+        self.use_linear_proj = use_linear_proj
+        if self.use_linear_proj:
+            self.linear_proj = nn.Linear(768, 768)
+            nn.init.xavier_uniform_(self.linear_proj.weight)
+            nn.init.zeros_(self.linear_proj.bias)
+
+        self.caption_generator = GPT2LMHeadModel.from_pretrained("gpt2")
+        self.tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
+        self.tokenizer.pad_token = self.tokenizer.eos_token
+
+        
+        self.caption_generator.requires_grad_(False)
+        self.clip_model.requires_grad_(False)
+    
+    def compute_semantic_loss(self, generated_texts, ground_truth_texts):
+        """
+        Use CLIP's text encoder to ensure generated captions are semantically close to ground-truth.
+        """
+        # Encode both generated and ground-truth texts
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        
+        generated_input = self.clip_processor(text=generated_texts, return_tensors="pt", padding=True, truncation=True).to(device)
+        gt_input = self.clip_processor(text=ground_truth_texts, return_tensors="pt", padding=True, truncation=True).to(device)
+        
+        # Get embeddings from CLIP (they are still part of the computation graph)
+        generated_embeddings = self.clip_model.get_text_features(**generated_input)
+        gt_embeddings = self.clip_model.get_text_features(**gt_input)
+
+        # Normalize embeddings before computing similarity
+        generated_embeddings = F.normalize(generated_embeddings, dim=-1)
+        gt_embeddings = F.normalize(gt_embeddings, dim=-1)
+
+        # Compute cosine similarity and loss
+        cosine_sim = F.cosine_similarity(generated_embeddings, gt_embeddings, dim=-1)
+        loss = 1 - cosine_sim.mean()  # Contrastive loss (minimize difference)
+        
+        return loss
+
+    def compute_cross_entropy_loss(self, aligned_embedding, ground_truth_texts):
+        """Calculates cross-entropy loss for caption generation."""
+        device = aligned_embedding.device
+
+        # Tokenize ground truth captions
+        encoded_gt = self.tokenizer(ground_truth_texts, return_tensors="pt", padding=True, truncation=True).to(device)
+        input_ids = encoded_gt.input_ids
+        attention_mask = encoded_gt.attention_mask
+
+        # Generate logits from GPT-2
+        outputs = self.caption_generator(inputs_embeds=aligned_embedding, attention_mask=attention_mask, labels=input_ids)
+        loss = outputs.loss
+        return loss
+    
+    def forward(self, ts_input, text_input, visual_input, ground_truth_texts=None, max_length=250, output_text=False, use_teacher_forcing=False):
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+        # Compute multimodal embeddings
+        numeric_embedding = self.ts_encoder(ts_input).to(device)
+        text_inputs = self.clip_processor(text=text_input, return_tensors="pt", padding=True, truncation=True).to(device)
+        text_embedding = self.clip_model.get_text_features(**text_inputs).to(device)
+        image_inputs = self.clip_processor(images=visual_input, return_tensors="pt").to(device)
+        visual_embedding = self.clip_model.get_image_features(**image_inputs)
+
+        # Fusion + prototype attention
+        fused_embedding = self.fusion_module(numeric_embedding, visual_embedding, text_embedding).unsqueeze(1)  
+        x = self.prototype_attention(fused_embedding)
+
+        if self.use_linear_proj:
+            x = self.linear_proj(x)
+
+        batch_size = x.shape[0]
+
+        if use_teacher_forcing and ground_truth_texts is not None:
+            pass
+
+        else:
+            """ 🔄 Autoregressive Mode """
+            input_ids = torch.full((batch_size, 1), self.tokenizer.bos_token_id, dtype=torch.long, device=device)
+            all_logits = []
+
+            for step in range(max_length):
+                if step == 0:
+                    # First step: Use multimodal input
+                    outputs = self.caption_generator(inputs_embeds=x, attention_mask=torch.ones_like(input_ids))
+                else:
+                    # Later steps: Use predicted tokens
+                    outputs = self.caption_generator(input_ids=input_ids, attention_mask=torch.ones_like(input_ids))
+
+                logits = outputs.logits[:, -1, :]
+                all_logits.append(logits.unsqueeze(1))
+
+                next_token = torch.argmax(logits, dim=-1, keepdim=True)
+
+                if torch.any(next_token == self.tokenizer.eos_token_id):
+                    break
+
+                input_ids = torch.cat([input_ids, next_token], dim=-1)
+
+            logits = torch.cat(all_logits, dim=1)
+
+        if output_text:
+            generated_text = self.tokenizer.batch_decode(input_ids, skip_special_tokens=True)
+            return generated_text, logits  
+
+        return logits  
+
+
+    
+
+
+    def generate_captions(self, aligned_embedding):
+        batch_size = aligned_embedding.shape[0]
+        
+        # Ensure the input tensor has the correct shape (batch_size, sequence_length, embedding_size)
+        inputs_embeds = aligned_embedding  # Already has shape (batch_size, 1, 768)
+
+        # Create an attention mask (all ones, since we have a single valid token)
+        attention_mask = torch.ones((batch_size, 1), dtype=torch.long, device=aligned_embedding.device)
+
+        # Use GPT-2's generation API to create a description
+        outputs = self.caption_generator.generate(
+            inputs_embeds=inputs_embeds,
+            attention_mask=attention_mask,
+            max_new_tokens=300,
+            num_beams=5,
+            no_repeat_ngram_size=2,
+            early_stopping=True,
+            num_return_sequences=1,
+            pad_token_id=self.tokenizer.eos_token_id,
+        )
+
+        # Decode the output token IDs to text (batch processing)
+        generated_descriptions = [self.tokenizer.decode(output, skip_special_tokens=True) for output in outputs]
+        return generated_descriptions
+
 
 
 class Mobtep(torch.nn.Module):
@@ -32,6 +176,7 @@ class Mobtep(torch.nn.Module):
         # Pre-trained text and visual encoders, and TCN encoder
         self.text_encoder = SentenceBERT()  # Pretrained
         self.visual_encoder = ViTEncoder()  # Pretrained
+        
         self.ts_encoder = TCNEncoder(embedding_size=tcn_emb_size)  # From scratch
 
         self.fusion_module = LinearFusion(input_size_numeric=tcn_emb_size, input_size_visual=768, input_size_text=768, output_size=768)
@@ -127,41 +272,35 @@ class Mobtep(torch.nn.Module):
 
 def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    config = load_config()
 
-    prototype_words = [
-    "stabilize", "spike", "increase", "drop", "plateau", "fluctuate", "in the beginning", "sudden rise",
-    "peak", "valley", "steady growth", "sharp decline", "gradual increase", "gradual decrease",
-    "oscillate", "volatile", "steady", "outlier", "anomaly", "trend", "seasonal", "cyclical",
-    "mean-reverting", "acceleration", "deceleration", "surge", "dip", "persistent", "transient",
-    "burst", "regression", "correlation", "autoregressive", "dampening", "converge", "diverge",
-    "periodic", "non-stationary", "stationary", "residual", "cumulative", "saturation",
-    "uptrend", "downtrend", "breakout", "shock", "rebound", "flatten", "persist", "retrace",
-    "noise", "random walk", "drift", "inflection point", "moving average", "momentum",
-    "overshoot", "undershoot", "lagging", "leading", "slope", "spurt", "compression",
-    "expansion", "volatility cluster", "reversal", "lag", "contraction", "extension",
-    "signal", "mean shift", "jump", "long-term", "short-term", "irregular", "knee point",
-    "asymptote", "equilibrium", "breaking point", "threshold", "compression", "dilation",
-    "decay", "growth rate", "exponential rise", "logarithmic growth", "relative change",
-    "absolute change", "tipping point", "structural break", "convex", "concave",
-    "random fluctuation", "cyclicality", "persistent oscillation", "transient spike"
-]
-
-
-    mobtep = Mobtep(tcn_emb_size=128, prototype_words=prototype_words, use_linear_proj=False).to(device)
-    mobtep.eval()
 
     # Example input data (random for demonstration)
     ts_input = torch.randn(3, 100, 1).to(device)  # Example time series (3 samples, length 100)
-    text_input = ["Tell me a story.", "How are you?", "I am Luca."]
-    visual_input = torch.randn(3, 3, 224, 224).to(device)  # Example visual data (3 samples, 3 channels, H224 x W224 images)
+    text_input = ["Tell me a story.", "How are you?", "I am Luca."] # these are gonna be metadata with a request
+    
+    img_paths = ['/home/ubuntu/thesis/data/samples/plots/air quality_0.jpeg', 
+                    '/home/ubuntu/thesis/data/samples/plots/crime_0.jpeg', 
+                    '/home/ubuntu/thesis/data/samples/plots/demography_0.jpeg']
+    images = [Image.open(img_path).convert("RGB") for img_path in img_paths]
+    transform = transforms.ToTensor()
+    images = [transform(image) for image in images]
 
-    # Forward pass
+
+    mobtep = CLIP_Mobtep(tcn_emb_size=128, prototype_words=config['mobtep']['anchor_words'], use_linear_proj=False).to(device)
+    mobtep.eval()
+
+    #print(mobtep.compute_semantic_loss(["A dog is sleeping", "It's raining"], ['A cat is sleeping', "It is raining"]))
+
+    
     with torch.no_grad():
-        output = mobtep(ts_input, text_input, visual_input, output_text=True)
+        output = mobtep(ts_input, text_input, images, output_text=False)
 
-    #print(output.shape)  # Expected shape: [3, 1, 768]
-    for i, caption in enumerate(output):
-        print("\n\ni)\n", caption)
+    print(output.shape)  # Expected shape: [3, 1, 768]
+    print(output[0])
+    #for i, caption in enumerate(output):
+    #    print("\n\ni)\n", caption)
+    
 
 
 if __name__ == "__main__":

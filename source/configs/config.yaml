@@ -2,7 +2,7 @@ general:
   random_seed: 42
 
 data:
-  dataset_names: [border crossing, crime, demography]
+  dataset_names: [air quality, border crossing, crime, demography]
   request_augmentations: 0 # how many times to rephrase the original prompt request?
   n_samples: 100 # how many window samples to extract per dataset? i.e. how many time series to sample? Note that this is just the number of real samples and not the number of captions because each model in used_models generates its version of the caption. So, the number of captions generated will be n_samples*len(used_models).
   save_top_k: 0 # save the top k best captions based on the ranking, if it's 0 or negative, don't do top-k. If top-k is on, caption ranking is invoked
@@ -52,16 +52,26 @@ path: # paths that have "folder" in its name are folder paths, otherwise they ar
   prototypes_path: /home/ubuntu/thesis/model/prototype_words.txt
 
 mobtep:
-  output_text: True # if False, it outputs the fused and aligned embedding
+  output_text: False # if False, it outputs the fused and aligned embedding
   tcn_emb_size: 128
   use_linear_proj: False
+  max_output_tokens: 100
+  anchor_words: [ stabilize, spike, increase, drop, plateau, fluctuate, in the beginning, sudden rise, peak, valley, steady growth, sharp decline, gradual increase, gradual decrease, oscillate, volatile, steady, outlier, anomaly, trend, seasonal, cyclical, mean-reverting, acceleration, deceleration, surge, dip, persistent, transient, burst, regression, correlation, autoregressive, dampening, converge, diverge, periodic, non-stationary, stationary, residual, cumulative, saturation, uptrend, downtrend, breakout, shock, rebound, flatten, persist, retrace, noise, random walk, drift, inflection point, moving average, momentum, overshoot, undershoot, lagging, leading, slope, spurt, compression, expansion, volatility cluster, reversal, lag, contraction, extension, signal, mean shift, jump, long-term, short-term, irregular, knee point, asymptote, equilibrium, breaking point, threshold, compression, dilation, decay, growth rate, exponential rise, logarithmic growth, relative change, absolute change, tipping point, structural break, convex, concave, random fluctuation, cyclicality, persistent oscillation, transient spike ]
+
+train:
+  lr: 1e-5
+  epochs: 5
+  batch_size: 4
+  loss_fn: cross-entropy
+  teacher_forcing: True
+
 
 nlp:
  synonym_similarity_thresh: 0.7
 
 plot:
-  height: null
-  width: null
+  height: 5
+  width: 7
 
 rag:
   use_rag: False # whether to apply RAG on caption generation, it will only retrieve the facts that are temporally relevant to the prompt request.

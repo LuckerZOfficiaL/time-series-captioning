@@ -726,7 +726,7 @@ def save_file(data, filepath: str, mode= "w"):
         #print(f"Data type is list for {filepath}.")
         with open(filepath, mode) as file:
             for item in data:
-                file.write(str(item) + '\n'+'_'*80+"\n")
+                file.write(str(item) + '\n')
     elif isinstance(data, dict):
         #print(f"Data type is dictionary for {filepath}.")
         with open(filepath, mode) as file:
@@ -827,7 +827,7 @@ def generate_line_plot(ts, xlabel, ylabel, title, savepath, height=None, width=N
   plt.title(title)
   plt.grid(True)
 
-  plt.savefig(savepath, bbox_inches='tight')  # Save the plot
+  plt.savefig(savepath, dpi=100)  # Save the plot
   plt.close()
   
 def extract_facts(caption, model="Google Gemini-2.0-Flash", return_list=False, extract_sentences=False):

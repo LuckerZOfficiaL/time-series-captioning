@@ -13,6 +13,10 @@ class CrossAttentionWithPrototypes(nn.Module):
         self.prototype_embeddings = self._get_frozen_embeddings(prototype_words)
         self.attn = nn.MultiheadAttention(embed_dim=fused_emb_size, num_heads=8, batch_first=True)
 
+        for param in self.llm.parameters():
+            param.requires_grad = False
+
+
     def _get_frozen_embeddings(self, words):
         """Retrieve frozen word embeddings for prototype words."""
         with torch.no_grad():  # Disable gradient computation
