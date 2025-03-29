@@ -68,24 +68,45 @@ class CLIP_Mobtep(torch.nn.Module):
         batch_size = x.shape[0]
 
         if teacher_forcing and ground_truth_texts is not None:
+            #print("Teacher forcing is active.")
+
             encoded_gt = self.tokenizer(ground_truth_texts, return_tensors="pt", padding=True, truncation=True).to(device)
-            gt_input_ids = encoded_gt.input_ids
-            attention_mask = encoded_gt.attention_mask
+            gt_input_ids = encoded_gt.input_ids  # (B, seq_len)
+            attention_mask = encoded_gt.attention_mask  # (B, seq_len)
 
-            # Get embeddings for ground truth input ids
-            gt_embeddings = self.caption_generator.get_input_embeddings()(gt_input_ids)
-            print("\nGT embeggins: ", gt_embeddings.shape)
+            #print(f"Ground truth input IDs shape: {gt_input_ids.shape}")  # (B, seq_len)
+            #print(f"Attention mask shape: {attention_mask.shape}")  # (B, seq_len)
 
-            # Concatenate x with ground truth embeddings
-            inputs_embeds = torch.cat([x, gt_embeddings], dim=1)
-            print("\nInput embeggins: ", inputs_embeds.shape)
+            # Convert token IDs into embeddings
+            gt_embeddings = self.caption_generator.get_input_embeddings()(gt_input_ids[:, :-1])  # (B, seq_len-1, emb_dim)
+            #print(f"Ground truth embeddings shape: {gt_embeddings.shape}")
 
-            # Create combined attention mask
-            combined_attention_mask = torch.cat([torch.ones((batch_size, 1), dtype=torch.long, device=device), attention_mask], dim=1)
+            # Concatenate multimodal embedding `x` as the first token representation
+            inputs_embeds = torch.cat([x, gt_embeddings], dim=1)  # (B, seq_len, emb_dim)
+            #print(f"Input embeddings shape (before slicing): {inputs_embeds.shape}")
 
-            # Use multimodal embedding `x` as the initial context
-            outputs = self.caption_generator(inputs_embeds=inputs_embeds, attention_mask=combined_attention_mask, labels=gt_input_ids)
-            return outputs.logits
+            # FIX: Remove the last token from inputs_embeds to match labels
+            inputs_embeds = inputs_embeds[:, :-1, :]
+            #print(f"Input embeddings shape (after slicing): {inputs_embeds.shape}")  # (B, seq_len-1, emb_dim)
+
+            # Update attention mask: Add a `1` for `x`, then keep the rest from `attention_mask[:, :-1]`
+            combined_attention_mask = torch.cat(
+                [torch.ones((batch_size, 1), dtype=torch.long, device=device), attention_mask[:, :-1]], dim=1
+            )[:, :-1]  # FIX: Slice to match inputs_embeds
+            #print(f"Combined attention mask shape: {combined_attention_mask.shape}")  # (B, seq_len-1)
+
+            # Pass everything to the GPT decoder
+            outputs = self.caption_generator(
+                inputs_embeds=inputs_embeds, 
+                attention_mask=combined_attention_mask, 
+                labels=gt_input_ids[:, 1:]  # Predict the next token
+            )
+
+            #print(f"Outputs loss: {outputs.loss}")
+            return outputs.loss
+
+
+
             
 
         else:
