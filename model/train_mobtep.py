@@ -12,6 +12,7 @@ from helpers import(
 import torch
 from PIL import Image
 import os
+import os
 
 class CaptionDataset(torch.utils.data.Dataset):
     def __init__(self, ts_paths, metadata_paths, image_paths, ground_truth_paths, image_transform=None):
@@ -68,11 +69,13 @@ class CaptionDataset(torch.utils.data.Dataset):
 
 
 
-def train(model, train_loader, optimizer, epochs=5):
+def train(model, train_loader, optimizer, epochs=5, milestones=None):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.train()
     config = load_config()
 
+    if milestones is not None:
+        scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=milestones, gamma=0.1)
 
     for epoch in range(epochs):
         total_loss = 0
@@ -81,7 +84,7 @@ def train(model, train_loader, optimizer, epochs=5):
             ts_input = ts_input.to(device)
 
             ground_truth_captions_ids = model.tokenizer(ground_truth_captions, padding=True, truncation=True, return_tensors="pt")["input_ids"].to(device) # strings are converted into indices of tokens
-            ground_truth_captions_ids = ground_truth_captions_ids[:, :config['mobtep']['max_output_tokens']] # remove this line and increase max_output_tokens in config, when GPU is available
+            #ground_truth_captions_ids = ground_truth_captions_ids[:, :config['mobtep']['max_output_tokens']] # remove this line and increase max_output_tokens in config, when GPU is available
 
             #print("GT ids shape: ", ground_truth_captions_ids.shape)
             if config['train']['teacher_forcing']:
@@ -102,6 +105,9 @@ def train(model, train_loader, optimizer, epochs=5):
             loss.backward()
             optimizer.step()
             
+            if milestones is not None:
+                scheduler.step()
+            
             total_loss += loss.item()
         
         avg_loss = total_loss / len(train_loader)
@@ -114,19 +120,30 @@ def main():
     clip_processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch16")
     clip_model = CLIPModel.from_pretrained("openai/clip-vit-base-patch16")
 
+    # Reading Data
+    ts_folder = "/home/ubuntu/thesis/data/samples/time series/"
+    ts_paths = [os.path.join(ts_folder, file) for file in os.listdir(ts_folder)]
+
+    metadata_folder = "/home/ubuntu/thesis/data/samples/metadata/"
+    metadata_paths = [os.path.join(metadata_folder, file) for file in os.listdir(metadata_folder)]
+
+    image_folder = "/home/ubuntu/thesis/data/samples/plots/"
+    image_paths = [os.path.join(image_folder, file) for file in os.listdir(image_folder)]
+
+    grond_truth_folder = "/home/ubuntu/thesis/data/samples/captions/no external"
+    ground_truth_paths = [os.path.join(grond_truth_folder, file) for file in os.listdir(grond_truth_folder)]
+
+    ts_paths.sort()
+    metadata_paths.sort()
+    image_paths.sort()
+    ground_truth_paths.sort()
+
+
     train_dataset = CaptionDataset(
-        ts_paths=["/home/ubuntu/thesis/data/samples/time series/air quality_0.txt",
-                "/home/ubuntu/thesis/data/samples/time series/crime_0.txt",
-                "/home/ubuntu/thesis/data/samples/time series/demography_0.txt"],
-        metadata_paths=["/home/ubuntu/thesis/data/samples/metadata/air quality_0.json",
-                        "/home/ubuntu/thesis/data/samples/metadata/crime_0.json",
-                        "/home/ubuntu/thesis/data/samples/metadata/demography_0.json"],
-        image_paths=["/home/ubuntu/thesis/data/samples/plots/air quality_0.jpeg",
-                    "/home/ubuntu/thesis/data/samples/plots/crime_0.jpeg",
-                    "/home/ubuntu/thesis/data/samples/plots/demography_0.jpeg"],
-        ground_truth_paths=["/home/ubuntu/thesis/data/samples/captions/no external/air quality_0.txt",
-                            "/home/ubuntu/thesis/data/samples/captions/no external/crime_0.txt",
-                            "/home/ubuntu/thesis/data/samples/captions/no external/demography_0.txt"]
+        ts_paths=ts_paths,
+        metadata_paths=metadata_paths,
+        image_paths=image_paths,
+        ground_truth_paths=ground_truth_paths
     )
 
     train_loader = DataLoader(train_dataset, batch_size=config['train']['batch_size'], shuffle=True)
@@ -137,7 +154,7 @@ def main():
 
     optimizer = AdamW(model.parameters(), lr=float(config['train']['lr']))
 
-    train(model, train_loader, optimizer, epochs=config['train']['epochs'])
+    train(model, train_loader, optimizer, epochs=config['train']['epochs'], scheduler=)
 
 if __name__ == "__main__":
     main()

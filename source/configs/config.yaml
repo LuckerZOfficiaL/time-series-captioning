@@ -51,19 +51,73 @@ path: # paths that have "folder" in its name are folder paths, otherwise they ar
   all_facts_by_period_folder_path: /home/ubuntu/thesis/data/fact bank/by period #/{BIN_YEARS}/all_facts_by_{BIN_YEARS}years.json
   prototypes_path: /home/ubuntu/thesis/model/prototype_words.txt
 
-mobtep:
-  output_text: False # if False, it outputs the fused and aligned embedding
-  tcn_emb_size: 128
-  use_linear_proj: False
-  max_output_tokens: 100
-  anchor_words: [ stabilize, spike, increase, drop, plateau, fluctuate, in the beginning, sudden rise, peak, valley, steady growth, sharp decline, gradual increase, gradual decrease, oscillate, volatile, steady, outlier, anomaly, trend, seasonal, cyclical, mean-reverting, acceleration, deceleration, surge, dip, persistent, transient, burst, regression, correlation, autoregressive, dampening, converge, diverge, periodic, non-stationary, stationary, residual, cumulative, saturation, uptrend, downtrend, breakout, shock, rebound, flatten, persist, retrace, noise, random walk, drift, inflection point, moving average, momentum, overshoot, undershoot, lagging, leading, slope, spurt, compression, expansion, volatility cluster, reversal, lag, contraction, extension, signal, mean shift, jump, long-term, short-term, irregular, knee point, asymptote, equilibrium, breaking point, threshold, compression, dilation, decay, growth rate, exponential rise, logarithmic growth, relative change, absolute change, tipping point, structural break, convex, concave, random fluctuation, cyclicality, persistent oscillation, transient spike ]
-
 train:
   lr: 1e-3
   epochs: 5
   batch_size: 3
   loss_fn: cross-entropy
   teacher_forcing: True # if False, the model generates autoregressively during training
+  milestones: Null
+
+mobtep:
+  output_text: False # if False, it outputs the fused and aligned embedding
+  tcn_emb_size: 128
+  use_linear_proj: False
+  max_output_tokens: 250
+  anchor_words: [
+    initially increase, initially decrease, initially stay stable, 
+    increase gradually, decrease gradually, remain stable, 
+    increase sharply, decrease sharply, 
+    spike at the beginning, spike in the middle, spike at the end, 
+    drop sharply at the beginning, drop sharply in the middle, drop sharply at the end, 
+    sudden surge, sudden drop, exponential growth, exponential decay, 
+    peak early, peak in the middle, peak late, 
+    trough early, trough in the middle, trough late, 
+    oscillate with high frequency, oscillate with low frequency, 
+    periodic pattern, irregular fluctuations, cyclic behavior, 
+    steady upward trend, steady downward trend, 
+    sudden reversal, trend reversal in the middle, 
+    plateau in the beginning, plateau in the middle, plateau by the end, 
+    recover after drop, dip before rising, rise before falling, 
+    short-term volatility, long-term stability, 
+    accelerate upwards, decelerate downwards, 
+    reach a local maximum, reach a local minimum, 
+    fluctuate around a constant value, oscillate with increasing amplitude, 
+    oscillate with decreasing amplitude, dampened oscillations, 
+    sharp peak followed by decline, gradual decline followed by recovery, 
+    persistent upward trend, persistent downward trend, 
+    drop to a new baseline, rise to a new baseline, 
+    stabilize after fluctuations, destabilize after stability, 
+    slow build-up followed by rapid drop, rapid build-up followed by slow drop, 
+    reach saturation, approach zero asymptotically, 
+    transition from stability to volatility, transition from volatility to stability, 
+    sudden collapse, gradual fade-out, sudden resurgence, 
+    prolonged stagnation, brief interruption, momentary spike, 
+    early acceleration, late deceleration, mid-period volatility, 
+    sustained increase, sustained decrease, 
+    short-lived surge, long-lasting dip, abrupt deviation, 
+    transient fluctuation, slow oscillation, rapid oscillation, 
+    initial instability followed by stabilization, 
+    stable start followed by instability, 
+    smooth transition from increase to decrease, 
+    smooth transition from decrease to increase, 
+    early sharp rise followed by slow decline, 
+    early slow rise followed by sharp decline, 
+    intermittent bursts of activity, sudden collapse to zero, 
+    oscillate with drifting baseline, periodic surges, 
+    slow descent into stability, gradual divergence, 
+    sudden synchronization, out-of-phase oscillations, 
+    drop below previous minimum, rise above previous maximum, 
+    increasing variance, decreasing variance, 
+    volatility spike, stabilization after volatility, 
+    delayed peak, early drop, asymptotic rise, asymptotic decay, 
+    transition from linear to exponential growth, 
+    transition from exponential to linear growth, 
+    drift away from baseline, convergence to equilibrium, 
+    chaotic fluctuations, self-reinforcing trend, 
+    bounded oscillations, unbounded divergence, 
+    burst-like activity, decay towards extinction
+]
 
 
 nlp:
