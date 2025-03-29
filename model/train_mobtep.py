@@ -104,7 +104,7 @@ def train(model, train_loader, optimizer, epochs=5, milestones=None):
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
-            
+
             if milestones is not None:
                 scheduler.step()
             
@@ -154,7 +154,9 @@ def main():
 
     optimizer = AdamW(model.parameters(), lr=float(config['train']['lr']))
 
-    train(model, train_loader, optimizer, epochs=config['train']['epochs'], scheduler=)
+    train(model, train_loader, optimizer, 
+        epochs=config['train']['epochs'], 
+        milestones=config['train']['milestones'])
 
 if __name__ == "__main__":
     main()

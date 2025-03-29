@@ -52,12 +52,12 @@ path: # paths that have "folder" in its name are folder paths, otherwise they ar
   prototypes_path: /home/ubuntu/thesis/model/prototype_words.txt
 
 train:
-  lr: 1e-3
-  epochs: 5
-  batch_size: 3
+  lr: 1e-2
+  epochs: 10
+  batch_size: 64
   loss_fn: cross-entropy
   teacher_forcing: True # if False, the model generates autoregressively during training
-  milestones: Null
+  milestones: [3, 7]
 
 mobtep:
   output_text: False # if False, it outputs the fused and aligned embedding

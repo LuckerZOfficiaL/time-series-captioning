@@ -68,41 +68,71 @@ class CLIP_Mobtep(torch.nn.Module):
         batch_size = x.shape[0]
 
         if teacher_forcing and ground_truth_texts is not None:
-            #print("Teacher forcing is active.")
+            # Step 1: Tokenize the ground truth prompt (or any custom prompt)
+            prompt = "please provide a description to the following time series."
+            prompt_input = self.tokenizer(prompt, return_tensors="pt", padding=True, truncation=True).to(device)
+            prompt_input_ids = prompt_input.input_ids  # (B, prompt_len)
+            prompt_attention_mask = prompt_input.attention_mask  # (B, prompt_len)
 
+            # Step 2: Convert prompt tokens into embeddings
+            prompt_embeddings = self.caption_generator.get_input_embeddings()(prompt_input_ids)  # (B, prompt_len, emb_dim)
+
+            # Duplicate prompt embeddings for each example in the batch
+            prompt_embeddings = prompt_embeddings.repeat(x.size(0), 1, 1)             
+            prompt_attention_mask = torch.cat(x.size()[0] * [prompt_attention_mask], dim=0)
+
+            # Step 3: Concatenate multimodal embedding `x` with the prompt embeddings
+            inputs_embeds = torch.cat([x, prompt_embeddings], dim=1)  # (B, prompt_len+1, emb_dim)
+
+            # Step 4: Update attention mask to reflect `x` prepended to the prompt
+            combined_attention_mask = torch.cat(
+                [torch.ones((batch_size, 1), dtype=torch.long, device=device), prompt_attention_mask], dim=1
+            )  # (B, prompt_len+1)
+
+            # Step 5: Tokenize and embed the ground truth texts (for teacher forcing)
             encoded_gt = self.tokenizer(ground_truth_texts, return_tensors="pt", padding=True, truncation=True).to(device)
             gt_input_ids = encoded_gt.input_ids  # (B, seq_len)
-            attention_mask = encoded_gt.attention_mask  # (B, seq_len)
+            gt_embeddings = self.caption_generator.get_input_embeddings()(gt_input_ids)
 
-            #print(f"Ground truth input IDs shape: {gt_input_ids.shape}")  # (B, seq_len)
-            #print(f"Attention mask shape: {attention_mask.shape}")  # (B, seq_len)
+            # Step 6: Concatenate the ground truth embeddings to the input embeddings.
+            inputs_embeds = torch.cat([inputs_embeds, gt_embeddings], dim=1)
 
-            # Convert token IDs into embeddings
-            gt_embeddings = self.caption_generator.get_input_embeddings()(gt_input_ids[:, :-1])  # (B, seq_len-1, emb_dim)
-            #print(f"Ground truth embeddings shape: {gt_embeddings.shape}")
+            # Step 7: update the attention mask.
+            combined_attention_mask = torch.cat([combined_attention_mask, encoded_gt.attention_mask], dim=1)
 
-            # Concatenate multimodal embedding `x` as the first token representation
-            inputs_embeds = torch.cat([x, gt_embeddings], dim=1)  # (B, seq_len, emb_dim)
-            #print(f"Input embeddings shape (before slicing): {inputs_embeds.shape}")
+            # Step 8: Pass everything to the GPT decoder
+            # Shift input embeddings and labels for loss calculation
+            labels = gt_input_ids
+            inputs_embeds = inputs_embeds[:, :-labels.shape[1], :]
+            combined_attention_mask = combined_attention_mask[:, :-labels.shape[1]]
 
-            # FIX: Remove the last token from inputs_embeds to match labels
-            inputs_embeds = inputs_embeds[:, :-1, :]
-            #print(f"Input embeddings shape (after slicing): {inputs_embeds.shape}")  # (B, seq_len-1, emb_dim)
+            #print("inputs_embeds", inputs_embeds.shape)
+            #print("attention_mask", combined_attention_mask.shape)
+            #print("labels", labels.shape)
 
-            # Update attention mask: Add a `1` for `x`, then keep the rest from `attention_mask[:, :-1]`
-            combined_attention_mask = torch.cat(
-                [torch.ones((batch_size, 1), dtype=torch.long, device=device), attention_mask[:, :-1]], dim=1
-            )[:, :-1]  # FIX: Slice to match inputs_embeds
-            #print(f"Combined attention mask shape: {combined_attention_mask.shape}")  # (B, seq_len-1)
+            # Calculate padding length needed for inputs_embeds
+            padding_length = labels.size(1) - inputs_embeds.size(1)
 
-            # Pass everything to the GPT decoder
+            # Pad the input embeddings
+            if padding_length > 0:
+                # Pad inputs_embeds with zeros (or any other padding value)
+                padding = torch.zeros((inputs_embeds.size(0), padding_length, inputs_embeds.size(2)), device=inputs_embeds.device)
+                inputs_embeds = torch.cat([inputs_embeds, padding], dim=1)  # (B, prompt_len + seq_len, emb_dim)
+
+                # Also pad the attention mask
+                padding_mask = torch.zeros((inputs_embeds.size(0), padding_length), dtype=torch.long, device=inputs_embeds.device)
+                combined_attention_mask = torch.cat([combined_attention_mask, padding_mask], dim=1)  # (B, prompt_len + seq_len)
+
+            #print("\n\ninputs_embeds", inputs_embeds.shape)
+            #print("attention_mask", combined_attention_mask.shape)
+            #print("labels", labels.shape)
+
             outputs = self.caption_generator(
-                inputs_embeds=inputs_embeds, 
-                attention_mask=combined_attention_mask, 
-                labels=gt_input_ids[:, 1:]  # Predict the next token
+                inputs_embeds=inputs_embeds,  # Use the concatenated embeddings
+                attention_mask=combined_attention_mask,  # Updated attention mask
+                labels=labels # Ground truth labels for teacher forcing.
             )
 
-            #print(f"Outputs loss: {outputs.loss}")
             return outputs.loss
 
 
