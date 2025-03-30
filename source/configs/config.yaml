@@ -57,7 +57,7 @@ train:
   batch_size: 64
   loss_fn: cross-entropy
   teacher_forcing: True # if False, the model generates autoregressively during training
-  milestones: [10, 15]
+  milestones: [5, 10]
 
 mobtep:
   tcn_emb_size: 128

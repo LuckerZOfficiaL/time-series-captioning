@@ -219,7 +219,7 @@ class CLIP_Mobtep(torch.nn.Module):
             if torch.all(next_token == self.tokenizer.eos_token_id):
                 break
 
-        print("Generated token IDs:", input_ids)
+        #print("Generated token IDs:", input_ids)
         
         # Decode generated token sequences
         generated_captions = self.tokenizer.batch_decode(input_ids[:, 1:], skip_special_tokens=True)
