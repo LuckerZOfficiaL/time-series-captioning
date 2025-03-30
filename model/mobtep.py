@@ -48,7 +48,7 @@ class CLIP_Mobtep(torch.nn.Module):
         self.clip_model.requires_grad_(False)
     
     
-    def forward(self, ts_input, text_input, visual_input, ground_truth_texts=None, max_length=250, output_text=False, teacher_forcing=False):
+    def forward(self, ts_input, text_input, visual_input, ground_truth_texts=None, teacher_forcing=False):
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         # Compute multimodal embeddings
@@ -134,9 +134,6 @@ class CLIP_Mobtep(torch.nn.Module):
             )
 
             return outputs.loss
-
-
-
             
 
         else:
@@ -163,42 +160,74 @@ class CLIP_Mobtep(torch.nn.Module):
                 input_ids = torch.cat([input_ids, next_token], dim=-1)
 
             logits = torch.cat(all_logits, dim=1)
+            return logits  
+       
+   
+    def generate_captions(self, ts_input, text_input, visual_input, prompt_input, max_length=250):
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-        if output_text:
-            generated_text = self.tokenizer.batch_decode(input_ids, skip_special_tokens=True)
-            return generated_text, logits  
+        # Compute multimodal embeddings
+        numeric_embedding = self.ts_encoder(ts_input).to(device)
+        text_inputs = self.clip_processor(text=text_input, return_tensors="pt", padding=True, truncation=True).to(device)
+        text_embedding = self.clip_model.get_text_features(**text_inputs).to(device)
+        image_inputs = self.clip_processor(images=visual_input, return_tensors="pt").to(device)
+        visual_embedding = self.clip_model.get_image_features(**image_inputs)
 
-        return logits  
+        # Fusion + prototype attention
+        fused_embedding = self.fusion_module(numeric_embedding, visual_embedding, text_embedding).unsqueeze(1)
+        x = self.prototype_attention(fused_embedding)
 
+        if self.use_linear_proj:
+            x = self.linear_proj(x)
 
-    
+        batch_size = x.shape[0]
 
+        # Tokenize and embed the prompts
+        encoded_prompts = self.tokenizer(prompt_input, return_tensors="pt", padding=True, truncation=True).to(device)
+        prompt_input_ids = encoded_prompts.input_ids  # (B, prompt_len)
+        prompt_attention_mask = encoded_prompts.attention_mask  # (B, prompt_len)
+        prompt_embeddings = self.caption_generator.get_input_embeddings()(prompt_input_ids)  # (B, prompt_len, emb_dim)
 
-    def generate_captions(self, aligned_embedding):
-        batch_size = aligned_embedding.shape[0]
+        # Concatenate multimodal embeddings (`x`) with prompt embeddings
+        inputs_embeds = torch.cat([x, prompt_embeddings], dim=1)  # (B, prompt_len+1, emb_dim)
+
+        # Adjust attention mask accordingly
+        combined_attention_mask = torch.cat(
+            [torch.ones((batch_size, 1), dtype=torch.long, device=device), prompt_attention_mask], dim=1
+        )  # (B, prompt_len+1)
+
+        input_ids = torch.full((batch_size, 1), self.tokenizer.bos_token_id, dtype=torch.long, device=device)
         
-        # Ensure the input tensor has the correct shape (batch_size, sequence_length, embedding_size)
-        inputs_embeds = aligned_embedding  # Already has shape (batch_size, 1, 768)
+        for step in range(max_length):
+            if step == 0:
+                # First step: Use the combined input embeddings
+                outputs = self.caption_generator(
+                    inputs_embeds=inputs_embeds, 
+                    attention_mask=combined_attention_mask
+                )
+            else:
+                # Later steps: Use predicted tokens as input
+                outputs = self.caption_generator(input_ids=input_ids, attention_mask=torch.ones_like(input_ids))
 
-        # Create an attention mask (all ones, since we have a single valid token)
-        attention_mask = torch.ones((batch_size, 1), dtype=torch.long, device=aligned_embedding.device)
+            logits = outputs.logits[:, -1, :]
+            next_token = torch.argmax(logits, dim=-1, keepdim=True)
 
-        # Use GPT-2's generation API to create a description
-        outputs = self.caption_generator.generate(
-            inputs_embeds=inputs_embeds,
-            attention_mask=attention_mask,
-            max_new_tokens=300,
-            num_beams=5,
-            no_repeat_ngram_size=2,
-            early_stopping=True,
-            num_return_sequences=1,
-            pad_token_id=self.tokenizer.eos_token_id,
-        )
+            # Append generated tokens to input
+            input_ids = torch.cat([input_ids, next_token], dim=-1)
 
-        # Decode the output token IDs to text (batch processing)
-        generated_descriptions = [self.tokenizer.decode(output, skip_special_tokens=True) for output in outputs]
-        return generated_descriptions
+            # Stop if all sequences have reached EOS
+            if torch.all(next_token == self.tokenizer.eos_token_id):
+                break
 
+        print("Generated token IDs:", input_ids)
+        
+        # Decode generated token sequences
+        generated_captions = self.tokenizer.batch_decode(input_ids[:, 1:], skip_special_tokens=True)
+
+        return generated_captions
+
+
+       
 
 
 class Mobtep(torch.nn.Module):
@@ -318,19 +347,25 @@ def main():
     transform = transforms.ToTensor()
     images = [transform(image) for image in images]
 
+    prompt_input = ["Provide a time series description."]*3
+
 
     mobtep = CLIP_Mobtep(tcn_emb_size=128, prototype_words=config['mobtep']['anchor_words'], use_linear_proj=False).to(device)
     mobtep.eval()
 
-    #print(mobtep.compute_semantic_loss(["A dog is sleeping", "It's raining"], ['A cat is sleeping', "It is raining"]))
 
-    
     with torch.no_grad():
-        output = mobtep(ts_input, text_input, images, output_text=False, 
-                        ground_truth_texts=['hello world', "university of california", "sapienza university of rome"],
-                        teacher_forcing=False)
+        output = mobtep.generate_captions(ts_input, 
+                                        text_input, 
+                                        images, 
+                                        prompt_input,
+                                        max_length=250)
 
-    print(output.shape)  # Expected shape: [3, 1, 768]
+    #with torch.no_grad():
+    #  output = mobtep(ts_input, text_input, images, output_text=False, 
+    #               ground_truth_texts=['hello world', "university of california", "sapienza university of rome"],
+    #               teacher_forcing=False)
+
     print(output[0])
     #for i, caption in enumerate(output):
     #    print("\n\ni)\n", caption)

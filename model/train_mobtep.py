@@ -88,14 +88,12 @@ def train(model, train_loader, optimizer, epochs=5, milestones=None):
 
             #print("GT ids shape: ", ground_truth_captions_ids.shape)
             if config['train']['teacher_forcing']:
-                loss = model(ts_input, text_input, image_input, 
-                            max_length=config['mobtep']['max_output_tokens'], 
+                loss = model(ts_input, text_input, image_input,  
                             teacher_forcing=True,
                             ground_truth_texts=ground_truth_captions)
                 
             else:
                 logits = model(ts_input, text_input, image_input, 
-                            max_length=config['mobtep']['max_output_tokens'], 
                             teacher_forcing=False)
                 print("Logits shape: ", logits.shape)
                 loss = cross_entropy_loss(logits, ground_truth_captions_ids, pad_token_id=model.tokenizer.pad_token_id)
@@ -157,6 +155,34 @@ def main():
     train(model, train_loader, optimizer, 
         epochs=config['train']['epochs'], 
         milestones=config['train']['milestones'])
+
+
+    ts_input = torch.randn(3, 100, 1).to(device)  # Example time series (3 samples, length 100)
+    text_input = ["Here's a time series describing hourly air quality.",
+                "Here's a time series describing daily crimes.",
+                "Here's a time series describing yearly."
+    ]
+    
+    img_paths = ['/home/ubuntu/thesis/data/samples/plots/air quality_0.jpeg', 
+                    '/home/ubuntu/thesis/data/samples/plots/crime_0.jpeg', 
+                    '/home/ubuntu/thesis/data/samples/plots/demography_0.jpeg']
+
+    images = [Image.open(img_path).convert("RGB") for img_path in img_paths]
+    transform = transforms.ToTensor()
+    images = [transform(image) for image in images]
+
+    prompt_input = ["Provide a time series description."]*3
+
+    mobtep = CLIP_Mobtep(tcn_emb_size=128, prototype_words=config['mobtep']['anchor_words'], use_linear_proj=False).to(device)
+    mobtep.eval()
+
+    
+    with torch.no_grad():
+        output = mobtep.generate_captions(ts_input, text_input, images, prompt_input,
+                                            max_length=config['mobtep']['max_output_tokens'],)
+    for caption in output:
+        print(caption)
+    
 
 if __name__ == "__main__":
     main()
