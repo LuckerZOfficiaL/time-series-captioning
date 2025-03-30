@@ -11,25 +11,28 @@ PLOT_WIDTH = None"""
 
 
 TITLE_MAP = {
-        "air quality": "value across time",
-        "border crossing": "crossing number across time",
-        "crime": "crime count across time",
-        "demography": "values across time",
-        "heart rate": "values at different measurements"
+        "air quality": "value across hours",
+        "border crossing": "crossing number across days",
+        "crime": "crime count across days",
+        "demography": "values across years",
+        "heart rate": "values at different measurements",
+        "road injuries": "values across years"
     }
 X_LABEL_MAP = {
         "air quality": "hourly timestep",
         "border crossing": "montly timestep",
         "crime": "daily timestep",
         "demography": "yearly timestep",
-        "heart rate": "measurement"
+        "heart rate": "measurement",
+        "road injuries": "yearly timestep"
     }
 Y_LABEL_MAP = {
         "air quality": "value",
         "border crossing": "crossing number",
         "crime": "crime count",
         "demography": "value",
-        "heart rate": "value"
+        "heart rate": "value",
+        "road injuries": "accident count"
     }
 
 

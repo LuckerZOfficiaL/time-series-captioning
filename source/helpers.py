@@ -550,6 +550,60 @@ def get_sample(dataset_name: str, json_data, series_len = None, start_idx = None
     metadata['minimum of this specific series'] = round(min(ts), 2)
     metadata['maximum of this specific series'] = round(max(ts), 2)
 
+
+  elif dataset_name == "road injuries":
+    location = random.choice(list(json_data.keys()))
+    mode = random.choice(list(json_data[location]['data'].keys()))
+    severity = random.choice(list(json_data[location]['data'][mode].keys()))
+
+    while len(json_data[location]['data'][mode][severity]) < 5: # if the series is too short, draw again
+      location = random.choice(list(json_data.keys()))
+      mode = random.choice(list(json_data[location]['data'].keys()))
+      severity = random.choice(list(json_data[location]['data'][mode].keys()))
+
+
+    if series_len is None:
+      series_len = random.randint(5, len(json_data[location]['data'][mode][severity]))
+    if start_idx is None:
+      start_idx = random.randint(0, len(json_data[location]['data'][mode][severity]) - series_len)
+
+    metadata = {}
+
+    metadata['location'] = location
+    metadata['mode'] = mode
+    metadata['severity'] = severity
+    metadata['geotype'] = json_data[location]["metadata"]['geotype']
+    
+    metadata['starting year'] = json_data[location]["metadata"]['start year of the series'] + start_idx
+    metadata['end year'] = metadata['starting year'] + series_len - 1
+    metadata['total population'] = json_data[location]['metadata']['totalpop']
+    metadata['sampling frequency'] = "yearly"
+    
+    
+    ts = json_data[location]['data'][mode][severity][start_idx:start_idx+series_len]
+    ts = [round(x, 2) for x in ts]
+    
+    sum_series = np.zeros(series_len)
+    count_series = np.zeros(series_len)
+    for loc in json_data:
+        if json_data[loc]["metadata"]["geotype"] == metadata["geotype"]:
+            if mode in json_data[loc]['data'] and severity in json_data[loc]['data'][mode]:
+                series = json_data[loc]['data'][mode][severity]
+                for i, value in enumerate(series[:series_len]):  # Only consider existing values
+                    sum_series[i] += value
+                    count_series[i] += 1  # Count only non-padded values
+
+    # Avoid division by zero by using np.where
+    average_ts = np.where(count_series > 0, sum_series / count_series, np.nan)
+
+    metadata['average time series of this type of location'] = [float(round(x, 2)) for x in average_ts]
+    metadata['standard deviation of this type of location'] = float(round(np.std(metadata['average time series of this type of location']), 2))
+
+    metadata['mean of this specific series'] = float(round(np.mean(ts), 2))
+    metadata['standard deviation of this specific series'] = float(round(np.std(ts), 2))
+    metadata['minimum of this specific series'] = float(round(min(ts), 2))
+    metadata['maximum of this specific series'] = float(round(max(ts), 2))
+
   return metadata, ts
 
 # the following function does not preclude that no sample is duplicated, there's a very slim chance that it occurs
@@ -664,6 +718,27 @@ def get_request(dataset_name, metadata, ts, external_knowledge=True):
 
           Answer in a single paragraph of four sentences at most, without bullet points or any formatting.
           """
+  elif dataset_name == "road injuries":
+    request = f"""I will give you a time series about the {metadata['sampling frequency']} number of people getting {metadata['severity']} on the road by means of {metadata['mode']}. The location is the {metadata['geotype']} of {metadata['location']}  and the period is from {metadata['starting year']} to {metadata['end year']}.
+          {metadata['location']} has a total population of {metadata['total population']}.
+           Here is the time series: \n {ts}
+          \nHere are the statistics for this specific time series for {metadata['location']} from {metadata['starting year']} to {metadata['end year']}: \n Mean: {metadata['mean of this specific series']} \n Standard Deviation: {metadata['standard deviation of this specific series']} \n Minimum: {metadata['minimum of this specific series']} \n Maximum: {metadata['maximum of this specific series']}
+          \nHere is the average time series of a typical {metadata['geotype']} in California in the same period of years. \n {metadata['average time series of this type of location']}, whose standard deviation is {metadata['standard deviation of this type of location']}
+
+          \n Describe this time series by focusing on trends and patterns. Discuss concrete numbers you see and pay attention to the dates.
+          For numerical values, ensure consistency with the provided time series. If making percentage comparisons, round to the nearest whole number.Report the dates when things happened.
+          Use the statistics I provided you for comparing this example to the normalcy.
+          {"Use your broad knowledge of geopolitics, natural events, and economic trends to provide meaningful comparisons. Be specific and factual, avoiding broad generalizations." if external_knowledge else "Do not add any extra information beyond what is given."}
+          Highlight significant spikes, dips, or patterns{" and explain possible causes based on global or regional factors." if external_knowledge else "."}
+          You don't have to explicitly report the numeric values of general statistics, you just use them for reference.
+          Compare the trends in this time series to global or regional norms, explaining whether they are higher, lower, or follow expected seasonal patterns.
+          When making comparisons, clearly state whether differences are minor, moderate, or significant.
+          Use descriptive language to create engaging, natural-sounding text.
+          Avoid repetitive phrasing and overused expressions.
+
+          Answer in a single paragraph of four sentences at most, without bullet points or any formatting.
+          """
+      
   return request
 
 def augment_request(request, n=3, model="GPT-4o"): # rephrases the request prompt n times and returns the augmentations in a list
@@ -1801,4 +1876,7 @@ def main():
 
 
 if __name__ == "__main__":
-  main()
+  #main()
+  json_data = json.load(open('/home/ubuntu/thesis/data/processed/road_injuries.json'))
+  metadata, ts = get_sample("road injuries", json_data)
+  print(get_request('road injuries', metadata, ts))

@@ -2,7 +2,7 @@ general:
   random_seed: 42
 
 data:
-  dataset_names: [air quality, border crossing, crime, demography]
+  dataset_names: [air quality, border crossing, crime, demography, road injuries]
   request_augmentations: 0 # how many times to rephrase the original prompt request?
   n_samples: 100 # how many window samples to extract per dataset? i.e. how many time series to sample? Note that this is just the number of real samples and not the number of captions because each model in used_models generates its version of the caption. So, the number of captions generated will be n_samples*len(used_models).
   save_top_k: 0 # save the top k best captions based on the ranking, if it's 0 or negative, don't do top-k. If top-k is on, caption ranking is invoked

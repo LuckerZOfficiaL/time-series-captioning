@@ -282,7 +282,7 @@ def preprocess_road_injuries():
         if geoname not in data_dict:
             data_dict[geoname] = {
                 'metadata': {
-                    'totalpop': totalpop,
+                    'totalpop': int(totalpop),
                     'geotype': geotype,
                     'start year of the series': 2002,
                     'end year of the series': 2010
@@ -328,7 +328,7 @@ def main():
     #preprocess_demographics()
     #preprocess_crime()
     #preprocess_border_crossing()
-    #preprocess_road_injuries()
+    preprocess_road_injuries()
 
     
 
