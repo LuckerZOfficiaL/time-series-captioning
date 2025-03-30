@@ -242,13 +242,95 @@ def preprocess_border_crossing():
     with open('/home/ubuntu/thesis/data/processed/border_crossing.json', 'w') as file:
         json.dump(crossing_data, file, indent=4, sort_keys=True)
 
+def preprocess_road_injuries():
+    file_path = DATASETS_PATH + '/US Gov/road-traffic-injuries-2002-2010.csv'
+    df = pd.read_csv(file_path)
+    df = df[['reportyear', 'geotype', 'geoname', 'mode', 'severity', 'injuries', 'totalpop']]
+    
+
+    
+
+    df = df[df['reportyear'].astype(str).str.len() == 4] # remove multi-year intervals and retain only single-year values
+    geotype_mapping = { # Convert geotype using the mapping
+        'CT': 'Census tract',
+        'PL': 'Place',
+        'CO': 'County',
+        'CD': 'County division',
+        'R4': 'Consolidated Statistical Metropolitan Area',
+        'RE': 'Region',
+        'CA': 'State'
+    }
+    df['geotype'] = df['geotype'].map(geotype_mapping)
+    
+    #print(df.head(2))
+    #print(df['geoname'].unique())
+
+    df_collapsed = df.groupby(['geotype', 'geoname', 'mode', 'severity', 'totalpop'])['injuries'].apply(list).reset_index()
+
+    data_dict = {}
+    for index, row in df_collapsed.iterrows():
+        geotype = row['geotype']
+        geoname = row['geoname']
+        mode = row['mode']
+        severity = row['severity']
+        totalpop = row['totalpop']
+        injuries = [x for x in row['injuries'] if not pd.isna(x)]  # Filter out NaN values
+
+        if not injuries:  # Skip adding empty lists
+            continue
+
+        if geoname not in data_dict:
+            data_dict[geoname] = {
+                'metadata': {
+                    'totalpop': totalpop,
+                    'geotype': geotype,
+                    'start year of the series': 2002,
+                    'end year of the series': 2010
+                },
+                'data': {}
+            }
+        
+        if mode not in data_dict[geoname]['data']:
+            data_dict[geoname]['data'][mode] = {}
+        
+        if severity not in data_dict[geoname]['data'][mode]:
+            data_dict[geoname]['data'][mode][severity] = injuries
+        else:
+            data_dict[geoname]['data'][mode][severity].extend(injuries)
+
+    for geoname in data_dict:
+        data_dict[geoname]['metadata']['mean'] = {}
+        data_dict[geoname]['metadata']['standard deviation'] = {}
+        data_dict[geoname]['metadata']['min'] = {}
+        data_dict[geoname]['metadata']['max'] = {}
+        
+        for mode in data_dict[geoname]['data']:
+            data_dict[geoname]['metadata']['mean'][mode] = {}
+            data_dict[geoname]['metadata']['standard deviation'][mode] = {}
+            data_dict[geoname]['metadata']['min'][mode] = {}
+            data_dict[geoname]['metadata']['max'][mode] = {}
+            
+            for severity in data_dict[geoname]['data'][mode]:
+                injuries = data_dict[geoname]['data'][mode][severity]
+                if injuries:  # Ensure there are valid values
+                    data_dict[geoname]['metadata']['mean'][mode][severity] = float(round(np.mean(injuries), 2))
+                    data_dict[geoname]['metadata']['standard deviation'][mode][severity] = float(round(np.std(injuries), 2))
+                    data_dict[geoname]['metadata']['min'][mode][severity] = float(round(np.min(injuries), 2))
+                    data_dict[geoname]['metadata']['max'][mode][severity] = float(round(np.max(injuries), 2))
+
+    with open('/home/ubuntu/thesis/data/processed/road_injuries.json', 'w') as file:
+        json.dump(data_dict, file, indent=4, sort_keys=True)
+
 
 def main():
     #preprocess_heart_rate()
     #preprocess_air_quality()
-    preprocess_demographics()
+    #preprocess_demographics()
     #preprocess_crime()
     #preprocess_border_crossing()
+    #preprocess_road_injuries()
+
+    
 
 if __name__ == "__main__":
     main()
