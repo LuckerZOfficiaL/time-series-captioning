@@ -38,13 +38,13 @@ def load_config(filepath="/home/ubuntu/thesis/source/configs/config.yaml"):
     return config
 
 
-def pad(series, max_len=None, with_value=0):
-    padding = max_len - len(series)  # Calculate the padding needed
-    if padding > 0:
-        padded_s = torch.nn.functional.pad(series, (0, padding), value=with_value)  # Pad the series with `with_value`
+def pad(tensor, max_len, with_value=0):
+    """Pad a 1D tensor to max_len with the given value."""
+    if len(tensor) >= max_len:
+        return tensor[:max_len]
     else:
-        padded_s = series  # No padding needed if the series is already at max_len
-    return padded_s
+        padding = torch.ones(max_len - len(tensor)) * with_value
+        return torch.cat([tensor, padding])
 
 
 def bert_score_loss(bert_model, tokenizer, generated_captions, gt_captions):
@@ -104,8 +104,10 @@ def cross_entropy_loss(logits, target, pad_token_id):
     if target_len < logits_len:
         # Pad target to match logits length
         padding = torch.full((target.size(0), logits_len - target_len), pad_token_id, device=target.device)
-        print(f"target {target.shape}, padding {padding.shape}")
+        #print(f"target {target.shape}, padding {padding.shape}")
         target = torch.cat([target, padding], dim=1)
+    elif target_len > logits_len:
+        target = target[:, :logits_len]
 
     # Compute loss, ignoring padding tokens
     loss = F.cross_entropy(logits.reshape(-1, logits.size(-1)), target.reshape(-1), 

@@ -52,12 +52,15 @@ path: # paths that have "folder" in its name are folder paths, otherwise they ar
   prototypes_path: /home/ubuntu/thesis/model/prototype_words.txt
 
 train:
-  lr: 1e-2
-  epochs: 20
+  lr: 4e-3
+  epochs: 1
   batch_size: 64
-  loss_fn: cross-entropy
+  loss_fn: cross-entropy # currently still useless
   teacher_forcing: True # if False, the model generates autoregressively during training
-  milestones: [5, 10]
+  milestones: [5, 10, 20]
+  early_stopping: False
+  patience: 5 # used only if early_stoping=True
+  clip_grad_norm: 1.0
 
 mobtep:
   tcn_emb_size: 128

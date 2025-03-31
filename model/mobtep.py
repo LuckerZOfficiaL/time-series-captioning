@@ -43,189 +43,245 @@ class CLIP_Mobtep(torch.nn.Module):
         self.tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
         self.tokenizer.pad_token = self.tokenizer.eos_token
 
-        
+        # Freeze pretrained models
         self.caption_generator.requires_grad_(False)
         self.clip_model.requires_grad_(False)
     
-    
-    def forward(self, ts_input, text_input, visual_input, ground_truth_texts=None, teacher_forcing=False):
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
+    def get_multimodal_embedding(self, ts_input, text_input, visual_input):
+        """Extract and fuse embeddings from different modalities"""
+        device = next(self.parameters()).device
+        
         # Compute multimodal embeddings
         numeric_embedding = self.ts_encoder(ts_input).to(device)
+        
         text_inputs = self.clip_processor(text=text_input, return_tensors="pt", padding=True, truncation=True).to(device)
         text_embedding = self.clip_model.get_text_features(**text_inputs).to(device)
+        
         image_inputs = self.clip_processor(images=visual_input, return_tensors="pt").to(device)
         visual_embedding = self.clip_model.get_image_features(**image_inputs)
 
         # Fusion + prototype attention
         fused_embedding = self.fusion_module(numeric_embedding, visual_embedding, text_embedding).unsqueeze(1)  
-        x = self.prototype_attention(fused_embedding)
+        embedding = self.prototype_attention(fused_embedding)
 
         if self.use_linear_proj:
-            x = self.linear_proj(x)
-
+            embedding = self.linear_proj(embedding)
+            
+        return embedding
+    
+    def forward(self, ts_input, text_input, visual_input, ground_truth_texts=None, teacher_forcing=False, max_length=250):
+        device = next(self.parameters()).device
+        
+        # Get fused multimodal embedding
+        x = self.get_multimodal_embedding(ts_input, text_input, visual_input)
         batch_size = x.shape[0]
 
         if teacher_forcing and ground_truth_texts is not None:
-            # Step 1: Tokenize the ground truth prompt (or any custom prompt)
-            prompt = "please provide a description to the following time series."
-            prompt_input = self.tokenizer(prompt, return_tensors="pt", padding=True, truncation=True).to(device)
-            prompt_input_ids = prompt_input.input_ids  # (B, prompt_len)
-            prompt_attention_mask = prompt_input.attention_mask  # (B, prompt_len)
-
-            # Step 2: Convert prompt tokens into embeddings
-            prompt_embeddings = self.caption_generator.get_input_embeddings()(prompt_input_ids)  # (B, prompt_len, emb_dim)
-
-            # Duplicate prompt embeddings for each example in the batch
-            prompt_embeddings = prompt_embeddings.repeat(x.size(0), 1, 1)             
-            prompt_attention_mask = torch.cat(x.size()[0] * [prompt_attention_mask], dim=0)
-
-            # Step 3: Concatenate multimodal embedding `x` with the prompt embeddings
-            inputs_embeds = torch.cat([x, prompt_embeddings], dim=1)  # (B, prompt_len+1, emb_dim)
-
-            # Step 4: Update attention mask to reflect `x` prepended to the prompt
-            combined_attention_mask = torch.cat(
-                [torch.ones((batch_size, 1), dtype=torch.long, device=device), prompt_attention_mask], dim=1
-            )  # (B, prompt_len+1)
-
-            # Step 5: Tokenize and embed the ground truth texts (for teacher forcing)
-            encoded_gt = self.tokenizer(ground_truth_texts, return_tensors="pt", padding=True, truncation=True).to(device)
-            gt_input_ids = encoded_gt.input_ids  # (B, seq_len)
-            gt_embeddings = self.caption_generator.get_input_embeddings()(gt_input_ids)
-
-            # Step 6: Concatenate the ground truth embeddings to the input embeddings.
-            inputs_embeds = torch.cat([inputs_embeds, gt_embeddings], dim=1)
-
-            # Step 7: update the attention mask.
-            combined_attention_mask = torch.cat([combined_attention_mask, encoded_gt.attention_mask], dim=1)
-
-            # Step 8: Pass everything to the GPT decoder
-            # Shift input embeddings and labels for loss calculation
-            labels = gt_input_ids
-            inputs_embeds = inputs_embeds[:, :-labels.shape[1], :]
-            combined_attention_mask = combined_attention_mask[:, :-labels.shape[1]]
-
-            #print("inputs_embeds", inputs_embeds.shape)
-            #print("attention_mask", combined_attention_mask.shape)
-            #print("labels", labels.shape)
-
-            # Calculate padding length needed for inputs_embeds
-            padding_length = labels.size(1) - inputs_embeds.size(1)
-
-            # Pad the input embeddings
-            if padding_length > 0:
-                # Pad inputs_embeds with zeros (or any other padding value)
-                padding = torch.zeros((inputs_embeds.size(0), padding_length, inputs_embeds.size(2)), device=inputs_embeds.device)
-                inputs_embeds = torch.cat([inputs_embeds, padding], dim=1)  # (B, prompt_len + seq_len, emb_dim)
-
-                # Also pad the attention mask
-                padding_mask = torch.zeros((inputs_embeds.size(0), padding_length), dtype=torch.long, device=inputs_embeds.device)
-                combined_attention_mask = torch.cat([combined_attention_mask, padding_mask], dim=1)  # (B, prompt_len + seq_len)
-
-            #print("\n\ninputs_embeds", inputs_embeds.shape)
-            #print("attention_mask", combined_attention_mask.shape)
-            #print("labels", labels.shape)
-
-            outputs = self.caption_generator(
-                inputs_embeds=inputs_embeds,  # Use the concatenated embeddings
-                attention_mask=combined_attention_mask,  # Updated attention mask
-                labels=labels # Ground truth labels for teacher forcing.
-            )
-
-            return outputs.loss
+            # For teacher forcing, we'll use a custom approach to handle the shape mismatch
             
-
+            # Step 1: Get the multimodal context
+            mm_embeddings = x  # [batch_size, 1, hidden_size]
+            
+            # Step 2: Prepare prompt 
+            prompt = "please provide a description to the following time series."
+            
+            # Step 3: Tokenize ground truth texts with prompt prefixed
+            prefixed_gt_texts = [f"{prompt} {gt}" for gt in ground_truth_texts]
+            encoded_texts = self.tokenizer(prefixed_gt_texts, return_tensors="pt", padding=True, truncation=True).to(device)
+            input_ids = encoded_texts.input_ids
+            attention_mask = encoded_texts.attention_mask
+            
+            # Step 4: Create labels - we set the prompt part to -100 (ignored in loss calculation)
+            # Find the length of the prompt tokens
+            prompt_tokens = self.tokenizer(prompt, return_tensors="pt").to(device).input_ids
+            prompt_len = prompt_tokens.size(1)
+            
+            # Create labels tensor, setting prompt portion to -100
+            labels = input_ids.clone()
+            labels[:, :prompt_len] = -100
+            
+            # Step 5: Create position_ids based on attention_mask
+            position_ids = attention_mask.long().cumsum(-1) - 1
+            position_ids.masked_fill_(attention_mask == 0, 1)
+            
+            # Step 6: Calculate actual loss using the model
+            # First, get token embeddings
+            inputs_embeds = self.caption_generator.get_input_embeddings()(input_ids)
+            
+            # For the first token position in each sequence, replace with multimodal embedding
+            inputs_embeds[:, 0, :] = mm_embeddings.squeeze(1)
+            
+            #print("\ninputs embeds: ", inputs_embeds.shape)
+            #print("labels: ", labels.shape)
+            #exit()
+            # Forward pass through GPT2 with our custom inputs and labels
+            outputs = self.caption_generator(
+                inputs_embeds=inputs_embeds,
+                attention_mask=attention_mask,
+                position_ids=position_ids,
+                labels=labels
+            )
+            
+            return outputs.loss
         else:
-            """ 🔄 Autoregressive Mode """
-            input_ids = torch.full((batch_size, 1), self.tokenizer.bos_token_id, dtype=torch.long, device=device)
+            # Autoregressive generation
             all_logits = []
-
-            for step in range(max_length):
-                if step == 0:
-                    # First step: Use multimodal input
-                    outputs = self.caption_generator(inputs_embeds=x, attention_mask=torch.ones_like(input_ids))
-                else:
-                    # Later steps: Use predicted tokens
-                    outputs = self.caption_generator(input_ids=input_ids, attention_mask=torch.ones_like(input_ids))
-
-                logits = outputs.logits[:, -1, :]
-                all_logits.append(logits.unsqueeze(1))
-
-                next_token = torch.argmax(logits, dim=-1, keepdim=True)
-
-                if torch.any(next_token == self.tokenizer.eos_token_id):
-                    break
-
-                input_ids = torch.cat([input_ids, next_token], dim=-1)
-
-            logits = torch.cat(all_logits, dim=1)
-            return logits  
-       
-   
-    def generate_captions(self, ts_input, text_input, visual_input, prompt_input, max_length=250):
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-        # Compute multimodal embeddings
-        numeric_embedding = self.ts_encoder(ts_input).to(device)
-        text_inputs = self.clip_processor(text=text_input, return_tensors="pt", padding=True, truncation=True).to(device)
-        text_embedding = self.clip_model.get_text_features(**text_inputs).to(device)
-        image_inputs = self.clip_processor(images=visual_input, return_tensors="pt").to(device)
-        visual_embedding = self.clip_model.get_image_features(**image_inputs)
-
-        # Fusion + prototype attention
-        fused_embedding = self.fusion_module(numeric_embedding, visual_embedding, text_embedding).unsqueeze(1)
-        x = self.prototype_attention(fused_embedding)
-
-        if self.use_linear_proj:
-            x = self.linear_proj(x)
-
-        batch_size = x.shape[0]
-
-        # Tokenize and embed the prompts
-        encoded_prompts = self.tokenizer(prompt_input, return_tensors="pt", padding=True, truncation=True).to(device)
-        prompt_input_ids = encoded_prompts.input_ids  # (B, prompt_len)
-        prompt_attention_mask = encoded_prompts.attention_mask  # (B, prompt_len)
-        prompt_embeddings = self.caption_generator.get_input_embeddings()(prompt_input_ids)  # (B, prompt_len, emb_dim)
-
-        # Concatenate multimodal embeddings (`x`) with prompt embeddings
-        inputs_embeds = torch.cat([x, prompt_embeddings], dim=1)  # (B, prompt_len+1, emb_dim)
-
-        # Adjust attention mask accordingly
-        combined_attention_mask = torch.cat(
-            [torch.ones((batch_size, 1), dtype=torch.long, device=device), prompt_attention_mask], dim=1
-        )  # (B, prompt_len+1)
-
-        input_ids = torch.full((batch_size, 1), self.tokenizer.bos_token_id, dtype=torch.long, device=device)
-        
-        for step in range(max_length):
-            if step == 0:
-                # First step: Use the combined input embeddings
+            
+            # Track which sequences have completed
+            completed_sequences = torch.zeros(batch_size, dtype=torch.bool, device=device)
+            
+            # Step 1: Setup the prompt
+            prompt = "please provide a description to the following time series."
+            prompt_tokens = self.tokenizer(prompt, return_tensors="pt").to(device).input_ids
+            prompt_len = prompt_tokens.size(1)
+            
+            # Step 2: Initialize the sequence with BOS + prompt tokens
+            prefixed_prompt = [f"{self.tokenizer.bos_token} {prompt}" for _ in range(batch_size)]
+            encoded_prompts = self.tokenizer(prefixed_prompt, return_tensors="pt", padding=True).to(device)
+            input_ids = encoded_prompts.input_ids
+            
+            # Step 3: Get the embeddings for this sequence
+            inputs_embeds = self.caption_generator.get_input_embeddings()(input_ids)
+            
+            # Replace the first embedding with our multimodal embedding
+            inputs_embeds[:, 0, :] = x.squeeze(1)
+            
+            # Create attention mask and position IDs
+            attention_mask = torch.ones_like(input_ids)
+            position_ids = attention_mask.long().cumsum(-1) - 1
+            position_ids.masked_fill_(attention_mask == 0, 1)
+            
+            # Step 4: Generate initial sequence
+            outputs = self.caption_generator(
+                inputs_embeds=inputs_embeds,
+                attention_mask=attention_mask,
+                position_ids=position_ids
+            )
+            
+            # Get the predicted token IDs for the next position
+            next_token_logits = outputs.logits[:, -1, :]
+            next_token = torch.argmax(next_token_logits, dim=-1, keepdim=True)
+            
+            # Step 5: Begin autoregressive generation
+            # Start with the previously generated prompt + first prediction
+            generated_ids = torch.cat([input_ids, next_token], dim=1)
+            
+            for step in range(1, max_length):
+                # Get new outputs based on updated sequence
                 outputs = self.caption_generator(
-                    inputs_embeds=inputs_embeds, 
-                    attention_mask=combined_attention_mask
+                    input_ids=generated_ids,
+                    attention_mask=torch.ones_like(generated_ids)
                 )
+                
+                # Get next token prediction
+                next_token_logits = outputs.logits[:, -1, :]
+                all_logits.append(next_token_logits.unsqueeze(1))
+                next_token = torch.argmax(next_token_logits, dim=-1, keepdim=True)
+                
+                # Update completed sequences mask
+                completed_sequences = completed_sequences | (next_token.squeeze(-1) == self.tokenizer.eos_token_id)
+                
+                # Append next token to generated sequence
+                generated_ids = torch.cat([generated_ids, next_token], dim=1)
+                
+                # Stop if all sequences have completed
+                if torch.all(completed_sequences):
+                    break
+            
+            # Combine all logits for return
+            if all_logits:
+                logits = torch.cat(all_logits, dim=1)
+                return logits
             else:
-                # Later steps: Use predicted tokens as input
-                outputs = self.caption_generator(input_ids=input_ids, attention_mask=torch.ones_like(input_ids))
-
-            logits = outputs.logits[:, -1, :]
-            next_token = torch.argmax(logits, dim=-1, keepdim=True)
-
-            # Append generated tokens to input
-            input_ids = torch.cat([input_ids, next_token], dim=-1)
-
-            # Stop if all sequences have reached EOS
-            if torch.all(next_token == self.tokenizer.eos_token_id):
-                break
-
-        #print("Generated token IDs:", input_ids)
+                # Return the logits from the initial generation if no steps were taken
+                return outputs.logits
+    
+    def generate_captions(self, ts_input, text_input, visual_input, prompt_input=None, max_length=250):
+        device = next(self.parameters()).device
         
-        # Decode generated token sequences
-        generated_captions = self.tokenizer.batch_decode(input_ids[:, 1:], skip_special_tokens=True)
-
+        # Get fused multimodal embedding
+        x = self.get_multimodal_embedding(ts_input, text_input, visual_input)
+        batch_size = x.shape[0]
+        
+        # Use default prompt if none provided
+        if prompt_input is None:
+            prompt = "please provide a description to the following time series."
+            prompt_input = [prompt] * batch_size
+        elif isinstance(prompt_input, str):
+            prompt_input = [prompt_input] * batch_size
+        
+        # Initialize with BOS + prompt for each sequence
+        prefixed_prompts = [f"{self.tokenizer.bos_token} {p}" for p in prompt_input]
+        encoded_prompts = self.tokenizer(prefixed_prompts, return_tensors="pt", padding=True).to(device)
+        input_ids = encoded_prompts.input_ids
+        
+        # Get initial embeddings
+        inputs_embeds = self.caption_generator.get_input_embeddings()(input_ids)
+        
+        # Replace first token embedding with multimodal embedding
+        inputs_embeds[:, 0, :] = x.squeeze(1)
+        
+        # Create masks
+        attention_mask = torch.ones_like(input_ids)
+        
+        # Track completed sequences
+        completed_sequences = torch.zeros(batch_size, dtype=torch.bool, device=device)
+        
+        # Generate initial outputs
+        outputs = self.caption_generator(
+            inputs_embeds=inputs_embeds,
+            attention_mask=attention_mask
+        )
+        
+        # Get first predicted token
+        next_token_logits = outputs.logits[:, -1, :]
+        next_token = torch.argmax(next_token_logits, dim=-1, keepdim=True)
+        
+        # Start with input_ids + first predicted token
+        generated_ids = torch.cat([input_ids, next_token], dim=1)
+        
+        # Autoregressive generation
+        for step in range(1, max_length):
+            outputs = self.caption_generator(
+                input_ids=generated_ids,
+                attention_mask=torch.ones_like(generated_ids)
+            )
+            
+            next_token_logits = outputs.logits[:, -1, :]
+            next_token = torch.argmax(next_token_logits, dim=-1, keepdim=True)
+            
+            # Update completed sequences
+            completed_sequences = completed_sequences | (next_token.squeeze(-1) == self.tokenizer.eos_token_id)
+            
+            # Append to generated sequence
+            generated_ids = torch.cat([generated_ids, next_token], dim=1)
+            
+            # Check if all sequences complete
+            if torch.all(completed_sequences):
+                break
+        
+        # Find where the prompt ends (to remove from output)
+        # Determine prompt length for each example
+        prompt_tokens = [self.tokenizer(p, return_tensors="pt").to(device).input_ids[0] for p in prompt_input]
+        prompt_lens = [len(p) + 1 for p in prompt_tokens]  # +1 for BOS token
+        
+        # Extract only the generated part (after prompt) for each sequence
+        clean_generations = []
+        for i, ids in enumerate(generated_ids):
+            # Skip the prefix (BOS + prompt)
+            generation = ids[prompt_lens[i]:]
+            clean_generations.append(generation)
+        
+        # Pad to same length for batched decoding
+        max_gen_len = max(len(g) for g in clean_generations)
+        padded_gens = [torch.cat([g, torch.full((max_gen_len - len(g),), self.tokenizer.pad_token_id, device=device)]) 
+                      for g in clean_generations]
+        padded_gens = torch.stack(padded_gens)
+        
+        # Decode
+        generated_captions = self.tokenizer.batch_decode(padded_gens, skip_special_tokens=True)
+        
         return generated_captions
-
 
        
 

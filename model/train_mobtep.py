@@ -38,6 +38,8 @@ class CaptionDataset(torch.utils.data.Dataset):
 
         if image_transform is None:
             self.image_transform = transforms.ToTensor()
+        else:
+            self.image_transform = image_transform
 
     def __len__(self):
         return len(self.ts_paths)
@@ -69,47 +71,136 @@ class CaptionDataset(torch.utils.data.Dataset):
 
 
 
-def train(model, train_loader, optimizer, epochs=5, milestones=None):
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+def train(model, train_loader, val_loader=None, optimizer=None, epochs=5, milestones=None, early_stopping=False, 
+          patience=None, clip_grad_norm=None, device=None):
+    if device is None:
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    
+    if optimizer is None:
+        optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
+        
+    model.to(device)
     model.train()
     config = load_config()
 
     if milestones is not None:
         scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=milestones, gamma=0.1)
-
+    
+    best_val_loss = float('inf')
+    patience_counter = 0
+    
     for epoch in range(epochs):
         total_loss = 0
+        model.train()
         
+        # Training loop
         for ts_input, text_input, image_input, ground_truth_captions in train_loader:    
             ts_input = ts_input.to(device)
-
-            ground_truth_captions_ids = model.tokenizer(ground_truth_captions, padding=True, truncation=True, return_tensors="pt")["input_ids"].to(device) # strings are converted into indices of tokens
-            #ground_truth_captions_ids = ground_truth_captions_ids[:, :config['mobtep']['max_output_tokens']] # remove this line and increase max_output_tokens in config, when GPU is available
-
-            #print("GT ids shape: ", ground_truth_captions_ids.shape)
+            image_input = image_input.to(device)
+            
+            ground_truth_captions_ids = model.tokenizer(
+                ground_truth_captions, 
+                padding=True, 
+                truncation=True, 
+                return_tensors="pt"
+            )["input_ids"].to(device)
+            
             if config['train']['teacher_forcing']:
-                loss = model(ts_input, text_input, image_input,  
-                            teacher_forcing=True,
-                            ground_truth_texts=ground_truth_captions)
-                
+                loss = model(
+                    ts_input, 
+                    text_input, 
+                    image_input,  
+                    teacher_forcing=True,
+                    ground_truth_texts=ground_truth_captions
+                )
             else:
-                logits = model(ts_input, text_input, image_input, 
-                            teacher_forcing=False)
-                print("Logits shape: ", logits.shape)
-                loss = cross_entropy_loss(logits, ground_truth_captions_ids, pad_token_id=model.tokenizer.pad_token_id)
-
+                logits = model(
+                    ts_input, 
+                    text_input, 
+                    image_input, 
+                    teacher_forcing=False, 
+                    max_length=config['mobtep']['max_output_tokens']
+                )
+                loss = cross_entropy_loss(
+                    logits, 
+                    ground_truth_captions_ids, 
+                    pad_token_id=model.tokenizer.pad_token_id
+                )
 
             optimizer.zero_grad()
             loss.backward()
+            
+            # Gradient clipping
+            if clip_grad_norm is not None:
+                torch.nn.utils.clip_grad_norm_(model.parameters(), clip_grad_norm)
+            
             optimizer.step()
-
-            if milestones is not None:
-                scheduler.step()
             
             total_loss += loss.item()
         
-        avg_loss = total_loss / len(train_loader)
-        print(f"\nEpoch {epoch + 1}/{epochs}, Loss: {avg_loss:.4f}")
+        avg_train_loss = total_loss / len(train_loader)
+        print(f"Epoch {epoch + 1}/{epochs}, Train Loss: {avg_train_loss:.4f}")
+        
+        # Validation loop
+        if val_loader is not None:
+            model.eval()
+            val_loss = 0
+            
+            with torch.no_grad():
+                for ts_input, text_input, image_input, ground_truth_captions in val_loader:
+                    ts_input = ts_input.to(device)
+                    image_input = image_input.to(device)
+                    
+                    ground_truth_captions_ids = model.tokenizer(
+                        ground_truth_captions, 
+                        padding=True, 
+                        truncation=True, 
+                        return_tensors="pt"
+                    )["input_ids"].to(device)
+                    
+                    # Use the same loss calculation as in training
+                    if config['train']['teacher_forcing']:
+                        loss = model(
+                            ts_input, 
+                            text_input, 
+                            image_input,  
+                            teacher_forcing=True,
+                            ground_truth_texts=ground_truth_captions
+                        )
+                    else:
+                        logits = model(
+                            ts_input, 
+                            text_input, 
+                            image_input, 
+                            teacher_forcing=False, 
+                            max_length=config['mobtep']['max_output_tokens']
+                        )
+                        loss = cross_entropy_loss(
+                            logits, 
+                            ground_truth_captions_ids, 
+                            pad_token_id=model.tokenizer.pad_token_id
+                        )
+                    
+                    val_loss += loss.item()
+            
+            avg_val_loss = val_loss / len(val_loader)
+            print(f"Epoch {epoch + 1}/{epochs}, Val Loss: {avg_val_loss:.4f}")
+            
+            # Early stopping
+            if early_stopping:
+                if avg_val_loss < best_val_loss:
+                    best_val_loss = avg_val_loss
+                    patience_counter = 0
+                    # Save the best model
+                    torch.save(model.state_dict(), 'best_model.pt')
+                else:
+                    patience_counter += 1
+                    if patience_counter >= patience:
+                        print(f"Early stopping at epoch {epoch + 1}")
+                        break
+        
+        if milestones is not None:
+            scheduler.step()
 
 
 def main():
@@ -144,7 +235,8 @@ def main():
         ground_truth_paths=ground_truth_paths
     )
 
-    train_loader = DataLoader(train_dataset, batch_size=config['train']['batch_size'], shuffle=True)
+    train_loader = DataLoader(train_dataset, 
+                                batch_size=config['train']['batch_size'], shuffle=True)
 
     model = CLIP_Mobtep(tcn_emb_size=config['mobtep']['tcn_emb_size'], 
                         prototype_words=config['mobtep']['anchor_words'], 
@@ -152,10 +244,16 @@ def main():
 
     optimizer = AdamW(model.parameters(), lr=float(config['train']['lr']))
 
-    train(model, train_loader, optimizer, 
+    train(model, 
+        train_loader=train_loader, 
+        val_loader=None,
+        optimizer=optimizer, 
         epochs=config['train']['epochs'], 
-        milestones=config['train']['milestones'])
-
+        milestones=config['train']['milestones'],
+        early_stopping=config['train']['early_stopping'],
+        patience=config['train']['patience'],
+        clip_grad_norm=config['train']['clip_grad_norm']
+        )
 
     ts_input = torch.randn(3, 100, 1).to(device)  # Example time series (3 samples, length 100)
     text_input = ["Here's a time series describing hourly air quality.",
