@@ -46,8 +46,8 @@ class CaptionDataset(torch.utils.data.Dataset):
 
     def __getitem__(self, idx):
         with open(self.ts_paths[idx], 'r') as file:
-            ts_input = [float(line.strip()) for line in file]
-            ts_input = torch.tensor(ts_input)
+            ts_input_list = [float(line.strip()) for line in file]
+            ts_input = torch.tensor(ts_input_list)
             ts_input = pad(ts_input, max_len=self.max_ts_len, with_value=0)
             ts_input = ts_input.unsqueeze(-1)
             
@@ -62,9 +62,14 @@ class CaptionDataset(torch.utils.data.Dataset):
             ground_truth_caption = file.read()      
         
         text_input = f"""
-            Here is a time series line chart and its metadata:
+            Here is a time series:
+            \n
+            {ts_input_list}
+            \n
+            And also its line chart and metadata:
             \n
             {metadata}
+            
         """
 
         return ts_input, text_input, image, ground_truth_caption
