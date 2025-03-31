@@ -279,7 +279,7 @@ def main():
         output = mobtep.generate_captions(ts_input, text_input, images, prompt_input,
                                             max_length=config['mobtep']['max_output_tokens'],)
     for caption in output:
-        print(caption)
+        print("\n\n", caption)
     
 
 if __name__ == "__main__":

@@ -196,7 +196,9 @@ class CLIP_Mobtep(torch.nn.Module):
                 # Return the logits from the initial generation if no steps were taken
                 return outputs.logits
     
-    def generate_captions(self, ts_input, text_input, visual_input, prompt_input=None, max_length=250):
+    def generate_captions(self, ts_input, text_input, visual_input, prompt_input=None, 
+                     max_length=250, temperature=0.7, top_k=50, top_p=0.9, 
+                     repetition_penalty=1.2):
         device = next(self.parameters()).device
         
         # Get fused multimodal embedding
@@ -205,7 +207,7 @@ class CLIP_Mobtep(torch.nn.Module):
         
         # Use default prompt if none provided
         if prompt_input is None:
-            prompt = "please provide a description to the following time series."
+            prompt = "Please provide a description of the following time series:"
             prompt_input = [prompt] * batch_size
         elif isinstance(prompt_input, str):
             prompt_input = [prompt_input] * batch_size
@@ -221,65 +223,91 @@ class CLIP_Mobtep(torch.nn.Module):
         # Replace first token embedding with multimodal embedding
         inputs_embeds[:, 0, :] = x.squeeze(1)
         
-        # Create masks
+        # Create attention mask
         attention_mask = torch.ones_like(input_ids)
         
-        # Track completed sequences
-        completed_sequences = torch.zeros(batch_size, dtype=torch.bool, device=device)
-        
-        # Generate initial outputs
+        # Generate initial outputs with the multimodal embedding injected
         outputs = self.caption_generator(
             inputs_embeds=inputs_embeds,
             attention_mask=attention_mask
         )
         
-        # Get first predicted token
-        next_token_logits = outputs.logits[:, -1, :]
-        next_token = torch.argmax(next_token_logits, dim=-1, keepdim=True)
+        # Start with input_ids for continued generation
+        generated_ids = input_ids.clone()
         
-        # Start with input_ids + first predicted token
-        generated_ids = torch.cat([input_ids, next_token], dim=1)
+        # Store the sequence already seen to apply repetition penalty
+        past_sequences = [list(seq.cpu().numpy()) for seq in generated_ids]
         
         # Autoregressive generation
-        for step in range(1, max_length):
+        for step in range(max_length):
+            # Generate with current sequence
             outputs = self.caption_generator(
                 input_ids=generated_ids,
                 attention_mask=torch.ones_like(generated_ids)
             )
             
-            next_token_logits = outputs.logits[:, -1, :]
-            next_token = torch.argmax(next_token_logits, dim=-1, keepdim=True)
+            # Get logits for next token prediction
+            next_token_logits = outputs.logits[:, -1, :].clone()
             
-            # Update completed sequences
-            completed_sequences = completed_sequences | (next_token.squeeze(-1) == self.tokenizer.eos_token_id)
+            # Apply temperature scaling
+            next_token_logits = next_token_logits / temperature
+            
+            # Apply repetition penalty - discourage already generated tokens
+            for i in range(batch_size):
+                for token_id in set(past_sequences[i]):
+                    if token_id in range(next_token_logits.shape[-1]):
+                        next_token_logits[i, token_id] /= repetition_penalty
+            
+            # Filter logits using top-k sampling
+            if top_k > 0:
+                indices_to_remove = next_token_logits < torch.topk(next_token_logits, top_k)[0][..., -1, None]
+                next_token_logits[indices_to_remove] = -float("Inf")
+            
+            # Filter using top-p (nucleus) sampling
+            if top_p < 1.0:
+                sorted_logits, sorted_indices = torch.sort(next_token_logits, descending=True)
+                cumulative_probs = torch.cumsum(F.softmax(sorted_logits, dim=-1), dim=-1)
+                
+                # Remove tokens with cumulative probability above the threshold
+                sorted_indices_to_remove = cumulative_probs > top_p
+                # Shift the indices to the right to keep also the first token above the threshold
+                sorted_indices_to_remove[..., 1:] = sorted_indices_to_remove[..., :-1].clone()
+                sorted_indices_to_remove[..., 0] = 0
+                
+                for i in range(batch_size):
+                    indices_to_remove = sorted_indices[i][sorted_indices_to_remove[i]]
+                    next_token_logits[i, indices_to_remove] = -float("Inf")
+            
+            # Convert logits to probabilities
+            probs = F.softmax(next_token_logits, dim=-1)
+            
+            # Sample next tokens
+            next_tokens = torch.multinomial(probs, num_samples=1)
+            
+            # Update sequences
+            for i in range(batch_size):
+                past_sequences[i].append(next_tokens[i].item())
             
             # Append to generated sequence
-            generated_ids = torch.cat([generated_ids, next_token], dim=1)
+            generated_ids = torch.cat([generated_ids, next_tokens], dim=1)
             
-            # Check if all sequences complete
-            if torch.all(completed_sequences):
+            # Check for EOS tokens
+            eos_in_sequences = (next_tokens == self.tokenizer.eos_token_id).squeeze(-1)
+            if torch.all(eos_in_sequences):
                 break
         
-        # Find where the prompt ends (to remove from output)
-        # Determine prompt length for each example
-        prompt_tokens = [self.tokenizer(p, return_tensors="pt").to(device).input_ids[0] for p in prompt_input]
-        prompt_lens = [len(p) + 1 for p in prompt_tokens]  # +1 for BOS token
+        # Determine prompt length for each example to remove
+        prompt_lens = [len(self.tokenizer(p, return_tensors="pt", add_special_tokens=False).input_ids[0]) + 1 
+                    for p in prompt_input]  # +1 for BOS token
         
         # Extract only the generated part (after prompt) for each sequence
-        clean_generations = []
+        generated_captions = []
         for i, ids in enumerate(generated_ids):
-            # Skip the prefix (BOS + prompt)
+            # Get generation without the prompt
             generation = ids[prompt_lens[i]:]
-            clean_generations.append(generation)
-        
-        # Pad to same length for batched decoding
-        max_gen_len = max(len(g) for g in clean_generations)
-        padded_gens = [torch.cat([g, torch.full((max_gen_len - len(g),), self.tokenizer.pad_token_id, device=device)]) 
-                      for g in clean_generations]
-        padded_gens = torch.stack(padded_gens)
-        
-        # Decode
-        generated_captions = self.tokenizer.batch_decode(padded_gens, skip_special_tokens=True)
+            # Decode to text
+            text = self.tokenizer.decode(generation, skip_special_tokens=True).strip()
+            generated_captions.append(text)
         
         return generated_captions
 
