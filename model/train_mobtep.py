@@ -12,7 +12,7 @@ from helpers import(
 import torch
 from PIL import Image
 import os
-import os
+import random
 
 class CaptionDataset(torch.utils.data.Dataset):
     def __init__(self, ts_paths, metadata_paths, image_paths, ground_truth_paths, image_transform=None):
@@ -255,21 +255,25 @@ def main():
         clip_grad_norm=config['train']['clip_grad_norm']
         )
 
-    ts_input = torch.randn(3, 100, 1).to(device)  # Example time series (3 samples, length 100)
+    
+    ts_input = [[random.randint(1, 8) for _ in range(100)] for _ in range(3)]
     text_input = ["Here's a time series describing hourly air quality.",
                 "Here's a time series describing daily crimes.",
                 "Here's a time series describing yearly."
     ]
-    
+
     img_paths = ['/home/ubuntu/thesis/data/samples/plots/air quality_0.jpeg', 
-                    '/home/ubuntu/thesis/data/samples/plots/crime_0.jpeg', 
-                    '/home/ubuntu/thesis/data/samples/plots/demography_0.jpeg']
+                '/home/ubuntu/thesis/data/samples/plots/crime_0.jpeg', 
+                '/home/ubuntu/thesis/data/samples/plots/demography_0.jpeg']
 
     images = [Image.open(img_path).convert("RGB") for img_path in img_paths]
     transform = transforms.ToTensor()
     images = [transform(image) for image in images]
 
-    prompt_input = ["Provide a time series description."]*3
+    prompt_input = [f"Provide a time series description for the following time series :\n{str(list(ts))}" for ts in ts_input]
+    print("Prompts: ", prompt_input)
+
+    ts_input = torch.tensor(ts_input, dtype=torch.float32).unsqueeze(-1).to(device)
 
     mobtep = CLIP_Mobtep(tcn_emb_size=128, prototype_words=config['mobtep']['anchor_words'], use_linear_proj=False).to(device)
     mobtep.eval()
