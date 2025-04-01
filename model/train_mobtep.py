@@ -13,6 +13,7 @@ import torch
 from PIL import Image
 import os
 import random
+from transformers import GPT2LMHeadModel, GPT2Tokenizer
 
 class CaptionDataset(torch.utils.data.Dataset):
     def __init__(self, ts_paths, metadata_paths, image_paths, ground_truth_paths, image_transform=None):
@@ -211,8 +212,8 @@ def train(model, train_loader, val_loader=None, optimizer=None, epochs=5, milest
 def main():
     config = load_config()
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    clip_processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch16")
-    clip_model = CLIPModel.from_pretrained("openai/clip-vit-base-patch16")
+    #clip_processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch16")
+    #clip_model = CLIPModel.from_pretrained("openai/clip-vit-base-patch16")
 
     # Reading Data
     ts_folder = "/home/ubuntu/thesis/data/samples/time series/"
@@ -244,8 +245,10 @@ def main():
                                 batch_size=config['train']['batch_size'], shuffle=True)
 
     model = CLIP_Mobtep(tcn_emb_size=config['mobtep']['tcn_emb_size'], 
+                        generator=config['mobtep']['generator'],
                         prototype_words=config['mobtep']['anchor_words'], 
-                        use_linear_proj=config['mobtep']['use_linear_proj']).to(device)
+                        use_linear_proj=config['mobtep']['use_linear_proj'],
+                        generator_dim=config['mobtep']['generator_dim']).to(device)
 
     optimizer = AdamW(model.parameters(), lr=float(config['train']['lr']))
 
@@ -260,8 +263,10 @@ def main():
         clip_grad_norm=config['train']['clip_grad_norm']
         )
 
+
+    ##################### TOY DEMO ###########################
     
-    ts_input = [[random.randint(1, 8) for _ in range(100)] for _ in range(3)]
+    ts_input = [[random.randint(1, 30) for _ in range(8)] for _ in range(3)]
     text_input = ["Here's a time series describing hourly air quality.",
                 "Here's a time series describing daily crimes.",
                 "Here's a time series describing yearly."
@@ -276,20 +281,48 @@ def main():
     images = [transform(image) for image in images]
 
     prompt_input = [f"Provide a time series description for the following time series :\n{str(list(ts))}" for ts in ts_input]
-    print("Prompts: ", prompt_input)
+    for prompt in prompt_input:
+        print(prompt)
 
     ts_input = torch.tensor(ts_input, dtype=torch.float32).unsqueeze(-1).to(device)
 
-    mobtep = CLIP_Mobtep(tcn_emb_size=128, prototype_words=config['mobtep']['anchor_words'], use_linear_proj=False).to(device)
-    mobtep.eval()
-
+    model.eval()
     
     with torch.no_grad():
-        output = mobtep.generate_captions(ts_input, text_input, images, prompt_input,
+        output = model.generate_captions(ts_input, text_input, images, prompt_input,
                                             max_length=config['mobtep']['max_output_tokens'],)
     for caption in output:
-        print("\n\n", caption)
+        print("\n-----------------------------------------------------------------------------------\n", caption)
     
+
+
+from transformers import AutoTokenizer, AutoModelForCausalLM
 
 if __name__ == "__main__":
     main()
+    """model_name = 'openai-community/gpt2'
+    model = GPT2LMHeadModel.from_pretrained(model_name)
+    tokenizer = GPT2Tokenizer.from_pretrained(model_name)
+
+    # Prompt the model with a text
+    prompt = "Please describe the following time series: [2, 5, 6, 7, 10, 21, 0, -7]"
+    input_ids = tokenizer.encode(prompt, return_tensors='pt')
+    output = model.generate(input_ids, max_length=100)
+
+    # Decode and print the model's response
+    response = tokenizer.decode(output[0], skip_special_tokens=True)
+    print("Model's response:", response)"""
+
+    """tokenizer = AutoTokenizer.from_pretrained("meta-llama/Llama-3.2-3B-Instruct")
+    model = AutoModelForCausalLM.from_pretrained("meta-llama/Llama-3.2-3B-Instruct").to("cuda")
+
+    prompt = "Provide a descrition for this time series: [2,4,5,6,9,20,5,1,-5]"
+    input_ids = tokenizer(prompt, return_tensors="pt").to("cuda")
+
+    output = model.generate(
+        **input_ids, 
+        max_length=300,  
+        eos_token_id=None,  # Prevents stopping at <eos>
+        pad_token_id=tokenizer.eos_token_id  # Ensures padding works correctly
+    )
+    print(tokenizer.decode(output[0], skip_special_tokens=True))"""

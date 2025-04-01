@@ -33,9 +33,6 @@ refinement:
   confidence_thresh: 70
 
 
-factcheck:
-  start_from_files: True # If False, the benchmark starts by applying our fake detection method and save the txt files. If True, it starts by reading the txt files instead of re-generating the facts
-  save_files: True # whether to store the facts into files
 
 path: # paths that have "folder" in its name are folder paths, otherwise they are file paths
   caption_folder_path: /home/ubuntu/thesis/data/samples/captions
@@ -53,18 +50,20 @@ path: # paths that have "folder" in its name are folder paths, otherwise they ar
 
 train:
   lr: 4e-3
-  epochs: 8
-  batch_size: 32
+  epochs: 5
+  batch_size: 64
   loss_fn: cross-entropy # currently still useless
   teacher_forcing: True # if False, the model generates autoregressively during training
-  milestones: [5, 10, 20]
+  milestones: [3, 10, 20]
   early_stopping: False
   patience: 5 # used only if early_stoping=True
   clip_grad_norm: 1.0
 
 mobtep:
   tcn_emb_size: 128
-  use_linear_proj: False
+  generator: gpt-2 # gpt-2, llama 3.2 instruct
+  use_linear_proj: False # this is the projector between multi-modal encoder and the generator, it's used to match embedding dimensionalities
+  generator_dim: 3072 # used only if use_linear_proj=True, 768 for GPT-2, 3070 for Llama3.2
   max_output_tokens: 250
   temperature: 70
   top_k: 50
@@ -125,6 +124,9 @@ mobtep:
     burst-like activity, decay towards extinction
 ]
 
+factcheck:
+  start_from_files: True # If False, the benchmark starts by applying our fake detection method and save the txt files. If True, it starts by reading the txt files instead of re-generating the facts
+  save_files: True # whether to store the facts into files
 
 nlp:
  synonym_similarity_thresh: 0.7

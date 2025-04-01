@@ -5,6 +5,7 @@ from fusion_module import LinearFusion
 from cross_attention import CrossAttentionWithPrototypes
 from transformers import GPT2LMHeadModel, GPT2Tokenizer
 from transformers import CLIPProcessor, CLIPModel, GPT2LMHeadModel, GPT2Tokenizer
+from transformers import AutoTokenizer, AutoModelForCausalLM
 from PIL import Image
 import torch
 import torch.nn as nn
@@ -18,7 +19,7 @@ from helpers import(
 
 
 class CLIP_Mobtep(torch.nn.Module):
-    def __init__(self, prototype_words, tcn_emb_size=64, use_linear_proj=False):
+    def __init__(self, prototype_words, tcn_emb_size=64, generator="gpt-2", use_linear_proj=False, generator_dim=768):
         super(CLIP_Mobtep, self).__init__()
         
         # Load CLIP model
@@ -35,12 +36,17 @@ class CLIP_Mobtep(torch.nn.Module):
         
         self.use_linear_proj = use_linear_proj
         if self.use_linear_proj:
-            self.linear_proj = nn.Linear(768, 768)
+            self.linear_proj = nn.Linear(768, generator_dim)
             nn.init.xavier_uniform_(self.linear_proj.weight)
             nn.init.zeros_(self.linear_proj.bias)
 
-        self.caption_generator = GPT2LMHeadModel.from_pretrained("gpt2")
-        self.tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
+        if generator == "gpt-2":
+            self.caption_generator = GPT2LMHeadModel.from_pretrained("openai-community/gpt2")
+            self.tokenizer = GPT2Tokenizer.from_pretrained("openai-community/gpt2")
+        elif generator == "llama 3.2 instruct":
+            self.tokenizer = AutoTokenizer.from_pretrained("meta-llama/Llama-3.2-3B-Instruct")
+            self.caption_generator = AutoModelForCausalLM.from_pretrained("meta-llama/Llama-3.2-3B-Instruct")
+
         self.tokenizer.pad_token = self.tokenizer.eos_token
 
         # Freeze pretrained models
@@ -66,7 +72,6 @@ class CLIP_Mobtep(torch.nn.Module):
 
         if self.use_linear_proj:
             embedding = self.linear_proj(embedding)
-            
         return embedding
     
     def forward(self, ts_input, text_input, visual_input, ground_truth_texts=None, teacher_forcing=False, max_length=250):
@@ -197,8 +202,8 @@ class CLIP_Mobtep(torch.nn.Module):
                 return outputs.logits
     
     def generate_captions(self, ts_input, text_input, visual_input, prompt_input=None, 
-                     max_length=250, temperature=0.7, top_k=50, top_p=0.9, 
-                     repetition_penalty=1.2):
+                     max_length=250, temperature=0.2, top_k=50, top_p=0.9, 
+                     repetition_penalty=1.1):
         device = next(self.parameters()).device
         
         # Get fused multimodal embedding
@@ -220,81 +225,31 @@ class CLIP_Mobtep(torch.nn.Module):
         # Get initial embeddings
         inputs_embeds = self.caption_generator.get_input_embeddings()(input_ids)
         
-        # Replace first token embedding with multimodal embedding
-        inputs_embeds[:, 0, :] = x.squeeze(1)
+        # Debug: Print what the prompt looks like before embedding modification
+        print("=== Before Embedding Modification ===")
+        for i in range(batch_size):
+            print(f"Sample {i}: {self.tokenizer.decode(input_ids[i])}")
+
+        # Prepend the multimodal embedding after the BOS embedding but before the prompt embedding
+        new_inputs_embeds = torch.cat([x, inputs_embeds[:, 1:]], dim=1)
         
         # Create attention mask
         attention_mask = torch.ones_like(input_ids)
         
-        # Generate initial outputs with the multimodal embedding injected
-        outputs = self.caption_generator(
+        # Use the built-in generation method
+        generated_ids = self.caption_generator.generate(
             inputs_embeds=inputs_embeds,
-            attention_mask=attention_mask
+            attention_mask=attention_mask,
+            max_length=input_ids.shape[1] + max_length,  # Account for prompt length
+            temperature=temperature,
+            top_k=top_k,
+            top_p=top_p,
+            repetition_penalty=repetition_penalty,
+            do_sample=True,
+            pad_token_id=self.tokenizer.pad_token_id,
+            eos_token_id=self.tokenizer.eos_token_id,
+            use_cache=True
         )
-        
-        # Start with input_ids for continued generation
-        generated_ids = input_ids.clone()
-        
-        # Store the sequence already seen to apply repetition penalty
-        past_sequences = [list(seq.cpu().numpy()) for seq in generated_ids]
-        
-        # Autoregressive generation
-        for step in range(max_length):
-            # Generate with current sequence
-            outputs = self.caption_generator(
-                input_ids=generated_ids,
-                attention_mask=torch.ones_like(generated_ids)
-            )
-            
-            # Get logits for next token prediction
-            next_token_logits = outputs.logits[:, -1, :].clone()
-            
-            # Apply temperature scaling
-            next_token_logits = next_token_logits / temperature
-            
-            # Apply repetition penalty - discourage already generated tokens
-            for i in range(batch_size):
-                for token_id in set(past_sequences[i]):
-                    if token_id in range(next_token_logits.shape[-1]):
-                        next_token_logits[i, token_id] /= repetition_penalty
-            
-            # Filter logits using top-k sampling
-            if top_k > 0:
-                indices_to_remove = next_token_logits < torch.topk(next_token_logits, top_k)[0][..., -1, None]
-                next_token_logits[indices_to_remove] = -float("Inf")
-            
-            # Filter using top-p (nucleus) sampling
-            if top_p < 1.0:
-                sorted_logits, sorted_indices = torch.sort(next_token_logits, descending=True)
-                cumulative_probs = torch.cumsum(F.softmax(sorted_logits, dim=-1), dim=-1)
-                
-                # Remove tokens with cumulative probability above the threshold
-                sorted_indices_to_remove = cumulative_probs > top_p
-                # Shift the indices to the right to keep also the first token above the threshold
-                sorted_indices_to_remove[..., 1:] = sorted_indices_to_remove[..., :-1].clone()
-                sorted_indices_to_remove[..., 0] = 0
-                
-                for i in range(batch_size):
-                    indices_to_remove = sorted_indices[i][sorted_indices_to_remove[i]]
-                    next_token_logits[i, indices_to_remove] = -float("Inf")
-            
-            # Convert logits to probabilities
-            probs = F.softmax(next_token_logits, dim=-1)
-            
-            # Sample next tokens
-            next_tokens = torch.multinomial(probs, num_samples=1)
-            
-            # Update sequences
-            for i in range(batch_size):
-                past_sequences[i].append(next_tokens[i].item())
-            
-            # Append to generated sequence
-            generated_ids = torch.cat([generated_ids, next_tokens], dim=1)
-            
-            # Check for EOS tokens
-            eos_in_sequences = (next_tokens == self.tokenizer.eos_token_id).squeeze(-1)
-            if torch.all(eos_in_sequences):
-                break
         
         # Determine prompt length for each example to remove
         prompt_lens = [len(self.tokenizer(p, return_tensors="pt", add_special_tokens=False).input_ids[0]) + 1 
@@ -334,8 +289,8 @@ class Mobtep(torch.nn.Module):
             nn.init.xavier_uniform_(self.linear_proj.weight)
             nn.init.zeros_(self.linear_proj.bias)
 
-        self.caption_generator = GPT2LMHeadModel.from_pretrained("gpt2")
-        self.tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
+        self.caption_generator = GPT2LMHeadModel.from_pretrained("openai-community/gpt2")
+        self.tokenizer = GPT2Tokenizer.from_pretrained("openai-community/gpt2")
         self.tokenizer.pad_token = self.tokenizer.eos_token
         
         
@@ -422,7 +377,7 @@ def main():
 
     # Example input data (random for demonstration)
     ts_input = torch.randn(3, 100, 1).to(device)  # Example time series (3 samples, length 100)
-    text_input = ["Tell me a story.", "How are you?", "I am Luca."] # these are gonna be metadata with a request
+    text_input = ["Tell me a story.", "How are you?", "I am Luca."] # these are gonna be metadata
     
     img_paths = ['/home/ubuntu/thesis/data/samples/plots/air quality_0.jpeg', 
                     '/home/ubuntu/thesis/data/samples/plots/crime_0.jpeg', 
@@ -431,10 +386,16 @@ def main():
     transform = transforms.ToTensor()
     images = [transform(image) for image in images]
 
-    prompt_input = ["Provide a time series description."]*3
+    prompt_input = ["Describe the city of San Diego.",
+                    "What is 2 + 15?",
+                    "Tell me a joke."]
 
 
-    mobtep = CLIP_Mobtep(tcn_emb_size=128, prototype_words=config['mobtep']['anchor_words'], use_linear_proj=False).to(device)
+    mobtep = CLIP_Mobtep(tcn_emb_size=128, 
+                        prototype_words=config['mobtep']['anchor_words'], 
+                        generator=config['mobtep']['generator'],
+                        use_linear_proj=config['mobtep']['use_linear_proj']
+                        ).to(device)
     mobtep.eval()
 
 
@@ -449,8 +410,8 @@ def main():
     #  output = mobtep(ts_input, text_input, images, output_text=False, 
     #               ground_truth_texts=['hello world', "university of california", "sapienza university of rome"],
     #               teacher_forcing=False)
-
-    print(output[0])
+    for caption in output:
+        print("\n------------------------------------------\n", caption)
     #for i, caption in enumerate(output):
     #    print("\n\ni)\n", caption)
     
