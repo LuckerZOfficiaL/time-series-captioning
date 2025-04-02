@@ -9,7 +9,7 @@ from helpers import(
 class ChronosEmbedder(torch.nn.Module):
     def __init__(self, model_name="amazon/chronos-t5-small"):
         super(ChronosEmbedder, self).__init__()
-        self.chronos = ChronosPipeline.from_pretrained(model_name)
+        self.chronos = ChronosPipeline.from_pretrained(model_name, )
     
     def mean_pooling(self, embeddings):
         return torch.mean(embeddings, dim=1) 
@@ -20,7 +20,7 @@ class ChronosEmbedder(torch.nn.Module):
     def forward(self, time_series, pooling="mean"):
         time_series = time_series.squeeze(-1)
         embeddings, tokenizer_state = self.chronos.embed(time_series)
-        print(embeddings.shape)
+        #print(embeddings.shape)
         if pooling == "mean":
             embeddings = self.mean_pooling(embeddings)
         elif pooling == "max":
