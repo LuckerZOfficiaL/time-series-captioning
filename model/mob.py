@@ -69,10 +69,13 @@ def evaluate_mob(model, ts_folder_path, metadata_folder_path, image_folder_path,
             metadata_filename = metadata_folder_path+"/"+filename[:-4]+".json"
             with open(metadata_filename, 'r') as metadata_file:
                 metadata_text = metadata_file.read()
-            prompt = f"""Provide a description for the following line plot, given these auxiliary metadata: 
+            prompt = f"""Provide a description for the following time series, given its line plot and auxiliary metadata: 
+            \n
+            Time Series:{values}
             \n
             {metadata_text}
             \n
+            Discuss concrete numbers and the trend. Do not mention any line chart, just directly describe the time series. 
             Give your answer in a single paragraph, without additional explanations or formatting.        
             """
             prompt_list.append(prompt)

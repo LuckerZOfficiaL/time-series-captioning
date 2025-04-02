@@ -47,7 +47,7 @@ def pad(tensor, max_len, with_value=0):
         return torch.cat([tensor, padding])
 
 
-def bert_score_loss(bert_model, tokenizer, generated_captions, gt_captions):
+def bert_score(bert_model, tokenizer, generated_captions, gt_captions):
     """
     Compute the BERT score loss for the generated captions compared to the ground-truth captions.
     The loss is based on minimizing the cosine similarity between the BERT embeddings of the generated
@@ -59,7 +59,7 @@ def bert_score_loss(bert_model, tokenizer, generated_captions, gt_captions):
         gt_captions (list of str): List of ground-truth captions.
 
     Returns:
-        loss (tensor): The contrastive loss (1 - cosine similarity between generated and ground-truth embeddings).
+        score (tensor): average cosine similarity between generated and ground-truth embeddings.
     """
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -79,10 +79,9 @@ def bert_score_loss(bert_model, tokenizer, generated_captions, gt_captions):
     # Compute the cosine similarity between the generated and ground-truth embeddings
     cosine_sim = F.cosine_similarity(generated_embeddings, gt_embeddings, dim=-1)
 
-    # Contrastive loss: minimize the cosine distance (maximize similarity)
-    loss = 1 - cosine_sim.mean()  # 1 - cosine similarity is the contrastive loss
+    score = cosine_sim.mean()
 
-    return loss
+    return score
 
 
 def cross_entropy_loss(logits, target, pad_token_id):

@@ -1819,6 +1819,43 @@ def remove_source(text):
     modified_text = re.sub(r'\s*\(Source: .*?\)', '', text)
     return modified_text
 
+def bert_score(bert_model, tokenizer, generated_captions, gt_captions):
+    """
+    Compute the BERT score loss for the generated captions compared to the ground-truth captions.
+    The loss is based on minimizing the cosine similarity between the BERT embeddings of the generated
+    and ground-truth captions.
+
+    Args:
+        bert_model: Pretrained BERT model (should be initialized outside this function).
+        generated_captions (list of str): List of generated captions.
+        gt_captions (list of str): List of ground-truth captions.
+
+    Returns:
+        score (tensor): average cosine similarity between generated and ground-truth embeddings
+    """
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    # Tokenize and process both generated and ground-truth captions
+    generated_input = tokenizer(generated_captions, return_tensors="pt", padding=True, truncation=True).to(device)
+    gt_input = tokenizer(gt_captions, return_tensors="pt", padding=True, truncation=True).to(device)
+
+    # Get embeddings from BERT for both generated and ground-truth captions
+    with torch.no_grad():  # Freeze BERT, no gradients will be computed for BERT
+        generated_embeddings = bert_model(**generated_input).last_hidden_state.mean(dim=1)
+        gt_embeddings = bert_model(**gt_input).last_hidden_state.mean(dim=1)
+
+    # Normalize the embeddings (important for cosine similarity)
+    generated_embeddings = F.normalize(generated_embeddings, dim=-1)
+    gt_embeddings = F.normalize(gt_embeddings, dim=-1)
+
+    # Compute the cosine similarity between the generated and ground-truth embeddings
+    cosine_sim = F.cosine_similarity(generated_embeddings, gt_embeddings, dim=-1)
+
+    score = cosine_sim.mean()
+
+    return score
+
+
 def main():
   config = load_config()
 
