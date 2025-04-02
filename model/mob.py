@@ -120,7 +120,7 @@ def main():
     metadata_folder_pth = "/home/ubuntu/thesis/data/samples/metadata"
     image_folder_path = "/home/ubuntu/thesis/data/samples/plots"
     save_folder_path="/home/ubuntu/thesis/data/samples/captions/mob"
-    evaluate_mob(mob, ts_folder_path, metadata_folder_pth, image_folder_path, save_folder_path, batch_size=50)
+    evaluate_mob(mob, ts_folder_path, metadata_folder_pth, image_folder_path, save_folder_path, batch_size=100)
 
 
 
