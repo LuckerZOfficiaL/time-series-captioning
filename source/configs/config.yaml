@@ -38,6 +38,7 @@ path: # paths that have "folder" in its name are folder paths, otherwise they ar
   caption_folder_path: /home/ubuntu/thesis/data/samples/captions
   ts_folder_path: /home/ubuntu/thesis/data/samples/time series
   plot_folder_path: /home/ubuntu/thesis/data/samples/plots
+  metadata_folder_path: /home/ubuntu/thesis/data/samples/metadata
   refined_captions_folder_path: /home/ubuntu/thesis/data/samples/captions/refined
   verified_captions_folder_path: /home/ubuntu/thesis/data/samples/captions/verified
   extracted_facts_folder_path: /home/ubuntu/thesis/data/samples/captions/extracted facts
@@ -51,12 +52,13 @@ path: # paths that have "folder" in its name are folder paths, otherwise they ar
   gt_captions_folder_path: /home/ubuntu/thesis/data/samples/captions/no external
 
 train:
-  lr: 4e-3
-  epochs: 5
-  batch_size: 64
+  lr: 4e-6
+  epochs: 10
+  weight_decay: 1e-4
+  batch_size: 32
   loss_fn: cross-entropy # currently still useless
   teacher_forcing: True # if False, the model generates autoregressively during training
-  milestones: [3, 10, 20]
+  milestones: [3, 7, 20]
   early_stopping: False
   patience: 5 # used only if early_stoping=True
   clip_grad_norm: 1.0
@@ -72,7 +74,7 @@ mobtep:
   generator: gpt-2 # gpt-2, llama 3.2 instruct
   use_linear_proj: False # this is the projector between multi-modal encoder and the generator, it's used to match embedding dimensionalities
   generator_dim: 3072 # used only if use_linear_proj=True, 768 for GPT-2, 3070 for Llama3.2
-  max_output_tokens: 250
+  max_output_tokens: 256
   temperature: 70
   top_k: 50
   top_p: 0.9

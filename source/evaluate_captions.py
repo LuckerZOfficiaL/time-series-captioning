@@ -18,14 +18,19 @@ def main():
     gt_captions_folder_path = config['path']['gt_captions_folder_path']
     gt_caption_paths = [os.path.join(gt_captions_folder_path, filename) for filename in os.listdir(gt_captions_folder_path)]
     gt_caption_paths.sort()
+
+    assert len(generated_caption_paths) == len(gt_caption_paths)
+    for gen_path, gt_path in zip(generated_caption_paths, gt_caption_paths): # checking that the caption paths between generated and gt are aligned
+        if gen_path.split("/")[-1] != gt_path.split("/")[-1]:
+            print("\n\nCaption filenames are not aligned between the two folders!")
+            exit()
     
-    generated_caption_paths = generated_caption_paths[:5]
-    gt_caption_paths = gt_caption_paths[:5]
-
-    print("Generated: ", generated_caption_paths)
-    print("GT: ", gt_caption_paths)
+    # truncate the samples for quick code testing, remove these 2 lines in official evaluation
+    #generated_caption_paths = generated_caption_paths[:5]
+    #gt_caption_paths = gt_caption_paths[:5]
 
 
+    # Read the captions into lists of strings
     generated_captions = []
     for generated_caption_path in generated_caption_paths:
         with open(generated_caption_path, 'r') as file:
@@ -38,9 +43,7 @@ def main():
             gt_caption = file.read()
             gt_captions.append(gt_caption)
 
-
-    assert len(generated_captions) == len(gt_caption_paths)
-
+    print(f"\n{len(generated_captions)} captions are being scored...")
     
     """
         P (Precision): Measures how much of the candidate text's meaning is captured in the reference text.
@@ -58,7 +61,7 @@ def main():
     p_mean = sum(P) / len(P)
     r_mean = sum(R) / len(R)
     f1_mean = sum(F1) / len(F1)
-    print(f"Mean P: {p_mean}, Mean R: {r_mean}, Mean F1: {f1_mean}")
+    print(f"Mean P: {round(p_mean.item(), 3)}, Mean R: {round(r_mean.item(), 3)}, Mean F1: {round(f1_mean.item(), 3)}")
 
 
 if __name__ == "__main__":
