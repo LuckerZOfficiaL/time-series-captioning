@@ -17,4 +17,4 @@ def run_script(script_path):
             time.sleep(5)
 
 if __name__ == "__main__":
-    run_script(script_path='/home/ubuntu/thesis/source/factcheck/factcheck_detection.py')
+    run_script(script_path='/home/ubuntu/thesis/model/mob.py')
