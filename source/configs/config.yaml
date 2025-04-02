@@ -62,7 +62,7 @@ train:
 mobtep:
   chronos_name: amazon/chronos-t5-small
   chronos_pooling: mean # mean, max
-  internvl_name: OpenGVLab/InternVL2-1B
+  internvl_name: OpenGVLab/InternVL2_5-2B
   tcn_emb_size: 128
   generator: gpt-2 # gpt-2, llama 3.2 instruct
   use_linear_proj: False # this is the projector between multi-modal encoder and the generator, it's used to match embedding dimensionalities
