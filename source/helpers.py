@@ -1855,6 +1855,69 @@ def bert_score(bert_model, tokenizer, generated_captions, gt_captions):
 
     return score
 
+def score_caption(generated_caption, gt_caption, model="Google Gemini-2.0-Flash"):
+  prompt = f"""
+  You are an expert evaluator of artificially generated captions against ground truth captions. 
+  Your task is to provide scores (0-100) for the generated caption's quality in comparison to the ground truth.
+
+  Scoring Criteria:
+  1.  Semantic Similarity: How closely does the generated caption convey the same meaning as the ground truth?
+  2.  Information Overlap: How much of the factual information present in the ground truth is also accurately represented in the generated caption?
+  3.  Numeric Correctness: Are all numbers in the generated caption exactly the same as those in the ground truth? A single numerical mismatch results in a score of 0.
+  4.  Overall Quality: A holistic score reflecting the overall accuracy and usefulness of the generated caption. Assign higher weight to numeric correctness and semantic similarity.
+
+  Examples:
+  Generated: "The chart shows a slight increase in sales."
+  Ground Truth: "Sales increased by 5%."
+  Scores:
+  - Semantic Similarity: 80
+  - Information Overlap: 50
+  - Numeric Correctness: 0
+  - Overall: 40
+
+  Generated: "The average daily temperature of Seattle was 11 degrees Celsius in the beginning of March 2023, and it increased to 14 by the end of the month."
+  Ground Truth: "The average daily temperature of Seattle was 10 degrees Celsius in the beginning of March 2023, and it increased to 14 by the end of the month."
+  Scores:
+  - Semantic Similarity: 100
+  - Information Overlap: 100
+  - Numeric Correctness: 50
+  - Overall: 70
+
+  Generated: "There are two peaks in this time series."
+  Ground Truth: "The time series shows two distinct peaks."
+  Scores:
+  - Semantic Similarity: 95
+  - Information Overlap: 100
+  - Numeric Correctness: 100
+  - Overall: 98
+
+  Generated: "{generated_caption}"
+  Ground Truth: "{gt_caption}"
+
+  Provide your scores in the following STRICT format:
+  - Semantic Similarity: [score]
+  - Information Overlap: [score]
+  - Numeric Correctness: [score]
+  - Overall: [score]
+
+  Do NOT include any additional text or explanations.
+  """
+
+  response = get_response(prompt, model=model, temperature=0.25)
+  #print(f"Scoring response:\n{response}")
+  response = response.lower()
+  semantic_similarity_score = int(re.search(r"semantic similarity: (\d+)", response).group(1))
+  information_overlap_score = int(re.search(r"information overlap: (\d+)", response).group(1))
+  numeric_correctness_score = int(re.search(r"numeric correctness: (\d+)", response).group(1))
+  overall_score = int(re.search(r"overall: (\d+)", response).group(1))
+
+  return {
+      "semantic similarity": semantic_similarity_score,
+      "information overlap": information_overlap_score,
+      "numeric correctness": numeric_correctness_score,
+      "overall": overall_score
+  }
+
 
 def main():
   config = load_config()
@@ -1877,13 +1940,10 @@ def main():
 
   #print(check_whole_caption_confidence('Football is globally the most popular sport. The global population has halved in the last decade. The Chinese population has been increasing drastically lately.', extraction_model="Google Gemini-2.0-Flash", checking_model="Ollama llama3.3", confidence_thresh=0.7))
 
-
-  prompts = ["Continue this sequence: 1, 4, 9, 16",
-              "Who is the president of Italy in 2016?",
-              "What is the best national park in California?"]
-
-  responses = get_response(prompts, model="Ollama mixtral")
-  print(responses)
+  gt_caption = "The average daily temperature in San Diego in March 2025 started at 15 degrees Celcius and ended at 17 degrees Celcius. San Diego is a city in California USA and boasts of being one of the cities with the best weather nationwide."
+  generated_caption = "The average daily temperature in San Diego in March 2025 started at 15 degrees Celcius and ended at 18 degrees Celcius. San Diego is a city in California USA."
+  scores = score_caption(generated_caption, gt_caption, model=config['model']['scoring_model'])
+  print(f"Scores: \n{scores}")
 
   
   """facts = ["The Canadian dollar had a relatively low exchange rate against USD in 2007.",
@@ -1913,7 +1973,5 @@ def main():
 
 
 if __name__ == "__main__":
-  #main()
-  json_data = json.load(open('/home/ubuntu/thesis/data/processed/road_injuries.json'))
-  metadata, ts = get_sample("road injuries", json_data)
-  print(get_request('road injuries', metadata, ts))
+  main()
+  

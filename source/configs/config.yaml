@@ -14,6 +14,7 @@ model:
   refinement_model: Google Gemini-2.0-Flash
   checking_model: Ollama qwen2.5-1m:14b
   extraction_model: Google Gemini-2.0-Flash
+  scoring_model: Google Gemini-2.0-Flash
   ranking_model: OpenAI GPT-4o # the model used to rank the captions
   embedding_model: all-MiniLM-L6-v2 # the sentence transformer model used for embeddings in RAG
   remove_common_sense_model: Google Gemini-2.0-Flash #"OpenAI GPT-4o" #"Gemini-2.0-Flash"
@@ -53,12 +54,12 @@ path: # paths that have "folder" in its name are folder paths, otherwise they ar
 
 train:
   lr: 4e-6
-  epochs: 10
+  epochs: 40
   weight_decay: 1e-4
   batch_size: 32
   loss_fn: cross-entropy # currently still useless
   teacher_forcing: True # if False, the model generates autoregressively during training
-  milestones: [3, 7, 20]
+  milestones: [3, 10, 30]
   early_stopping: False
   patience: 5 # used only if early_stoping=True
   clip_grad_norm: 1.0
