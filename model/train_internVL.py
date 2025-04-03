@@ -208,19 +208,7 @@ def main():
                                                     val_split=config['eval']['val_split'],
                                                     seed=config['general']['random_seed'])
 
-    """
-    img_tensor, input_idx, target_idx = next(iter(dataloader))
-    #print(f"Image Tensor: {img_tensor.shape}\nInput Idx: {input_idx.shape}\nTarget Idx: {target_idx.shape}")
-
-    # Decode the first element in input_idx and target_idx back into text
-    input_text = tokenizer.decode(input_idx[0])
-    target_text = tokenizer.decode(target_idx[0])
-
-    print("Decoded Input Text:", input_text)
-    print("Decoded Target Text:", target_text)"""
-
-    ################# TRAINING #################
-
+    ####################################### TRAINING #######################################
     optimizer = AdamW(model.parameters(), lr=float(config['train']['lr']), weight_decay=float(config['train']['weight_decay']))
 
     train_losses, val_losses = train_model(model, 
@@ -230,13 +218,15 @@ def main():
                             epochs=config['train']['epochs'],
                             val_loader=val_loader)
     print("\nTrain Losses: ", train_losses)
-    print("Val Losses: ", val_losses)
+    print("\nVal Losses: ", val_losses)
 
 
-    filenpath = f"{config['path']['checkpoints_folder_path']}/internVL2_5-2B_{round(val_losses[-1], 3) if val_losses != [] else ""}.pth"
-    torch.save(model.state_dict(), filenpath)
+    ######################################## SAVING CHECKPOINT #######################################
+    filepath = f"{config['path']['checkpoints_folder_path']}/internVL2_5-2B_{round(val_losses[-1], 3) if val_losses != [] else ""}.pth"
+    torch.save(model.state_dict(), filepath)
 
 
+    ####################################### TOY DEMO #######################################
     ts = torch.randn(2, 20, 1)
     image_paths = ['/home/ubuntu/thesis/data/samples/plots/air quality_0.jpeg',
                 '/home/ubuntu/thesis/data/samples/plots/demography_0.jpeg']
@@ -249,6 +239,8 @@ def main():
     print(f"\nResponses:\n")
     for response in responses:
         print("\n", response)
+
+
 
 if __name__ == "__main__":
     main()

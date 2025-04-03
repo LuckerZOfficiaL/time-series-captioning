@@ -425,7 +425,7 @@ def get_sample(dataset_name: str, json_data, series_len = None, start_idx = None
 
     metadata = {}
     means = random.choice(list(json_data[port]['data'].keys()))
-    while len(json_data[port]["data"][means]) == 0:
+    while len(json_data[port]["data"][means]) < 20:
       means = random.choice(list(json_data[port]['data'].keys()))
     
 
