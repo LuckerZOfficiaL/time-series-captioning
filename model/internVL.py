@@ -19,7 +19,7 @@ def transform_image(image_path, input_size=448):
 # Load batch of images
 def load_batch(image_paths, input_size=448):
     images = [transform_image(img_path, input_size) for img_path in image_paths]
-    return torch.stack(images).to(torch.bfloat16).cuda()
+    return torch.stack(images).to(torch.bfloat16).cuda() # type: ignore
 
 # Batch inference
 def batch_inference(model, tokenizer, image_paths, prompts, max_output_tokens=250):
