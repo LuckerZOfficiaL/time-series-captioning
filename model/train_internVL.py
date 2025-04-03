@@ -20,6 +20,8 @@ class InternVLDataset(Dataset):
     def __init__(self, tokenizer, ts_folder, img_folder, metadata_folder, gt_folder, input_size=448, max_tokens=250):
         self.tokenizer = tokenizer
         self.ts_path_list = sorted([os.path.join(ts_folder, file) for file in os.listdir(ts_folder)])
+        self.max_ts_len = max([len(self.read_ts_file(filepath)) for filepath in self.ts_path_list])
+        #print("max ts len: ", self.max_ts_len)
         self.img_path_list = sorted([os.path.join(img_folder, file) for file in os.listdir(img_folder)])
         self.metadata_path_list = sorted([os.path.join(metadata_folder, file) for file in os.listdir(metadata_folder)])
         self.gt_path_list = sorted([os.path.join(gt_folder, file) for file in os.listdir(gt_folder)])
@@ -30,6 +32,11 @@ class InternVLDataset(Dataset):
             T.ToTensor(),
             T.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225))
         ])
+
+    def read_ts_file(self, filepath):
+        with open(filepath, 'r') as file:
+            ts_values = [float(line.strip()) for line in file]
+        return ts_values
 
     def __len__(self):
         return len(self.ts_path_list)
@@ -76,12 +83,18 @@ class InternVLDataset(Dataset):
         )
 
         # Extract input_ids and attention masks
+        ts = torch.tensor(item['ts']).unsqueeze(-1)
+        #print("\nts shape ", ts.shape)
+        padded_ts = torch.full((self.max_ts_len, 1), float('nan'))
+        padded_ts[self.max_ts_len - ts.size()[0]:] = ts
+        #print("padded ts shape ", padded_ts.shape)
+
         input_ids = input_encodings["input_ids"].squeeze(0)
         attention_mask = input_encodings["attention_mask"].squeeze(0)
         target_ids = target_encodings["input_ids"].squeeze(0)
         target_attention_mask = target_encodings["attention_mask"].squeeze(0)
 
-        return img_tensor, input_ids, attention_mask, target_ids, target_attention_mask
+        return padded_ts, img_tensor, input_ids, attention_mask, target_ids, target_attention_mask
 
 
 def create_dataloaders(tokenizer, ts_folder, img_folder, metadata_folder, gt_folder, train_batch_size=32, val_batch_size=64, val_split=0.2, seed=42, max_tokens=256):
@@ -135,7 +148,7 @@ def train_model(model, train_loader, optimizer, ignore_id, epochs=5, val_loader=
     for epoch in range(epochs):
         total_train_loss = 0
         model.train()
-        for pixel_values, input_ids, attention_mask, target_ids, target_attention_mask in tqdm(train_loader):
+        for ts, pixel_values, input_ids, attention_mask, target_ids, target_attention_mask in tqdm(train_loader):
             pixel_values = pixel_values.cuda().to(torch.bfloat16)
             input_ids = input_ids.cuda()
             attention_mask = attention_mask.cuda()
@@ -164,7 +177,7 @@ def train_model(model, train_loader, optimizer, ignore_id, epochs=5, val_loader=
             model.eval()
             total_val_loss = 0
             with torch.no_grad():
-                for val_pixel_values, val_input_ids, val_attention_mask, val_target_ids, val_target_attention_mask in tqdm(val_loader):
+                for ts, val_pixel_values, val_input_ids, val_attention_mask, val_target_ids, val_target_attention_mask in tqdm(val_loader):
                     val_pixel_values = val_pixel_values.cuda().to(torch.bfloat16)
                     val_input_ids = val_input_ids.cuda()
                     val_attention_mask = val_attention_mask.cuda()

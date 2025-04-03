@@ -55,7 +55,7 @@ path: # paths that have "folder" in its name are folder paths, otherwise they ar
 
 train:
   lr: 1e-5
-  epochs: 20
+  epochs: 5
   weight_decay: 1e-3
   batch_size: 32
   loss_fn: cross-entropy # currently still useless
