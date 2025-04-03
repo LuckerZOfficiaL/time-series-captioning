@@ -55,7 +55,7 @@ path: # paths that have "folder" in its name are folder paths, otherwise they ar
 
 train:
   lr: 4e-6
-  epochs: 60
+  epochs: 1
   weight_decay: 1e-4
   batch_size: 32
   loss_fn: cross-entropy # currently still useless
@@ -67,6 +67,8 @@ train:
 
 eval:
   bertscore_model: microsoft/deberta-xlarge-mnli #bert-base-uncased, roberta-large
+  batch_size: 64
+  val_split: 0.2
 
 mobtep:
   chronos_name: amazon/chronos-t5-small
