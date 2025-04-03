@@ -51,15 +51,16 @@ path: # paths that have "folder" in its name are folder paths, otherwise they ar
   prototypes_path: /home/ubuntu/thesis/model/prototype_words.txt
   generated_captions_folder_path: /home/ubuntu/thesis/data/samples/captions/mob
   gt_captions_folder_path: /home/ubuntu/thesis/data/samples/captions/no external
+  checkpoints_folder_path: /home/ubuntu/thesis/model/checkpoints
 
 train:
   lr: 4e-6
-  epochs: 40
+  epochs: 60
   weight_decay: 1e-4
   batch_size: 32
   loss_fn: cross-entropy # currently still useless
   teacher_forcing: True # if False, the model generates autoregressively during training
-  milestones: [3, 10, 30]
+  milestones: [10, 30, 50]
   early_stopping: False
   patience: 5 # used only if early_stoping=True
   clip_grad_norm: 1.0

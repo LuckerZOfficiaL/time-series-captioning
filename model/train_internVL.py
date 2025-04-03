@@ -117,7 +117,8 @@ def train_model(model, dataloader, optimizer, ignore_id, epochs=5):
 
             total_loss += loss.item()
 
-        print(f"Epoch {epoch+1} - Loss: {total_loss/len(dataloader):.4f}")
+        print(f"Epoch {epoch+1}/{epochs} - Loss: {total_loss/len(dataloader):.4f}")
+    return total_loss/len(dataloader) # return the final loss
 
 
 def compute_loss(logits, labels, ignore_id):
@@ -166,7 +167,11 @@ def main():
     ################# TRAINING #################
 
     optimizer = AdamW(model.parameters(), lr=float(config['train']['lr']), weight_decay=float(config['train']['weight_decay']))
-    train_model(model, dataloader, optimizer, ignore_id=tokenizer.pad_token_id, epochs=config['train']['epochs'])
+
+    final_loss = train_model(model, dataloader, optimizer, ignore_id=tokenizer.pad_token_id, epochs=config['train']['epochs'])
+
+    filenpath = f"{config['path']['checkpoints_folder_path']}/internVL2_5-2B_{round(final_loss, 3)}.pth"
+    torch.save(model.state_dict(), filenpath)
 
 
     ts = torch.randn(2, 20, 1)
