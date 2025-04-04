@@ -5,6 +5,10 @@ import torchvision.transforms as T
 from helpers import(
     load_config
 )
+from custom_methods import(
+    custom_generate
+)
+import types
 
 # Image transformation
 def transform_image(image_path, input_size=448):
@@ -35,13 +39,15 @@ def batch_inference(model, tokenizer, image_paths, prompts, max_output_tokens=25
 def main():
     config = load_config()
     path = config['mobtep']['internvl_name']
-    model = AutoModel.from_pretrained(
+    model = AutoModel.from_pretrained( 
         path,
         torch_dtype=torch.bfloat16,
         #low_cpu_mem_usage=True,
         #use_flash_attn=True,
         trust_remote_code=True).eval().cuda()
-
+    
+    model.generate = types.MethodType(custom_generate, model)
+    
     tokenizer = AutoTokenizer.from_pretrained(path, trust_remote_code=True, use_fast=False)
 
     image_paths = ['/home/ubuntu/thesis/data/samples/plots/air quality_0.jpeg',

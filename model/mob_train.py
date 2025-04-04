@@ -9,32 +9,55 @@ from train_internVL import(
     create_dataloaders,
     compute_loss,
 )
+from custom_methods import(
+    custom_forward,
+    custom_generate
+)
 from torch.optim import AdamW
 from chronos_embedder import ChronosEmbedder
 import torch
 from transformers import AutoTokenizer, AutoModel
 import os
 from tqdm import tqdm
+from typing import Optional
+import types
+
 
 
 class Mob(torch.nn.Module):
     def __init__(self, chronos_name="amazon/chronos-t5-small", internvl_name="OpenGVLab/InternVL2_5-2B"):
         super(Mob, self).__init__()
         self.chronos = ChronosEmbedder(model_name=chronos_name)
-        self.internvl =  AutoModel.from_pretrained(
-                                                    internvl_name,
-                                                    torch_dtype=torch.bfloat16,
-                                                    #low_cpu_mem_usage=True,
-                                                    use_flash_attn=True,
-                                                    trust_remote_code=True)
+        self.projector = torch.nn.Linear(512, 2048) # 512 and 2048 are the embedding sizes of Chronos and InternVL
+        self.internvl = AutoModel.from_pretrained(
+                                internvl_name,
+                                torch_dtype=torch.bfloat16,
+                                #low_cpu_mem_usage=True,
+                                use_flash_attn=True,
+                                trust_remote_code=True)
         self.internvl_tokenizer = AutoTokenizer.from_pretrained(internvl_name, trust_remote_code=True, use_fast=False)
+        
         for param in self.chronos.chronos.model.parameters():
             param.requires_grad = False
+            
+        torch.nn.init.xavier_uniform_(self.projector.weight)
+        
+        # replace the original methods with my custom ones, which accomodate ts embedding injection
+        self.internvl.generate = types.MethodType(custom_generate, self.internvl)
+        self.internvl.forward = types.MethodType(custom_forward, self.internvl)
 
     def forward(self, ts, pixel_values, input_ids, attention_mask, target_ids, pooling="mean"):
-        ts_emb = self.chronos(ts, pooling=pooling)
-        pixel_values, input_ids, attention_mask, target_ids = pixel_values.to("cuda"), input_ids.to("cuda"), attention_mask.to("cuda"), target_ids.to("cuda")
-        internvl_outputs = self.internvl(pixel_values=pixel_values, 
+        ts_emb = self.chronos(ts, pooling=pooling).to("cuda")
+        ts_emb = self.projector(ts_emb) 
+        ts_emb = ts_emb.to(torch.bfloat16)
+        
+        pixel_values, input_ids, attention_mask = pixel_values.to("cuda"), input_ids.to("cuda"), attention_mask.to("cuda")
+        
+        if target_ids is not None:
+            target_ids = target_ids.to("cuda")
+            
+        internvl_outputs = self.internvl(ts_emb = ts_emb,
+                                        pixel_values=pixel_values, 
                                         input_ids=input_ids,
                                         labels=target_ids,
                                         image_flags=torch.ones(input_ids.size(0)),
@@ -120,6 +143,7 @@ def evaluate_mob(model, ts_folder_path, metadata_folder_path, image_folder_path,
         
         batch_start_idx = batch_end_idx
 
+
 def train_mob(model, train_loader, optimizer, ignore_id, epochs=5, val_loader=None): # if val_loader is not None, it also does validation
     print("\nStart Training...")
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -141,9 +165,10 @@ def train_mob(model, train_loader, optimizer, ignore_id, epochs=5, val_loader=No
             outputs = model(ts=ts,
                             pixel_values=pixel_values, 
                             input_ids=input_ids,
-                            target_ids=target_ids,
+                            target_ids=None,
                             attention_mask=attention_mask,
                             pooling=config['mobtep']['chronos_pooling'])
+            #print(f"logits shape {outputs.logits.shape}, target shape {target_ids.shape}")
             loss = compute_loss(outputs.logits, target_ids, ignore_id=ignore_id)
             #loss = outputs.loss
 
