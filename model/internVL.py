@@ -26,13 +26,19 @@ def load_batch(image_paths, input_size=448):
     return torch.stack(images).to(torch.bfloat16).cuda() # type: ignore
 
 # Batch inference
-def batch_inference(model, tokenizer, image_paths, prompts, max_output_tokens=250):
+def batch_inference(model, image_paths, prompts, tokenizer=None, ts=None, max_output_tokens=250):
     pixel_values = load_batch(image_paths)
     num_patches_list = [1] * len(image_paths)  # Assuming each image is one patch
-    responses = model.batch_chat(
-        tokenizer, pixel_values, num_patches_list=num_patches_list,
-        questions=prompts, generation_config={'max_new_tokens': max_output_tokens, 'do_sample': True}
-    )
+    if tokenizer is None:
+        responses = model.batch_chat(
+            pixel_values=pixel_values, ts=ts, num_patches_list=num_patches_list,
+            questions=prompts, generation_config={'max_new_tokens': max_output_tokens, 'do_sample': True}
+        )
+    else:
+        responses = model.batch_chat(
+            tokenizer=tokenizer, pixel_values=pixel_values, ts=ts, num_patches_list=num_patches_list,
+            questions=prompts, generation_config={'max_new_tokens': max_output_tokens, 'do_sample': True}
+        )
     return responses
 
 

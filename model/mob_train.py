@@ -11,7 +11,8 @@ from train_internVL import(
 )
 from custom_methods import(
     custom_forward,
-    custom_generate
+    custom_generate,
+    custom_batch_chat
 )
 from torch.optim import AdamW
 from chronos_embedder import ChronosEmbedder
@@ -45,6 +46,7 @@ class Mob(torch.nn.Module):
         # replace the original methods with my custom ones, which accomodate ts embedding injection
         self.internvl.generate = types.MethodType(custom_generate, self.internvl)
         self.internvl.forward = types.MethodType(custom_forward, self.internvl)
+        self.internvl.batch_chat = types.MethodType(custom_batch_chat, self.internvl)
 
     def forward(self, ts, pixel_values, input_ids, attention_mask, target_ids, pooling="mean"):
         ts_emb = self.chronos(ts, pooling=pooling).to("cuda")
@@ -66,6 +68,24 @@ class Mob(torch.nn.Module):
         return outputs # currnetly, ts_emb from chronos is unused
 
 
+    def batch_chat(self, ts, pixel_values, questions, generation_config, num_patches_list=None,
+                history=None, return_history=False, IMG_START_TOKEN='<img>', IMG_END_TOKEN='</img>',
+                IMG_CONTEXT_TOKEN='<IMG_CONTEXT>', verbose=False, image_counts=None):
+        ts_emb = self.chronos(ts, pooling="mean").to("cuda")
+        ts_emb = self.projector(ts_emb) 
+        ts_emb = ts_emb.to(torch.bfloat16)
+        return self.internvl.batch_chat(tokenizer=self.internvl_tokenizer, 
+                                               ts_emb=ts_emb,
+                                               pixel_values=pixel_values, 
+                                               questions=questions, generation_config=generation_config,
+                                               num_patches_list=num_patches_list,
+                                               history=history, 
+                                               return_history=False, 
+                                               IMG_START_TOKEN='<img>', 
+                                               IMG_END_TOKEN='</img>',
+                                               IMG_CONTEXT_TOKEN='<IMG_CONTEXT>', 
+                                               verbose=False, image_counts=None)
+    
 
     def get_responses(self, prompts, image_paths, ts, pooling="mean", max_output_tokens=256): 
         """
@@ -79,8 +99,9 @@ class Mob(torch.nn.Module):
         responses = batch_inference(self.internvl, self.internvl_tokenizer, image_paths, prompts, max_output_tokens=max_output_tokens)
         
         return ts_emb, responses
-
-        
+    
+    
+    
 def evaluate_mob(model, ts_folder_path, metadata_folder_path, image_folder_path, save_folder_path, batch_size=32):
     config = load_config()
     ts_list = []
@@ -255,6 +276,27 @@ def main():
     print("\nTrain Losses: ", train_losses)
     print("\nVal Losses: ", val_losses)
 
+    
+    
+    
+    ######################################## SAVING CHECKPOINT #######################################
+    filepath = f"{config['path']['checkpoints_folder_path']}/Mob2_5-2B_{round(val_losses[-1], 3) if val_losses != [] else ""}.pth"
+    torch.save(model.state_dict(), filepath)
+
+
+    ####################################### TOY DEMO #######################################
+    ts = torch.randn(2, 20, 1)
+    image_paths = ['/home/ubuntu/thesis/data/samples/plots/air quality_0.jpeg',
+                '/home/ubuntu/thesis/data/samples/plots/demography_0.jpeg']
+
+    prompts = ['Describe this line chart about the hourly CO levels in London. Discuss the values you see.', 
+                'Describe this line chart about the yearly death rates in Greece. Discuss the values you see.']
+
+    responses = batch_inference(model=model,ts=ts, image_paths=image_paths, prompts=prompts, max_output_tokens=256)
+
+    print(f"\nResponses:\n")
+    for response in responses:
+        print("\n", response)
 
 # You might neet to run this script many times without any change since there are too many examples to fit into memory for a single run. 
 if __name__ == "__main__":
