@@ -286,9 +286,8 @@ def main():
 
     
     
-    
     ######################################## SAVING CHECKPOINT #######################################
-    filepath = f"{config['path']['checkpoints_folder_path']}/Mob2_5-2B_{round(val_losses[-1], 3) if val_losses != [] else ""}.pth"
+    filepath = f"{config['path']['checkpoints_folder_path']}/InternVL2_5-2B_{round(val_losses[-1], 3) if val_losses != [] else ""}.pth"
     torch.save(model.state_dict(), filepath)
 
 
@@ -310,16 +309,19 @@ def main():
 if __name__ == "__main__":
     #main()
     
+    ################### GENERATE CAPTION FILES ##################################
     config = load_config()
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     
     model = Mob(chronos_name=config['mobtep']['chronos_name'], internvl_name=config['mobtep']['internvl_name']).to(device)
-    checkpoint_path = "/home/ubuntu/thesis/model/checkpoints/internVL2_5-2B_5.368.pth"
-    model.internvl.load_state_dict(torch.load(checkpoint_path, map_location=device))
+    
+    checkpoint_path = "/home/ubuntu/thesis/model/checkpoints/internVL2_5-2B_XXX.pth"
+    model.load_state_dict(torch.load(checkpoint_path, map_location=device))
     
     ts_folder_path = "/home/ubuntu/thesis/data/samples/time series"
     metadata_folder_pth = "/home/ubuntu/thesis/data/samples/metadata"
     image_folder_path = "/home/ubuntu/thesis/data/samples/plots"
-    save_folder_path="/home/ubuntu/thesis/data/samples/captions/generated/finetuned internVL"
+    save_folder_path="/home/ubuntu/thesis/data/samples/captions/generated/mob v1"
+    
     evaluate_mob(model, ts_folder_path, metadata_folder_pth, image_folder_path, save_folder_path, batch_size=20, use_chronos=config['mobtep']['use_chronos'])
     

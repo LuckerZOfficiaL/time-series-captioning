@@ -2,7 +2,7 @@ general:
   random_seed: 42
 
 data:
-  dataset_names: [air quality, border crossing, crime, demography, road injuries]
+  dataset_names: [air quality, border crossing, crime, demography, road injuries, covid] 
   request_augmentations: 0 # how many times to rephrase the original prompt request?
   n_samples: 300 # how many window samples to extract per dataset? i.e. how many time series to sample? Note that this is just the number of real samples and not the number of captions because each model in used_models generates its version of the caption. So, the number of captions generated will be n_samples*len(used_models).
   save_top_k: 0 # save the top k best captions based on the ranking, if it's 0 or negative, don't do top-k. If top-k is on, caption ranking is invoked
@@ -55,12 +55,12 @@ path: # paths that have "folder" in its name are folder paths, otherwise they ar
 
 train:
   lr: 1e-5
-  epochs: 30
+  epochs: 4
   weight_decay: 1e-3
   batch_size: 32
   loss_fn: cross-entropy # currently still useless
   teacher_forcing: True # if False, the model generates autoregressively during training
-  milestones: [10, 20, 50]
+  milestones: [2, 15]
   early_stopping: False
   patience: 5 # used only if early_stoping=True
   clip_grad_norm: 1.0
@@ -73,7 +73,7 @@ eval:
 mobtep:
   chronos_name: amazon/chronos-t5-small
   chronos_pooling: mean # mean, max
-  use_chronos: False
+  use_chronos: True
   internvl_name: OpenGVLab/InternVL2_5-2B
   tcn_emb_size: 128
   generator: gpt-2 # gpt-2, llama 3.2 instruct

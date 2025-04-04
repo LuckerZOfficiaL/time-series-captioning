@@ -2,8 +2,7 @@ import yaml
 import torch
 import torch.nn.functional as F
 from transformers import BertTokenizer, BertModel
-
-
+    
 # Initialize the BERT model and tokenizer
 def initialize_bert_model(model_name="bert-base-uncased"):
     # Load pre-trained BERT model and tokenizer

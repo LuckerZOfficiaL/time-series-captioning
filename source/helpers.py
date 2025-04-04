@@ -604,6 +604,72 @@ def get_sample(dataset_name: str, json_data, series_len = None, start_idx = None
     metadata['minimum of this specific series'] = float(round(min(ts), 2))
     metadata['maximum of this specific series'] = float(round(max(ts), 2))
 
+  if dataset_name == "covid":
+    country_ID = random.choice(list(json_data.keys()))
+    country = json_data[country_ID]['metadata']['country_name']
+    attribute = random.choice(list(json_data[country_ID].keys())) # daily_cases, dauly_deaths
+    while attribute == "metadata":
+      attribute = random.choice(list(json_data[country_ID].keys()))
+      
+    if series_len is None:
+      series_len = random.randint(5, min(150, 5+int(len(json_data[country_ID][attribute])/8)))
+    if start_idx is None:
+      start_idx = random.randint(0, len(json_data[country_ID][attribute]) - series_len)
+    ts = json_data[country_ID][attribute][start_idx:start_idx+series_len]
+    ts = [round(x, 2) for x in ts]
+    
+    while (ts.count(0) / len(ts)) * 100 > 20: # if there are at last 20% zeros, reject it and resample
+      country_ID = random.choice(list(json_data.keys()))
+      country = json_data[country_ID]['metadata']['country_name']
+      attribute = random.choice(list(json_data[country_ID].keys())) # daily_cases, dauly_deaths
+      while attribute == "metadata":
+        attribute = random.choice(list(json_data[country_ID].keys()))
+        
+      if series_len is None:
+        series_len = random.randint(5, min(150, 5+int(len(json_data[country_ID][attribute])/8)))
+      if start_idx is None:
+        start_idx = random.randint(0, len(json_data[country_ID][attribute]) - series_len)
+      ts = json_data[country_ID][attribute][start_idx:start_idx+series_len]
+      ts = [round(x, 2) for x in ts]
+      series_len = random.randint(5, min(150, 5+int(len(json_data[country_ID][attribute])/8))) 
+      start_idx = random.randint(0, len(json_data[country_ID][attribute]) - series_len)
+      ts = json_data[country_ID][attribute][start_idx:start_idx+series_len]
+      ts = [round(x, 2) for x in ts]
+    
+    start_date = pd.to_datetime(json_data[country_ID]['metadata']['start_date']) + pd.DateOffset(days=start_idx)
+    end_date = pd.to_datetime(json_data[country_ID]['metadata']['start_date']) + pd.DateOffset(days=start_idx+series_len)
+    start_date = start_date.strftime('%Y-%m-%d')
+    end_date = end_date.strftime('%Y-%m-%d')
+    
+    metadata = {}
+    metadata['country'] = country
+    metadata['attribute'] = attribute
+    metadata['sampling frequency'] = "daily"
+    metadata['start date of this series'] = start_date
+    metadata['end date of this series'] = end_date
+    metadata['income group'] = json_data[country_ID]['metadata']['income_group'] # middle income
+    metadata['region'] = json_data[country_ID]['metadata']['region'] # south asia
+    if 'gdp_per_capita' in json_data[country_ID]['metadata']['stats']:
+      metadata['gdp per capita'] = json_data[country_ID]['metadata']['stats']['gdp_per_capita']
+    if 'aged_65_over' in json_data[country_ID]['metadata']['stats']:
+      metadata['over 65'] = json_data[country_ID]['metadata']['stats']['aged_65_over']
+    if 'median_age' in json_data[country_ID]['metadata']['stats']:
+      metadata['median age'] = json_data[country_ID]['metadata']['stats']['median_age']
+    if 'population_density' in json_data[country_ID]['metadata']['stats']:
+      metadata['population density'] = json_data[country_ID]['metadata']['stats']['population_density']
+    
+    metadata['population'] = json_data[country_ID]['metadata']['population']
+    metadata['historical minimum in this country'] = float(round(json_data[country_ID]['metadata']['stats']['min'][attribute]))
+    metadata['historical maximum in this country'] = float(round(json_data[country_ID]['metadata']['stats']['max'][attribute]))
+    metadata['historical mean in this country'] = float(round(json_data[country_ID]['metadata']['stats']['mean'][attribute]))
+    metadata['historical standard deviation in this country'] = float(round(json_data[country_ID]['metadata']['stats']['std'][attribute]))
+    
+    metadata['mean of this specific series'] = float(round(np.mean(ts), 2))
+    metadata['standard deviation of this specific series'] = float(round(np.std(ts), 2))
+    metadata['minimum of this specific series'] = float(round(min(ts), 2))
+    metadata['maximum of this specific series'] = float(round(max(ts), 2))
+    
+    
   return metadata, ts
 
 # the following function does not preclude that no sample is duplicated, there's a very slim chance that it occurs
@@ -738,7 +804,30 @@ def get_request(dataset_name, metadata, ts, external_knowledge=True):
 
           Answer in a single paragraph of four sentences at most, without bullet points or any formatting.
           """
-      
+  elif dataset_name == "covid":
+    request = f"""I will give you a time series about the {metadata['sampling frequency']} {metadata['attribute']} due to Covid 19 in the country of {metadata['country']}, {metadata['region']}. The country has a population of {metadata['population']} and is classified as {metadata['income group']}. {f"The country has a GDP per capita of {metadata['gdp per capita']}." if 'gpt per capita' in metadata.keys() else ""}
+    {f"The percentage of over 65 is {metadata['over 65']}." if 'over 65' in metadata.keys() else ""} {f"The median age in the country is {metadata['median age']}." if 'median age' in metadata.keys() else ""} {f"The country has a population density of {metadata['population density']}." if 'population density' in metadata.keys() else ""}     
+    
+    The time series covers the period from {metadata['start date of this series']} to {metadata['end date of this series']}.
+    
+           Here is the time series: \n {ts}
+           
+          \nHere are the statistics for this specific time series for {metadata['country']} from {metadata['start date of this series']} to {metadata['end date of this series']}: \n Mean: {metadata['mean of this specific series']} \n Standard Deviation: {metadata['standard deviation of this specific series']} \n Minimum: {metadata['minimum of this specific series']} \n Maximum: {metadata['maximum of this specific series']}
+          \nHere are the general statistics about the  {metadata['sampling frequency']} {metadata['attribute']} in {metadata['country']}. \n Mean: {metadata['historical mean in this country']} \n Standard Deviation: {metadata['historical standard deviation in this country']} \n Minimum: {metadata["historical minimum in this country"]} \n Maximum: {metadata["historical maximum in this country"]}
+
+          \n Describe this time series by focusing on trends and patterns. Discuss concrete numbers you see and pay attention to the dates.
+          For numerical values, ensure consistency with the provided time series. If making percentage comparisons, round to the nearest whole number.Report the dates when things happened.
+          Use the statistics I provided you for comparing this example to the normalcy.
+          {"Use your broad knowledge of geopolitics, natural events, and economic trends to provide meaningful comparisons. Be specific and factual, avoiding broad generalizations." if external_knowledge else "Do not add any extra information beyond what is given."}
+          Highlight significant spikes, dips, or patterns{" and explain possible causes based on global or regional factors." if external_knowledge else "."}
+          You don't have to explicitly report the numeric values of general statistics, you just use them for reference.
+          Compare the trends in this time series to global or regional norms, explaining whether they are higher, lower, or follow expected seasonal patterns.
+          When making comparisons, clearly state whether differences are minor, moderate, or significant.
+          Use descriptive language to create engaging, natural-sounding text.
+          Avoid repetitive phrasing and overused expressions.
+
+          Answer in a single paragraph of four sentences at most, without bullet points or any formatting.
+          """
   return request
 
 def augment_request(request, n=3, model="GPT-4o"): # rephrases the request prompt n times and returns the augmentations in a list
@@ -1923,6 +2012,14 @@ def main():
   config = load_config()
 
   random.seed(config['general']['random_seed'])
+  
+  with open("/home/ubuntu/thesis/data/processed/covid.json", "r") as file:
+      json_data = json.load(file)
+  metadata, ts = get_sample(dataset_name="covid", json_data=json_data)
+  print(metadata, ts)
+  
+  print(get_request("covid", metadata, ts))
+  
 
   #print(check_single_fact_confidence("The sun is smaller than the Earth", checking_model="Google Gemini-2.0-Flash"))
 
@@ -1940,11 +2037,11 @@ def main():
 
   #print(check_whole_caption_confidence('Football is globally the most popular sport. The global population has halved in the last decade. The Chinese population has been increasing drastically lately.', extraction_model="Google Gemini-2.0-Flash", checking_model="Ollama llama3.3", confidence_thresh=0.7))
 
-  gt_caption = "The average daily temperature in San Diego in March 2025 started at 15 degrees Celcius and ended at 17 degrees Celcius. San Diego is a city in California USA and boasts of being one of the cities with the best weather nationwide."
+  """gt_caption = "The average daily temperature in San Diego in March 2025 started at 15 degrees Celcius and ended at 17 degrees Celcius. San Diego is a city in California USA and boasts of being one of the cities with the best weather nationwide."
   generated_caption = "The average daily temperature in San Diego in March 2025 started at 15 degrees Celcius and ended at 18 degrees Celcius. San Diego is a city in California USA."
   scores = score_caption(generated_caption, gt_caption, model=config['model']['scoring_model'])
   print(f"Scores: \n{scores}")
-
+"""
   
   """facts = ["The Canadian dollar had a relatively low exchange rate against USD in 2007.",
           "The exchange rate of Canadian dollar against USD was high in 2007."]

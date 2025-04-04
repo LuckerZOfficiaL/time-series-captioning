@@ -16,7 +16,8 @@ TITLE_MAP = {
         "crime": "crime count across days",
         "demography": "values across years",
         "heart rate": "values at different measurements",
-        "road injuries": "values across years"
+        "road injuries": "values across years",
+        "covid": "value count across days"
     }
 X_LABEL_MAP = {
         "air quality": "hourly timestep",
@@ -24,7 +25,8 @@ X_LABEL_MAP = {
         "crime": "daily timestep",
         "demography": "yearly timestep",
         "heart rate": "measurement",
-        "road injuries": "yearly timestep"
+        "road injuries": "yearly timestep",
+        "covid": "daily timestep"
     }
 Y_LABEL_MAP = {
         "air quality": "value",
@@ -32,7 +34,8 @@ Y_LABEL_MAP = {
         "crime": "crime count",
         "demography": "value",
         "heart rate": "value",
-        "road injuries": "accident count"
+        "road injuries": "accident count",
+        "covid": "daily count"
     }
 
 

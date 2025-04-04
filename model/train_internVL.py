@@ -247,8 +247,8 @@ def main():
     prompts = ['Describe this line chart about the hourly CO levels in London. Discuss the values you see.', 
                 'Describe this line chart about the yearly death rates in Greece. Discuss the values you see.']
 
-    responses = batch_inference(model, tokenizer, image_paths, prompts, max_output_tokens=256)
-
+    responses = batch_inference(model=model, tokenizer=tokenizer, image_paths=image_paths, prompts=prompts, max_output_tokens=256)
+    
     print(f"\nResponses:\n")
     for response in responses:
         print("\n", response)

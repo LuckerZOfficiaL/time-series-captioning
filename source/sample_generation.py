@@ -30,7 +30,8 @@ FILE_MAPPING = {
         "border crossing": "border_crossing.json",
         "crime": "crime.json",
         "demography": "demographics.json",
-        "road injuries": "road_injuries.json"
+        "road injuries": "road_injuries.json",
+        "covid": "covid.json"
         #"heart rate": "hr_data.json"
     }
 
