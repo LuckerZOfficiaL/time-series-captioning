@@ -48,8 +48,8 @@ class Mob(torch.nn.Module):
         self.internvl.forward = types.MethodType(custom_forward, self.internvl)
         self.internvl.batch_chat = types.MethodType(custom_batch_chat, self.internvl)
 
-    def forward(self, ts, pixel_values, input_ids, attention_mask, target_ids, pooling="mean"):
-        if ts is not None:  # if ts tensor is None (not provided), just skip chronos and use internVL directly
+    def forward(self, ts, pixel_values, input_ids, attention_mask, target_ids, pooling="mean",use_chronos=True):
+        if ts is not None and use_chronos:  # if ts tensor is None (not provided), just skip chronos and use internVL directly
             ts_emb = self.chronos(ts, pooling=pooling).to("cuda")
             ts_emb = self.projector(ts_emb) 
             ts_emb = ts_emb.to(torch.bfloat16)
@@ -70,10 +70,10 @@ class Mob(torch.nn.Module):
         return outputs # currnetly, ts_emb from chronos is unused
 
 
-    def batch_chat(self, ts, pixel_values, questions, generation_config, num_patches_list=None,
+    def batch_chat(self, ts, pixel_values, questions, generation_config, num_patches_list=None, use_chronos=True,
                 history=None, return_history=False, IMG_START_TOKEN='<img>', IMG_END_TOKEN='</img>',
                 IMG_CONTEXT_TOKEN='<IMG_CONTEXT>', verbose=False, image_counts=None):
-        if ts is not None:
+        if ts is not None and use_chronos:
             ts_emb = self.chronos(ts, pooling="mean").to("cuda")
             ts_emb = self.projector(ts_emb) 
             ts_emb = ts_emb.to(torch.bfloat16)
@@ -92,14 +92,15 @@ class Mob(torch.nn.Module):
                                                verbose=False, image_counts=None)
     
 
-    def get_responses(self, prompts, image_paths, ts, pooling="mean", max_output_tokens=256): 
+    def get_responses(self, prompts, image_paths, ts, pooling="mean", max_output_tokens=256, use_chronos=True): 
         """
             args:
                 prompts: a list of B text prompts
                 image_paths: a list of B images filepaths
                 ts: a tensor of shape (B, seq_len, 1)
+                use_chronos: if chronos ts embedding is used, if False, it's equivalent to running internVL only
         """
-        if ts is not None:
+        if ts is not None and use_chronos:
             ts_emb = self.chronos(ts, pooling=pooling).to("cuda") 
             ts_emb = self.projector(ts_emb) 
             ts_emb = ts_emb.to(torch.bfloat16)
@@ -214,7 +215,8 @@ def train_mob(model, train_loader, optimizer, ignore_id, epochs=5, val_loader=No
                             input_ids=input_ids,
                             target_ids=None,
                             attention_mask=attention_mask,
-                            pooling=config['mobtep']['chronos_pooling'])
+                            pooling=config['mobtep']['chronos_pooling'],
+                            use_chronos=config['mobtep']['use_chronos'])
             #print(f"logits shape {outputs.logits.shape}, target shape {target_ids.shape}")
             loss = compute_loss(outputs.logits, target_ids, ignore_id=ignore_id)
             #loss = outputs.loss
@@ -242,7 +244,8 @@ def train_mob(model, train_loader, optimizer, ignore_id, epochs=5, val_loader=No
                                         pixel_values=val_pixel_values, 
                                         input_ids=val_input_ids,
                                         target_ids=val_target_ids,
-                                        attention_mask=val_attention_mask)
+                                        attention_mask=val_attention_mask,
+                                        use_chronos=config['mobtep']['use_chronos'])
                     val_loss = compute_loss(val_outputs.logits, val_target_ids, ignore_id=ignore_id)
                     total_val_loss += val_loss.item()
             print(f"Epoch {epoch+1}/{epochs} - Validation Loss: {total_val_loss/len(val_loader):.4f}")
@@ -311,10 +314,12 @@ if __name__ == "__main__":
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     
     model = Mob(chronos_name=config['mobtep']['chronos_name'], internvl_name=config['mobtep']['internvl_name']).to(device)
+    checkpoint_path = "/home/ubuntu/thesis/model/checkpoints/internVL2_5-2B_5.368.pth"
+    model.internvl.load_state_dict(torch.load(checkpoint_path, map_location=device))
     
     ts_folder_path = "/home/ubuntu/thesis/data/samples/time series"
     metadata_folder_pth = "/home/ubuntu/thesis/data/samples/metadata"
     image_folder_path = "/home/ubuntu/thesis/data/samples/plots"
-    save_folder_path="/home/ubuntu/thesis/data/samples/captions/generated/internVL"
+    save_folder_path="/home/ubuntu/thesis/data/samples/captions/generated/finetuned internVL"
     evaluate_mob(model, ts_folder_path, metadata_folder_pth, image_folder_path, save_folder_path, batch_size=20, use_chronos=config['mobtep']['use_chronos'])
     
