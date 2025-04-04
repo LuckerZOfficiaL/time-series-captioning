@@ -49,10 +49,12 @@ class Mob(torch.nn.Module):
         self.internvl.batch_chat = types.MethodType(custom_batch_chat, self.internvl)
 
     def forward(self, ts, pixel_values, input_ids, attention_mask, target_ids, pooling="mean"):
-        ts_emb = self.chronos(ts, pooling=pooling).to("cuda")
-        ts_emb = self.projector(ts_emb) 
-        ts_emb = ts_emb.to(torch.bfloat16)
-        
+        if ts is not None:  # if ts tensor is None (not provided), just skip chronos and use internVL directly
+            ts_emb = self.chronos(ts, pooling=pooling).to("cuda")
+            ts_emb = self.projector(ts_emb) 
+            ts_emb = ts_emb.to(torch.bfloat16)
+        else: ts_emb = None
+            
         pixel_values, input_ids, attention_mask = pixel_values.to("cuda"), input_ids.to("cuda"), attention_mask.to("cuda")
         
         if target_ids is not None:
@@ -71,9 +73,12 @@ class Mob(torch.nn.Module):
     def batch_chat(self, ts, pixel_values, questions, generation_config, num_patches_list=None,
                 history=None, return_history=False, IMG_START_TOKEN='<img>', IMG_END_TOKEN='</img>',
                 IMG_CONTEXT_TOKEN='<IMG_CONTEXT>', verbose=False, image_counts=None):
-        ts_emb = self.chronos(ts, pooling="mean").to("cuda")
-        ts_emb = self.projector(ts_emb) 
-        ts_emb = ts_emb.to(torch.bfloat16)
+        if ts is not None:
+            ts_emb = self.chronos(ts, pooling="mean").to("cuda")
+            ts_emb = self.projector(ts_emb) 
+            ts_emb = ts_emb.to(torch.bfloat16)
+        else: ts_emb=None
+        
         return self.internvl.batch_chat(tokenizer=self.internvl_tokenizer, 
                                                ts_emb=ts_emb,
                                                pixel_values=pixel_values, 
@@ -94,20 +99,20 @@ class Mob(torch.nn.Module):
                 image_paths: a list of B images filepaths
                 ts: a tensor of shape (B, seq_len, 1)
         """
-        
-        ts_emb = self.chronos(ts, pooling=pooling)  # This is currently unused, so mob is really just internVL
-        responses = batch_inference(self.internvl, self.internvl_tokenizer, image_paths, prompts, max_output_tokens=max_output_tokens)
-        
-        return ts_emb, responses
+        if ts is not None:
+            ts_emb = self.chronos(ts, pooling=pooling).to("cuda") 
+            ts_emb = self.projector(ts_emb) 
+            ts_emb = ts_emb.to(torch.bfloat16)
+        else: ts_emb=None
+            
+        responses = batch_inference(model=self.internvl, tokenizer=self.internvl_tokenizer, image_paths=image_paths, prompts=prompts, ts_emb=ts_emb, max_output_tokens=max_output_tokens)
+        return responses
     
     
     
-def evaluate_mob(model, ts_folder_path, metadata_folder_path, image_folder_path, save_folder_path, batch_size=32):
+def evaluate_mob(model, ts_folder_path, metadata_folder_path, image_folder_path, save_folder_path, batch_size=32, use_chronos=True):
     config = load_config()
-    ts_list = []
-    prompt_list = []
-    image_paths = []
-
+    model.eval()
     ts_files = os.listdir(ts_folder_path)
     ts_files = [filename for filename in ts_files if filename not in os.listdir(save_folder_path)] # skip the captions that are already generated
     ts_files.sort()
@@ -116,6 +121,11 @@ def evaluate_mob(model, ts_folder_path, metadata_folder_path, image_folder_path,
     batch_start_idx = 0
 
     while batch_start_idx < len(ts_files):
+        ts_list = []
+        prompt_list = []
+        image_paths = []
+    
+        max_ts_len=0
         batch_end_idx = min(len(ts_files), batch_start_idx + batch_size)
         print(f"\nPreparing inputs for batch {batch_start_idx}-{batch_end_idx-1}...")
         for i in range(batch_start_idx, batch_end_idx):
@@ -125,12 +135,13 @@ def evaluate_mob(model, ts_folder_path, metadata_folder_path, image_folder_path,
             # Read ts and append it to a list, later to be tensorized after the loop
             with open(ts_folder_path+"/"+filename, 'r') as file:
                 lines = file.read().splitlines()        
-            for line in lines:
-                # Convert each value in the line to a float
-                values = [float(value) for value in line.split()]
-                # Convert the list of values into a tensor
-                tensor = torch.tensor(values)
-                ts_list.append(tensor)
+                
+            values = [float(value) for value in lines]
+            #print("\nValues: ", values)
+            max_ts_len = max(len(values), max_ts_len)
+            # Convert the list of values into a tensor
+            tensor = torch.tensor(values)
+            ts_list.append(tensor)
 
             # Read metadata, prepend a prompt to it and add to the prompt list
             metadata_filename = metadata_folder_path+"/"+filename[:-4]+".json"
@@ -150,17 +161,32 @@ def evaluate_mob(model, ts_folder_path, metadata_folder_path, image_folder_path,
             # Append image path
             image_paths.append(image_folder_path+"/"+filename[:-4]+".jpeg")
 
+        for i in range(len(ts_list)): # apply left-padding 
+            if ts_list[i].size(0) < max_ts_len:
+                padding = torch.full((max_ts_len - ts_list[i].size(0),), torch.nan)
+                ts_list[i] = torch.cat((padding, ts_list[i]), dim=0)
+                #print("ts: ", ts_list[i].shape)
+        
+        #print("max ts len ", max_ts_len)
+        #print("ts shape ", ts_list[0].shape)
         stacked_ts = torch.stack(ts_list, dim=0)
+        
+        #print("stacked shape: ", stacked_ts.shape)
 
-        print(f"\nGenerating captions for batch {batch_start_idx}-{batch_end_idx-1}...")
-        _, responses = model.get_responses(prompt_list, image_paths, stacked_ts, 
+        print(f"Generating captions for batch {batch_start_idx}-{batch_end_idx-1}...")
+        if use_chronos:
+            responses = model.get_responses(prompt_list, image_paths, ts=stacked_ts, 
+                            pooling=config['mobtep']['chronos_pooling'], 
+                            max_output_tokens=config['mobtep']['max_output_tokens'])
+        else:
+            responses = model.get_responses(prompt_list, image_paths, ts=None, 
                             pooling=config['mobtep']['chronos_pooling'], 
                             max_output_tokens=config['mobtep']['max_output_tokens'])
         
         for i in range(batch_start_idx, batch_end_idx):
             response_file = f"{save_folder_path+"/"+ts_files[i]}"
             with open(response_file, 'w') as file:
-                file.write(responses[i])
+                file.write(responses[i-batch_start_idx])
         
         batch_start_idx = batch_end_idx
 
@@ -231,29 +257,8 @@ def main():
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     
     model = Mob(chronos_name=config['mobtep']['chronos_name'], internvl_name=config['mobtep']['internvl_name']).to(device)
+
     
-    """ts = torch.randn(2, 20, 1)
-    image_paths = ['/home/ubuntu/thesis/data/samples/plots/air quality_0.jpeg',
-                '/home/ubuntu/thesis/data/samples/plots/demography_0.jpeg']
-
-    prompts = ['Describe this line chart about the hourly CO levels in London. Discuss the values you see.', 
-                'Describe this line chart about the yearly death rates in Greece. Discuss the values you see.']
-
-    ts_embed, responses = mob(prompts, image_paths, ts, 
-                                pooling=config['mobtep']['chronos_pooling'], 
-                                max_output_tokens=config['mobtep']['max_output_tokens'])
-
-    print(f"\nts_embed: {ts_embed.shape}\n\nresponses:\n")
-    for response in responses:
-        print("\n", response)"""
-        
-    
-    """ts_folder_path = "/home/ubuntu/thesis/data/samples/time series"
-    metadata_folder_pth = "/home/ubuntu/thesis/data/samples/metadata"
-    image_folder_path = "/home/ubuntu/thesis/data/samples/plots"
-    save_folder_path="/home/ubuntu/thesis/data/samples/captions/mob"
-    evaluate_mob(model, ts_folder_path, metadata_folder_pth, image_folder_path, save_folder_path, batch_size=100)"""
-
     train_loader, val_loader = create_dataloaders(model.internvl_tokenizer, 
                                                     ts_folder=config['path']['ts_folder_path'], 
                                                     img_folder=config['path']['plot_folder_path'], 
@@ -285,14 +290,14 @@ def main():
 
 
     ####################################### TOY DEMO #######################################
-    ts = torch.randn(2, 20, 1)
+    ts_emb = torch.randn(2, 20, 1)
     image_paths = ['/home/ubuntu/thesis/data/samples/plots/air quality_0.jpeg',
                 '/home/ubuntu/thesis/data/samples/plots/demography_0.jpeg']
 
     prompts = ['Describe this line chart about the hourly CO levels in London. Discuss the values you see.', 
                 'Describe this line chart about the yearly death rates in Greece. Discuss the values you see.']
 
-    responses = batch_inference(model=model,ts=ts, image_paths=image_paths, prompts=prompts, max_output_tokens=256)
+    responses = batch_inference(model=model,ts_emb=ts_emb, image_paths=image_paths, prompts=prompts, max_output_tokens=256)
 
     print(f"\nResponses:\n")
     for response in responses:
@@ -300,5 +305,16 @@ def main():
 
 # You might neet to run this script many times without any change since there are too many examples to fit into memory for a single run. 
 if __name__ == "__main__":
-    main()
+    #main()
+    
+    config = load_config()
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    
+    model = Mob(chronos_name=config['mobtep']['chronos_name'], internvl_name=config['mobtep']['internvl_name']).to(device)
+    
+    ts_folder_path = "/home/ubuntu/thesis/data/samples/time series"
+    metadata_folder_pth = "/home/ubuntu/thesis/data/samples/metadata"
+    image_folder_path = "/home/ubuntu/thesis/data/samples/plots"
+    save_folder_path="/home/ubuntu/thesis/data/samples/captions/generated/internVL"
+    evaluate_mob(model, ts_folder_path, metadata_folder_pth, image_folder_path, save_folder_path, batch_size=20, use_chronos=config['mobtep']['use_chronos'])
     

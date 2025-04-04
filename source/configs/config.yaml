@@ -73,6 +73,7 @@ eval:
 mobtep:
   chronos_name: amazon/chronos-t5-small
   chronos_pooling: mean # mean, max
+  use_chronos: False
   internvl_name: OpenGVLab/InternVL2_5-2B
   tcn_emb_size: 128
   generator: gpt-2 # gpt-2, llama 3.2 instruct

@@ -162,7 +162,7 @@ def custom_generate(
         #print("\n\ninput embeds shape: ", input_embeds.shape)    
         
         if ts_emb is not None:
-            input_embeds = input_embeds + ts_emb.unsqueeze(1) # add the ts conditioning vector to all the prompt embedding tokens
+            input_embeds = input_embeds + ts_emb.unsqueeze(1) # add the chronos ts vectir to all the prompt embedding tokens if available, else do nothing and run internVL only
         
         outputs = self.language_model.generate(
             inputs_embeds=input_embeds,
