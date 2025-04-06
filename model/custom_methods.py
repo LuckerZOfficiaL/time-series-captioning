@@ -10,6 +10,7 @@ def custom_forward(
             self,
             pixel_values: torch.FloatTensor,
             ts_emb = None, # (B, 2048), the ts embedding from chronos and followed by a projector
+            sum_ts_emb_to = "all",
             input_ids: torch.LongTensor = None,
             attention_mask: Optional[torch.Tensor] = None,
             position_ids: Optional[torch.LongTensor] = None,
@@ -58,8 +59,11 @@ def custom_forward(
 
         input_embeds = input_embeds.reshape(B, N, C)
 
-        if ts_emb is not None: # inject the ts embedding
-            input_embeds = input_embeds + ts_emb.unsqueeze(1) # add the ts conditioning vector to all the prompt embedding tokens
+        if ts_emb is not None:
+            if sum_ts_emb_to == "all":
+                input_embeds = input_embeds + ts_emb.unsqueeze(1) # add the chronos ts vector to all the prompt embedding tokens if ts_emb is available, else do nothing and run vanilla internVL
+            elif sum_to_emb_to == "first":
+                input_embeds[0] += ts_emb
 
             #input_embeds = torch.cat((ts_emb, input_embeds), dim=1)  # Concatenate along the sequence dimension
             #attention_mask = torch.cat((torch.ones((attention_mask.shape[0], 1), device=attention_mask.device, dtype=attention_mask.dtype), attention_mask), dim=1)
@@ -131,6 +135,7 @@ def custom_forward(
 def custom_generate(
             self,
             ts_emb = None, # ts embedding from chronos, shape: B, 
+            sum_ts_emb_to = "all",
             pixel_values: Optional[torch.FloatTensor] = None,
             input_ids: Optional[torch.FloatTensor] = None,
             attention_mask: Optional[torch.LongTensor] = None,
@@ -162,8 +167,11 @@ def custom_generate(
         #print("\n\ninput embeds shape: ", input_embeds.shape)    
         
         if ts_emb is not None:
-            input_embeds = input_embeds + ts_emb.unsqueeze(1) # add the chronos ts vectir to all the prompt embedding tokens if available, else do nothing and run internVL only
-        
+            if sum_ts_emb_to == "all":
+                input_embeds = input_embeds + ts_emb.unsqueeze(1) # add the chronos ts vector to all the prompt embedding tokens if ts_emb is available, else do nothing and run vanilla internVL
+            elif sum_ts_emb_to == "first":
+                input_embeds[0] += ts_emb
+                
         outputs = self.language_model.generate(
             inputs_embeds=input_embeds,
             attention_mask=attention_mask,
@@ -177,7 +185,7 @@ def custom_generate(
     
 def custom_batch_chat(self, tokenizer, ts_emb, pixel_values, questions, generation_config, num_patches_list=None,
                 history=None, return_history=False, IMG_START_TOKEN='<img>', IMG_END_TOKEN='</img>',
-                IMG_CONTEXT_TOKEN='<IMG_CONTEXT>', verbose=False, image_counts=None):
+                IMG_CONTEXT_TOKEN='<IMG_CONTEXT>', verbose=False, image_counts=None, sum_ts_emb_to="all"):
     if history is not None or return_history:
         print('Now multi-turn chat is not supported in batch_chat.')
         raise NotImplementedError
@@ -217,6 +225,7 @@ def custom_batch_chat(self, tokenizer, ts_emb, pixel_values, questions, generati
     generation_config['eos_token_id'] = eos_token_id
     generation_output = self.generate(
         ts_emb=ts_emb,
+        sum_ts_emb_to = sum_ts_emb_to,
         pixel_values=pixel_values,
         input_ids=input_ids,
         attention_mask=attention_mask,

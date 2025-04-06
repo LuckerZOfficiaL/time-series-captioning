@@ -54,8 +54,8 @@ path: # paths that have "folder" in its name are folder paths, otherwise they ar
   checkpoints_folder_path: /home/ubuntu/thesis/model/checkpoints
 
 train:
-  lr: 1e-5
-  epochs: 5
+  lr: 1e-4
+  epochs: 3
   weight_decay: 1e-4
   batch_size: 40
   loss_fn: cross-entropy # currently still useless
@@ -77,13 +77,14 @@ mobtep:
   internvl_name: OpenGVLab/InternVL2_5-2B
   tcn_emb_size: 128
   generator: gpt-2 # gpt-2, llama 3.2 instruct
-  use_linear_proj: False # this is the projector between multi-modal encoder and the generator, it's used to match embedding dimensionalities
+  use_linear_proj: True # this is the projector between multi-modal encoder and the generator, it's used to match embedding dimensionalities
+  projector_init: zero
+  sum_ts_emb_to: "all" # "all": all input embeddings, "first": first token only
   generator_dim: 3072 # used only if use_linear_proj=True, 768 for GPT-2, 3070 for Llama3.2
   max_output_tokens: 256
   temperature: 70
   top_k: 50
   top_p: 0.9
-  repetition_penalty: 1.2
   anchor_words: [
     initially increase, initially decrease, initially stay stable, 
     increase gradually, decrease gradually, remain stable, 
@@ -137,7 +138,7 @@ mobtep:
     chaotic fluctuations, self-reinforcing trend, 
     bounded oscillations, unbounded divergence, 
     burst-like activity, decay towards extinction
-]
+  ]
 
 factcheck:
   start_from_files: True # If False, the benchmark starts by applying our fake detection method and save the txt files. If True, it starts by reading the txt files instead of re-generating the facts

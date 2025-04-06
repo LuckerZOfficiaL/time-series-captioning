@@ -18,6 +18,7 @@ from custom_methods import(
 from torch.optim import AdamW
 from chronos_embedder import ChronosEmbedder
 import torch
+import torch.nn as nn
 from transformers import AutoTokenizer, AutoModel
 import os
 from tqdm import tqdm
@@ -26,11 +27,15 @@ import types
 
 
 
-class Mob(torch.nn.Module):
-    def __init__(self, chronos_name="amazon/chronos-t5-small", internvl_name="OpenGVLab/InternVL2_5-2B", projector_init="zero"):
+class Mob(nn.Module):
+    def __init__(self, chronos_name="amazon/chronos-t5-small", internvl_name="OpenGVLab/InternVL2_5-2B", projector_init="zero", sum_ts_emb_to="all"):
         super(Mob, self).__init__()
         self.chronos = ChronosEmbedder(model_name=chronos_name)
-        self.projector = torch.nn.Linear(512, 2048) # 512 and 2048 are the embedding sizes of Chronos and InternVL
+        self.projector = nn.Linear(512, 2048) # 512 and 2048 are the embedding sizes of Chronos and InternVL
+    
+        self.gate_proj = nn.Linear(2048, 1)
+        self.sigmoid = nn.Sigmoid() # the sigmoid outputs a scaling factor between 0 and 1 used to sum the chronos embedding to the internVL input embedding
+        
         self.internvl = AutoModel.from_pretrained(
                                 internvl_name,
                                 torch_dtype=torch.bfloat16,
@@ -38,16 +43,18 @@ class Mob(torch.nn.Module):
                                 use_flash_attn=True,
                                 trust_remote_code=True)
         self.internvl_tokenizer = AutoTokenizer.from_pretrained(internvl_name, trust_remote_code=True, use_fast=False)
+        self.sum_ts_emb_to = sum_ts_emb_to
+        
         
         for param in self.chronos.chronos.model.parameters():
             param.requires_grad = False
             
         if projector_init == "zero":
-            torch.nn.init.zeros_(self.projector.weight)
+            nn.init.zeros_(self.projector.weight)
         elif projector_init == "almost zero":
-            torch.nn.init.normal_(self.projector.weight, mean=0.0, std=1e-4)
+            nn.init.normal_(self.projector.weight, mean=0.0, std=1e-4)
         elif projector_init == "xavier":
-            torch.nn.init.xavier_uniform_(self.projector.weight)
+            nn.init.xavier_uniform_(self.projector.weight)
         else:
             pass # the default initialization is Kaiming uniform
         
@@ -60,7 +67,10 @@ class Mob(torch.nn.Module):
         if ts is not None and use_chronos:  # if ts tensor is None (not provided), just skip chronos and use internVL directly
             ts_emb = self.chronos(ts, pooling=pooling).to("cuda")
             ts_emb = self.projector(ts_emb) 
-            ts_emb = ts_emb.to(torch.bfloat16)
+            ts_emb = ts_emb
+            
+            coef = self.sigmoid(self.gate_proj(ts_emb)) # sigmoid to learn a dynamic scaling coefficient for summing the chronos ts embedding to the input embeddings of internVL
+            ts_emb =  (coef * ts_emb).to(torch.bfloat16)
         else: ts_emb = None
             
         pixel_values, input_ids, attention_mask = pixel_values.to("cuda"), input_ids.to("cuda"), attention_mask.to("cuda")
@@ -69,6 +79,7 @@ class Mob(torch.nn.Module):
             target_ids = target_ids.to("cuda")
             
         internvl_outputs = self.internvl(ts_emb = ts_emb,
+                                        sum_ts_emb_to=self.sum_ts_emb_to,
                                         pixel_values=pixel_values, 
                                         input_ids=input_ids,
                                         labels=target_ids,
@@ -78,26 +89,30 @@ class Mob(torch.nn.Module):
         return outputs # currnetly, ts_emb from chronos is unused
 
 
-    def batch_chat(self, ts, pixel_values, questions, generation_config, num_patches_list=None, use_chronos=True,
-                history=None, return_history=False, IMG_START_TOKEN='<img>', IMG_END_TOKEN='</img>',
-                IMG_CONTEXT_TOKEN='<IMG_CONTEXT>', verbose=False, image_counts=None):
+    def batch_chat(self, ts, pixel_values, questions, generation_config, pooling="mean", num_patches_list=None, use_chronos=True, history=None, return_history=False, IMG_START_TOKEN='<img>', IMG_END_TOKEN='</img>',
+    IMG_CONTEXT_TOKEN='<IMG_CONTEXT>', verbose=False, image_counts=None):
         if ts is not None and use_chronos:
-            ts_emb = self.chronos(ts, pooling="mean").to("cuda")
+            ts_emb = self.chronos(ts, pooling=pooling).to("cuda")
             ts_emb = self.projector(ts_emb) 
-            ts_emb = ts_emb.to(torch.bfloat16)
+            ts_emb = ts_emb.to
+
+            coef = self.sigmoid(self.gate_proj(ts_emb)) # sigmoid to learn a dynamic scaling coefficient for summing the chronos ts embedding to the input embeddings of internVL
+            ts_emb =  (coef * ts_emb).to(torch.bfloat16)
+            
         else: ts_emb=None
         
         return self.internvl.batch_chat(tokenizer=self.internvl_tokenizer, 
-                                               ts_emb=ts_emb,
-                                               pixel_values=pixel_values, 
-                                               questions=questions, generation_config=generation_config,
-                                               num_patches_list=num_patches_list,
-                                               history=history, 
-                                               return_history=False, 
-                                               IMG_START_TOKEN='<img>', 
-                                               IMG_END_TOKEN='</img>',
-                                               IMG_CONTEXT_TOKEN='<IMG_CONTEXT>', 
-                                               verbose=False, image_counts=None)
+                                        ts_emb=ts_emb,
+                                        sum_ts_emb_to=self.sum_ts_emb_to ,
+                                        pixel_values=pixel_values, 
+                                        questions=questions, generation_config=generation_config,
+                                        num_patches_list=num_patches_list,
+                                        history=history, 
+                                        return_history=False, 
+                                        IMG_START_TOKEN='<img>', 
+                                        IMG_END_TOKEN='</img>',
+                                        IMG_CONTEXT_TOKEN='<IMG_CONTEXT>', 
+                                        verbose=False, image_counts=None)
     
 
     def get_responses(self, prompts, image_paths, ts, pooling="mean", max_output_tokens=256, use_chronos=True): 
@@ -107,14 +122,8 @@ class Mob(torch.nn.Module):
                 image_paths: a list of B images filepaths
                 ts: a tensor of shape (B, seq_len, 1)
                 use_chronos: if chronos ts embedding is used, if False, it's equivalent to running internVL only
-        """
-        if ts is not None and use_chronos:
-            ts_emb = self.chronos(ts, pooling=pooling).to("cuda") 
-            ts_emb = self.projector(ts_emb) 
-            ts_emb = ts_emb.to(torch.bfloat16)
-        else: ts_emb=None
-            
-        responses = batch_inference(model=self.internvl, tokenizer=self.internvl_tokenizer, image_paths=image_paths, prompts=prompts, ts_emb=ts_emb, max_output_tokens=max_output_tokens)
+        """            
+        responses = mob_batch_inference(model=self, image_paths=image_paths, prompts=prompts, ts=ts, max_output_tokens=max_output_tokens)
         return responses
     
     
@@ -184,7 +193,7 @@ def evaluate_mob(model, ts_folder_path, metadata_folder_path, image_folder_path,
 
         print(f"Generating captions for batch {batch_start_idx}-{batch_end_idx-1}...")
         if use_chronos:
-            responses = model.get_responses(prompt_list, image_paths, ts=stacked_ts, 
+            responses = model.get_responses(prompt_list, image_paths, ts=stacked_ts, sum_ts_emb_to=model.sum_ts_emb_to,
                             pooling=config['mobtep']['chronos_pooling'], 
                             max_output_tokens=config['mobtep']['max_output_tokens'])
         else:
@@ -218,7 +227,7 @@ def train_mob(model, train_loader, optimizer, ignore_id, epochs=5, val_loader=No
             target_ids = target_ids.cuda()
             #target_attention_mask = target_attention_mask.cuda() # useless
 
-            outputs = model(ts=ts,
+            outputs = model(ts=ts, 
                             pixel_values=pixel_values, 
                             input_ids=input_ids,
                             target_ids=None,
@@ -267,7 +276,10 @@ def main():
     config = load_config()
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     
-    model = Mob(chronos_name=config['mobtep']['chronos_name'], internvl_name=config['mobtep']['internvl_name']).to(device)
+    model = Mob(chronos_name=config['mobtep']['chronos_name'], 
+                internvl_name=config['mobtep']['internvl_name'],
+                projector_init=config['mobtep']['projector_init'],
+                sum_ts_emb_to=config['mobtep']['sum_ts_emb_to']).to(device)
 
     
     train_loader, val_loader = create_dataloaders(model.internvl_tokenizer, 
@@ -330,8 +342,9 @@ if __name__ == "__main__":
     metadata_folder_pth = "/home/ubuntu/thesis/data/samples/metadata"
     image_folder_path = "/home/ubuntu/thesis/data/samples/plots"
     save_folder_path="/home/ubuntu/thesis/data/samples/captions/generated/pretrained internVL"
+    sum_ts_emb_to = config['mobtep']['sum_ts_emb_to']
     
-    evaluate_mob(model, ts_folder_path, metadata_folder_pth, image_folder_path, save_folder_path, batch_size=20, use_chronos=config['mobtep']['use_chronos'])"""
+    evaluate_mob(model, ts_folder_path, metadata_folder_pth, image_folder_path, save_folder_path, sum_ts_emb_to=sum_ts_emb_to, batch_size=20, use_chronos=config['mobtep']['use_chronos'])"""
     
     
     ############################# TOY DEMO ##################################
@@ -349,7 +362,7 @@ if __name__ == "__main__":
     prompts = ['Describe this line chart about the hourly CO levels in London. Discuss the values you see.', 
                 'Describe this line chart about the yearly death rates in Greece. Discuss the values you see.']
 
-    responses = mob_batch_inference(model=model,ts=ts, image_paths=image_paths, prompts=prompts, max_output_tokens=256)
+    responses = mob_batch_inference(model=model,ts=ts, sum_ts_emb_to=config['mobtep']['sum_ts_emb_to'], image_paths=image_paths, prompts=prompts, max_output_tokens=256)
 
     print(f"\nResponses:\n")
     for response in responses:
