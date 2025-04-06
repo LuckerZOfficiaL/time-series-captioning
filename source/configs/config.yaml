@@ -55,8 +55,8 @@ path: # paths that have "folder" in its name are folder paths, otherwise they ar
 
 train:
   lr: 1e-5
-  epochs: 30
-  weight_decay: 1e-3
+  epochs: 5
+  weight_decay: 1e-4
   batch_size: 40
   loss_fn: cross-entropy # currently still useless
   teacher_forcing: True # if False, the model generates autoregressively during training

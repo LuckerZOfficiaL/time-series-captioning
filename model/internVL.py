@@ -42,7 +42,7 @@ def batch_inference(model, image_paths, prompts, tokenizer=None, ts_emb=None, ma
     return responses
 
 # this function is actually for Mob, even though it is in this script
-def mob_batch_inference(model, image_paths, prompts, tokenizer=None, ts, max_output_tokens=256):
+def mob_batch_inference(model, image_paths, prompts, ts, tokenizer=None, max_output_tokens=256):
     pixel_values = load_batch(image_paths)
     num_patches_list = [1] * len(image_paths)  # Assuming each image is one patch
     if tokenizer is None:

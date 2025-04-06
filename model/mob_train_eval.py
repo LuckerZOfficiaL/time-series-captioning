@@ -27,7 +27,7 @@ import types
 
 
 class Mob(torch.nn.Module):
-    def __init__(self, chronos_name="amazon/chronos-t5-small", internvl_name="OpenGVLab/InternVL2_5-2B"):
+    def __init__(self, chronos_name="amazon/chronos-t5-small", internvl_name="OpenGVLab/InternVL2_5-2B", projector_init="zero"):
         super(Mob, self).__init__()
         self.chronos = ChronosEmbedder(model_name=chronos_name)
         self.projector = torch.nn.Linear(512, 2048) # 512 and 2048 are the embedding sizes of Chronos and InternVL
@@ -42,7 +42,14 @@ class Mob(torch.nn.Module):
         for param in self.chronos.chronos.model.parameters():
             param.requires_grad = False
             
-        torch.nn.init.xavier_uniform_(self.projector.weight)
+        if projector_init == "zero":
+            torch.nn.init.zeros_(self.projector.weight)
+        elif projector_init == "almost zero":
+            torch.nn.init.normal_(self.projector.weight, mean=0.0, std=1e-4)
+        elif projector_init == "xavier":
+            torch.nn.init.xavier_uniform_(self.projector.weight)
+        else:
+            pass # the default initialization is Kaiming uniform
         
         # replace the original methods with my custom ones, which accomodate ts embedding injection
         self.internvl.generate = types.MethodType(custom_generate, self.internvl)
@@ -310,8 +317,8 @@ def main():
 if __name__ == "__main__":
     main()
     
-    """################### GENERATE CAPTION FILES ##################################
-    config = load_config()
+    ################### GENERATE CAPTION FILES ##################################
+    """config = load_config()
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     
     model = Mob(chronos_name=config['mobtep']['chronos_name'], internvl_name=config['mobtep']['internvl_name']).to(device)
@@ -325,4 +332,26 @@ if __name__ == "__main__":
     save_folder_path="/home/ubuntu/thesis/data/samples/captions/generated/pretrained internVL"
     
     evaluate_mob(model, ts_folder_path, metadata_folder_pth, image_folder_path, save_folder_path, batch_size=20, use_chronos=config['mobtep']['use_chronos'])"""
+    
+    
+    ############################# TOY DEMO ##################################
+    """config = load_config()
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    
+    model = Mob(chronos_name=config['mobtep']['chronos_name'], internvl_name=config['mobtep']['internvl_name']).to(device)
+    checkpoint_path = "/home/ubuntu/thesis/model/checkpoints/Mob2_5-2B_5.174.pth"
+    model.load_state_dict(torch.load(checkpoint_path, map_location=device))
+    
+    ts = torch.randn(2, 20, 1)
+    image_paths = ['/home/ubuntu/thesis/data/samples/plots/air quality_0.jpeg',
+                '/home/ubuntu/thesis/data/samples/plots/demography_0.jpeg']
+
+    prompts = ['Describe this line chart about the hourly CO levels in London. Discuss the values you see.', 
+                'Describe this line chart about the yearly death rates in Greece. Discuss the values you see.']
+
+    responses = mob_batch_inference(model=model,ts=ts, image_paths=image_paths, prompts=prompts, max_output_tokens=256)
+
+    print(f"\nResponses:\n")
+    for response in responses:
+        print("\n", response)"""
     
