@@ -2,7 +2,8 @@ from helpers import(
     load_config
 )
 from internVL import(
-    batch_inference
+    batch_inference,
+    mob_batch_inference
 )
 from train_internVL import(
     InternVLDataset,
@@ -287,19 +288,19 @@ def main():
     
     
     ######################################## SAVING CHECKPOINT #######################################
-    filepath = f"{config['path']['checkpoints_folder_path']}/InternVL2_5-2B_{round(val_losses[-1], 3) if val_losses != [] else ""}.pth"
+    filepath = f"{config['path']['checkpoints_folder_path']}/Mob2_5-2B_{round(val_losses[-1], 3) if val_losses != [] else ""}.pth"
     torch.save(model.state_dict(), filepath)
 
 
     ####################################### TOY DEMO #######################################
-    ts_emb = torch.randn(2, 20, 1)
+    ts = torch.randn(2, 20, 1)
     image_paths = ['/home/ubuntu/thesis/data/samples/plots/air quality_0.jpeg',
                 '/home/ubuntu/thesis/data/samples/plots/demography_0.jpeg']
 
     prompts = ['Describe this line chart about the hourly CO levels in London. Discuss the values you see.', 
                 'Describe this line chart about the yearly death rates in Greece. Discuss the values you see.']
 
-    responses = batch_inference(model=model,ts_emb=ts_emb, image_paths=image_paths, prompts=prompts, max_output_tokens=256)
+    responses = mob_batch_inference(model=model,ts=ts, image_paths=image_paths, prompts=prompts, max_output_tokens=256)
 
     print(f"\nResponses:\n")
     for response in responses:
@@ -307,21 +308,21 @@ def main():
 
 # You might neet to run this script many times without any change since there are too many examples to fit into memory for a single run. 
 if __name__ == "__main__":
-    #main()
+    main()
     
-    ################### GENERATE CAPTION FILES ##################################
+    """################### GENERATE CAPTION FILES ##################################
     config = load_config()
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     
     model = Mob(chronos_name=config['mobtep']['chronos_name'], internvl_name=config['mobtep']['internvl_name']).to(device)
     
-    checkpoint_path = "/home/ubuntu/thesis/model/checkpoints/internVL2_5-2B_XXX.pth"
-    model.load_state_dict(torch.load(checkpoint_path, map_location=device))
+    #checkpoint_path = "/home/ubuntu/thesis/model/checkpoints/InternVL2_5-2B_5.388.pth"
+    #model.load_state_dict(torch.load(checkpoint_path, map_location=device))
     
     ts_folder_path = "/home/ubuntu/thesis/data/samples/time series"
     metadata_folder_pth = "/home/ubuntu/thesis/data/samples/metadata"
     image_folder_path = "/home/ubuntu/thesis/data/samples/plots"
-    save_folder_path="/home/ubuntu/thesis/data/samples/captions/generated/mob v1"
+    save_folder_path="/home/ubuntu/thesis/data/samples/captions/generated/pretrained internVL"
     
-    evaluate_mob(model, ts_folder_path, metadata_folder_pth, image_folder_path, save_folder_path, batch_size=20, use_chronos=config['mobtep']['use_chronos'])
+    evaluate_mob(model, ts_folder_path, metadata_folder_pth, image_folder_path, save_folder_path, batch_size=20, use_chronos=config['mobtep']['use_chronos'])"""
     

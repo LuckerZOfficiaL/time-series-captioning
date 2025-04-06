@@ -41,6 +41,21 @@ def batch_inference(model, image_paths, prompts, tokenizer=None, ts_emb=None, ma
         )
     return responses
 
+# this function is actually for Mob, even though it is in this script
+def mob_batch_inference(model, image_paths, prompts, tokenizer=None, ts, max_output_tokens=256):
+    pixel_values = load_batch(image_paths)
+    num_patches_list = [1] * len(image_paths)  # Assuming each image is one patch
+    if tokenizer is None:
+        responses = model.batch_chat(
+            pixel_values=pixel_values, ts=ts, num_patches_list=num_patches_list,
+            questions=prompts, generation_config={'max_new_tokens': max_output_tokens, 'do_sample': True}
+        )
+    else:
+        responses = model.batch_chat(
+            tokenizer=tokenizer, pixel_values=pixel_values, ts=ts, num_patches_list=num_patches_list,
+            questions=prompts, generation_config={'max_new_tokens': max_output_tokens, 'do_sample': True}
+        )
+    return responses
 
 def main():
     config = load_config()
