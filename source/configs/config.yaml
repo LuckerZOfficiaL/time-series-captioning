@@ -54,13 +54,13 @@ path: # paths that have "folder" in its name are folder paths, otherwise they ar
   checkpoints_folder_path: /home/ubuntu/thesis/model/checkpoints
 
 train:
-  lr: 1e-4
-  epochs: 3
+  lr: 1e-3
+  epochs: 30
   weight_decay: 1e-4
   batch_size: 40
   loss_fn: cross-entropy # currently still useless
   teacher_forcing: True # if False, the model generates autoregressively during training
-  milestones: [10, 25]
+  milestones: [2, 10, 20]
   early_stopping: False
   patience: 5 # used only if early_stoping=True
   clip_grad_norm: 1.0
@@ -79,7 +79,7 @@ mobtep:
   generator: gpt-2 # gpt-2, llama 3.2 instruct
   use_linear_proj: True # this is the projector between multi-modal encoder and the generator, it's used to match embedding dimensionalities
   projector_init: zero
-  sum_ts_emb_to: "all" # "all": all input embeddings, "first": first token only
+  sum_ts_emb_to: first # "all": all input embeddings, "first": first token only
   generator_dim: 3072 # used only if use_linear_proj=True, 768 for GPT-2, 3070 for Llama3.2
   max_output_tokens: 256
   temperature: 70

@@ -51,10 +51,13 @@ class Mob(nn.Module):
             
         if projector_init == "zero":
             nn.init.zeros_(self.projector.weight)
+            nn.init.zeros_(self.gate_proj.weight)
         elif projector_init == "almost zero":
             nn.init.normal_(self.projector.weight, mean=0.0, std=1e-4)
+            nn.init.normal_(self.gate_proj.weight, mean=0.0, std=1e-4)
         elif projector_init == "xavier":
             nn.init.xavier_uniform_(self.projector.weight)
+            nn.init.xavier_uniform_(self.gate_proj.weight)
         else:
             pass # the default initialization is Kaiming uniform
         
@@ -71,6 +74,7 @@ class Mob(nn.Module):
             
             coef = self.sigmoid(self.gate_proj(ts_emb)) # sigmoid to learn a dynamic scaling coefficient for summing the chronos ts embedding to the input embeddings of internVL
             ts_emb =  (coef * ts_emb).to(torch.bfloat16)
+            #print(f"First Coef: {coef[0]}")
         else: ts_emb = None
             
         pixel_values, input_ids, attention_mask = pixel_values.to("cuda"), input_ids.to("cuda"), attention_mask.to("cuda")
@@ -94,8 +98,8 @@ class Mob(nn.Module):
         if ts is not None and use_chronos:
             ts_emb = self.chronos(ts, pooling=pooling).to("cuda")
             ts_emb = self.projector(ts_emb) 
-            ts_emb = ts_emb.to
-
+            ts_emb = ts_emb
+            
             coef = self.sigmoid(self.gate_proj(ts_emb)) # sigmoid to learn a dynamic scaling coefficient for summing the chronos ts embedding to the input embeddings of internVL
             ts_emb =  (coef * ts_emb).to(torch.bfloat16)
             
