@@ -31,7 +31,13 @@ FILE_MAPPING = {
         "crime": "crime.json",
         "demography": "demographics.json",
         "road injuries": "road_injuries.json",
-        "covid": "covid.json"
+        "covid": "covid.json",
+        "co2": "co2.json",
+        "diet": "diet.json",
+        "walmart": "walmart.json",
+        "online retail": "online_retail.json",
+        
+        
         #"heart rate": "hr_data.json"
     }
 

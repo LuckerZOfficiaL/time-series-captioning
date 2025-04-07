@@ -17,7 +17,12 @@ TITLE_MAP = {
         "demography": "values across years",
         "heart rate": "values at different measurements",
         "road injuries": "values across years",
-        "covid": "value count across days"
+        "covid": "value count across days",
+        "co2": "co2 emission in million metric tons across years",
+        "diet": "average daily kilocalories consumed per person across years",
+        "walmart": "weekly sales in USD across weeks",
+        "online retail": "weekly value across weeks",
+        
     }
 X_LABEL_MAP = {
         "air quality": "hourly timestep",
@@ -26,7 +31,11 @@ X_LABEL_MAP = {
         "demography": "yearly timestep",
         "heart rate": "measurement",
         "road injuries": "yearly timestep",
-        "covid": "daily timestep"
+        "covid": "daily timestep",
+        "co2": "yearly timestamp",
+        "diet": "yearly timestamp",
+        "walmart": "weekly sales in USD",
+        "online retail": "weekly value",
     }
 Y_LABEL_MAP = {
         "air quality": "value",
@@ -35,7 +44,11 @@ Y_LABEL_MAP = {
         "demography": "value",
         "heart rate": "value",
         "road injuries": "accident count",
-        "covid": "daily count"
+        "covid": "daily count",
+        "co2": "co2 emission in million metric tons",
+        "diet": "average daily kilocalories consumed per person",
+        "walmart": "weekly timestamp",
+        "online retail": "weekly timestamp",
     }
 
 

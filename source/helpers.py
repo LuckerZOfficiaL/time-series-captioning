@@ -618,7 +618,7 @@ def get_sample(dataset_name: str, json_data, series_len = None, start_idx = None
     ts = json_data[country_ID][attribute][start_idx:start_idx+series_len]
     ts = [round(x, 2) for x in ts]
     
-    while (ts.count(0) / len(ts)) * 100 > 20: # if there are at last 20% zeros, reject it and resample
+    while (ts.count(0) / len(ts)) * 100 >= 20: # if there are at last 20% zeros, reject it and resample
       country_ID = random.choice(list(json_data.keys()))
       country = json_data[country_ID]['metadata']['country_name']
       attribute = random.choice(list(json_data[country_ID].keys())) # daily_cases, dauly_deaths
@@ -670,6 +670,119 @@ def get_sample(dataset_name: str, json_data, series_len = None, start_idx = None
     metadata['maximum of this specific series'] = float(round(max(ts), 2))
     
     
+    
+  if dataset_name == "co2":
+    country_ID = random.choice(list(json_data.keys()))
+    country = json_data[country_ID]['metadata']['country_name']
+    attribute = "co2_emissions"
+      
+    if series_len is None:
+      series_len = random.randint(5, min(150, 5+int(len(json_data[country_ID][attribute]))))
+    if start_idx is None:
+      start_idx = random.randint(0, len(json_data[country_ID][attribute]) - series_len)
+    ts = json_data[country_ID][attribute][start_idx:start_idx+series_len]
+    ts = [round(x, 2) for x in ts]
+    
+    start_year = json_data[country_ID]['metadata']['years'][start_idx]
+    end_year = json_data[country_ID]['metadata']['years'][start_idx+series_len]
+    
+    metadata = {}
+    metadata['country'] = country
+    metadata['attribute'] = attribute
+    metadata['sampling frequency'] = "yearly"
+    metadata['start year of this series'] = start_year
+    metadata['end year of this series'] = end_year
+    metadata['region'] = json_data[country_ID]['metadata']['region'] # south asia
+
+    metadata['population at the start year'] = json_data[country_ID]['population'][start_idx]
+    metadata['population at the end year'] = json_data[country_ID]['population'][start_idx+series_len]
+    
+    #metadata['historical minimum in this country'] = float(round(json_data[country_ID]['metadata']['stats']['min'][attribute]))
+    #metadata['historical maximum in this country'] = float(round(json_data[country_ID]['metadata']['stats']['max'][attribute]))
+    #metadata['historical mean in this country'] = float(round(json_data[country_ID]['metadata']['stats']['mean'][attribute]))
+    #metadata['historical standard deviation in this country'] = float(round(json_data[country_ID]['metadata']['stats']['std'][attribute]))
+    
+    metadata['mean of this specific series'] = float(round(np.mean(ts), 2))
+    metadata['standard deviation of this specific series'] = float(round(np.std(ts), 2))
+    metadata['minimum of this specific series'] = float(round(min(ts), 2))
+    metadata['maximum of this specific series'] = float(round(max(ts), 2))
+    
+  if dataset_name == "diet":
+    country_ID = random.choice(list(json_data.keys()))
+    country = json_data[country_ID]['metadata']['country_name']
+    attribute = random.choice(list(json_data[country_ID]["time_series"]))
+      
+    if series_len is None:
+      series_len = random.randint(5, min(150, 5+int(len(json_data[country_ID]["time_series"][attribute]))))
+    if start_idx is None:
+      start_idx = random.randint(0, len(json_data[country_ID]["time_series"][attribute]) - series_len)
+    ts = json_data[country_ID]['time_series'][attribute][start_idx:start_idx+series_len]
+    ts = [round(x, 2) for x in ts]
+  
+    if (ts.count(0) / len(ts)) > 0.2: # redraw a sample if at least 20% of values are 0
+      country_ID = random.choice(list(json_data.keys()))
+      country = json_data[country_ID]['metadata']['country_name']
+      attribute = random.choice(list(json_data[country_ID]["time_series"]))
+      if series_len is None:
+        series_len = random.randint(5, min(150, 5+int(len(json_data[country_ID]["time_series"][attribute]))))
+      if start_idx is None:
+        start_idx = random.randint(0, len(json_data[country_ID]["time_series"][attribute]) - series_len)
+      ts = json_data[country_ID]['time_series'][attribute][start_idx:start_idx+series_len]
+    
+    
+    start_year = json_data[country_ID]['metadata']['years'][start_idx]
+    end_year = json_data[country_ID]['metadata']['years'][start_idx+series_len]
+    
+    metadata = {}
+    metadata['country'] = country
+    metadata['attribute'] = attribute
+    metadata['sampling frequency'] = "yearly"
+    metadata['start year of this series'] = start_year
+    metadata['end year of this series'] = end_year
+    
+    metadata['historical minimum in this country'] = float(round(json_data[country_ID]['metadata']['stats'][attribute]['min']))
+    metadata['historical maximum in this country'] = float(round(json_data[country_ID]['metadata']['stats'][attribute]['max']))
+    metadata['historical mean in this country'] = float(round(json_data[country_ID]['metadata']['stats'][attribute]['mean']))
+    
+    metadata['mean of this specific series'] = float(round(np.mean(ts), 2))
+    metadata['minimum of this specific series'] = float(round(min(ts), 2))
+    metadata['maximum of this specific series'] = float(round(max(ts), 2)) 
+    
+    
+  if dataset_name == "online retail":
+    transaction_ID = random.choice(list(json_data.keys()))
+    item = json_data[transaction_ID]["metadata"]['description']
+    country = "United Kingdom"
+    attribute = random.choice(list(json_data[transaction_ID]["time_series"]))
+    while attribute == "dates": # redraw a sample if "dates" has been picked
+      attribute = random.choice(list(json_data[transaction_ID]["time_series"]))
+      
+    if series_len is None:
+      series_len = random.randint(5, min(150, 5+int(len(json_data[transaction_ID]["time_series"][attribute]))))
+    if start_idx is None:
+      start_idx = random.randint(0, len(json_data[transaction_ID]["time_series"][attribute]) - series_len)
+    ts = json_data[transaction_ID]['time_series'][attribute][start_idx:start_idx+series_len]
+    ts = [round(x, 2) for x in ts]
+    
+    
+    start_week = json_data[transaction_ID]['time_series']['dates'][start_idx]
+    end_week = json_data[transaction_ID]['time_series']['dates'][start_idx+series_len]
+    
+    metadata = {}
+    metadata['item'] = item
+    metadata['country'] = country
+    metadata['attribute'] = attribute
+    metadata['sampling frequency'] = "weekly"
+    metadata['start week of this series'] = start_week
+    metadata['end week of this series'] = end_week
+    
+    metadata['average weekly customers'] = json_data[transaction_ID]['metadata']["stats"]["engagement"]['avg_weekly_customers']
+    metadata['max sales'] = json_data[transaction_ID]['metadata']["stats"]["financial"]['max_sales_week']
+
+    metadata['mean of this specific series'] = float(round(np.mean(ts), 2))
+    metadata['minimum of this specific series'] = float(round(min(ts), 2))
+    metadata['maximum of this specific series'] = float(round(max(ts), 2))   
+    
   return metadata, ts
 
 # the following function does not preclude that no sample is duplicated, there's a very slim chance that it occurs
@@ -687,7 +800,7 @@ def get_samples(dataset_name, json_data, n, series_len=None) -> list: # returns 
       
   return samples
 
-def get_request(dataset_name, metadata, ts, external_knowledge=True):
+def get_request(dataset_name, metadata, ts, external_knowledge=False):
   if dataset_name == "air quality":
     request = f"""Here is a time series about {metadata["sampling frequency"]} {metadata["measure"]} in the Indian city of {metadata['city']}: \n {ts} \n Here is the detailed metadata: \n {str(metadata)}.
           \n Describe this time series by focusing on trends and patterns. Discuss concrete numbers you see and pay attention to the dates.
@@ -828,6 +941,75 @@ def get_request(dataset_name, metadata, ts, external_knowledge=True):
 
           Answer in a single paragraph of four sentences at most, without bullet points or any formatting.
           """
+  elif dataset_name == "co2":
+    request = f"""I will give you a time series about the {metadata['sampling frequency']} co2 emissions measured in million metric tons, in the country of {metadata['country']}, located in {metadata['region']}. 
+    
+    The time series covers the period from {metadata['start year of this series']} to {metadata['end year of this series']}, with the national population of {metadata['population at the start year']} and {metadata['population at the end year']} respectively.
+    
+    Here is the time series: \n {ts}
+           
+          \nHere are the statistics for this specific time series for {metadata['country']} from {metadata['start year of this series']} to {metadata['end year of this series']}: \n Mean: {metadata['mean of this specific series']} \n Standard Deviation: {metadata['standard deviation of this specific series']} \n Minimum: {metadata['minimum of this specific series']} \n Maximum: {metadata['maximum of this specific series']}
+
+          \n Describe this time series by focusing on trends and patterns. Discuss concrete numbers you see and pay attention to the dates. 
+          For numerical values, ensure consistency with the provided time series. If making percentage comparisons, round to the nearest whole number.Report the dates when things happened.
+          Use the statistics I provided you for comparing this example to the normalcy.
+          {"Use your broad knowledge of geopolitics, natural events, and economic trends to provide meaningful comparisons. Be specific and factual, avoiding broad generalizations." if external_knowledge else "Do not add any extra information beyond what is given."}
+          Highlight significant spikes, dips, or patterns{" and explain possible causes based on global or regional factors." if external_knowledge else "."}
+          You don't have to explicitly report the numeric values of general statistics, you just use them for reference.
+          Compare the trends in this time series to global or regional norms, explaining whether they are higher, lower, or follow expected seasonal patterns.
+          When making comparisons, clearly state whether differences are minor, moderate, or significant.
+          Use descriptive language to create engaging, natural-sounding text.
+          Avoid repetitive phrasing and overused expressions.
+
+          Answer in a single paragraph of four sentences at most, without bullet points or any formatting.
+          """
+  elif dataset_name == "diet":
+    request = f"""I will give you a time series about the {metadata['sampling frequency']} average per capita daily kilocalories consumed from {metadata['attribute']} in the country of {metadata['country']}. 
+    
+    The time series covers the period from {metadata['start year of this series']} to {metadata['end year of this series']}.
+    Here is the time series: \n {ts}
+           
+          \nHere are the statistics for this specific time series for {metadata['country']} from {metadata['start year of this series']} to {metadata['end year of this series']}: \nMean: {metadata['mean of this specific series']} \nMinimum: {metadata['minimum of this specific series']} \nMaximum: {metadata['maximum of this specific series']}
+          
+          \nHere are the all-time statistics of the {metadata["attribute"]} in {metadata['country']}, until the present year. \nAll-time minimum: {metadata['historical minimum in this country']}\nAll-time maximum: {metadata['historical maximum in this country']} \nAll-time mean: {metadata['historical mean in this country']}
+
+          \n Describe this time series by focusing on trends and patterns. Discuss concrete numbers you see and pay attention to the dates. 
+          For numerical values, ensure consistency with the provided time series. If making percentage comparisons, round to the nearest whole number.Report the dates when things happened.
+          Use the statistics I provided you for comparing this example to the normalcy.
+          {"Use your broad knowledge of geopolitics, natural events, and economic trends to provide meaningful comparisons. Be specific and factual, avoiding broad generalizations." if external_knowledge else "Do not add any extra information beyond what is given."}
+          Highlight significant spikes, dips, or patterns{" and explain possible causes based on global or regional factors." if external_knowledge else "."}
+          You don't have to explicitly report the numeric values of general statistics, you just use them for reference.
+          Compare the trends in this time series to global or regional norms, explaining whether they are higher, lower, or follow expected seasonal patterns.
+          When making comparisons, clearly state whether differences are minor, moderate, or significant.
+          Use descriptive language to create engaging, natural-sounding text.
+          Avoid repetitive phrasing and overused expressions.
+
+          Answer in a single paragraph of four sentences at most, without bullet points or any formatting.
+          """
+  elif dataset_name == "online retail":
+    request = f"""I will give you a time series about the {metadata['sampling frequency']} {metadata['attribute']} of the item: "{metadata['item']}" from an online retailer in the  {metadata['country']}. 
+    
+    The time series covers the period from the week of {metadata['start week of this series']} to the week of {metadata['end week of this series']}.
+    Here is the time series: \n {ts}
+           
+          \nHere are the statistics for this specific time series for {metadata['item']}. \nMean: {metadata['mean of this specific series']} \nMinimum: {metadata['minimum of this specific series']} \nMaximum: {metadata['maximum of this specific series']}
+          
+          \nHere are some additional information: \nAverage weekly customers of this item: {metadata['average weekly customers']} \nMaximum weekly sales ever: {metadata['max sales']} GBP.
+
+          \n Describe this time series by focusing on trends and patterns. Discuss concrete numbers you see and pay attention to the dates. 
+          For numerical values, ensure consistency with the provided time series. If making percentage comparisons, round to the nearest whole number.Report the dates when things happened.
+          Use the statistics I provided you for comparing this example to the normalcy.
+          {"Use your broad knowledge of geopolitics, natural events, and economic trends to provide meaningful comparisons. Be specific and factual, avoiding broad generalizations." if external_knowledge else "Do not add any extra information beyond what is given."}
+          Highlight significant spikes, dips, or patterns{" and explain possible causes based on global or regional factors." if external_knowledge else "."}
+          You don't have to explicitly report the numeric values of general statistics, you just use them for reference.
+          Compare the trends in this time series to global or regional norms, explaining whether they are higher, lower, or follow expected seasonal patterns.
+          When making comparisons, clearly state whether differences are minor, moderate, or significant.
+          Use descriptive language to create engaging, natural-sounding text.
+          Avoid repetitive phrasing and overused expressions.
+
+          Answer in a single paragraph of four sentences at most, without bullet points or any formatting.
+          """
+          
   return request
 
 def augment_request(request, n=3, model="GPT-4o"): # rephrases the request prompt n times and returns the augmentations in a list
@@ -2013,12 +2195,12 @@ def main():
 
   random.seed(config['general']['random_seed'])
   
-  with open("/home/ubuntu/thesis/data/processed/covid.json", "r") as file:
+  with open("/home/ubuntu/thesis/data/processed/online_retail.json", "r") as file:
       json_data = json.load(file)
-  metadata, ts = get_sample(dataset_name="covid", json_data=json_data)
+  metadata, ts = get_sample(dataset_name="online retail", json_data=json_data)
   print(metadata, ts)
   
-  print(get_request("covid", metadata, ts))
+  print("\n\n", get_request("online retail", metadata, ts))
   
 
   #print(check_single_fact_confidence("The sun is smaller than the Earth", checking_model="Google Gemini-2.0-Flash"))
