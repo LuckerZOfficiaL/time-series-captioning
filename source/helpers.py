@@ -783,6 +783,40 @@ def get_sample(dataset_name: str, json_data, series_len = None, start_idx = None
     metadata['minimum of this specific series'] = float(round(min(ts), 2))
     metadata['maximum of this specific series'] = float(round(max(ts), 2))   
     
+  
+  if dataset_name == "walmart":
+    ID = random.choice(list(json_data.keys()))
+    sampling_frequency = json_data[ID]['metadata']['sampling_frequency']
+    attribute = "weekly_sales"
+    
+    if series_len is None:
+      series_len = random.randint(5, min(150, 5+int(len(json_data[ID]["time_series"][attribute]))))
+    if start_idx is None:
+      start_idx = random.randint(0, len(json_data[ID]["time_series"][attribute]) - series_len)
+    ts = json_data[ID]['time_series'][attribute][start_idx:start_idx+series_len]
+    ts = [round(x, 2) for x in ts]
+    
+    
+    start_week = json_data[ID]['time_series']['dates'][start_idx]
+    end_week = json_data[ID]['time_series']['dates'][start_idx+series_len]
+    
+    metadata = {}
+    metadata['attribute'] = attribute
+    metadata['sampling frequency'] = sampling_frequency
+    metadata['start week of this series'] = start_week
+    metadata['end week of this series'] = end_week
+    
+    metadata['best week sales'] = json_data[ID]['metadata']['stats']['sales']['best_week_sales']
+    metadata['best week'] = json_data[ID]['metadata']['stats']['sales']['best_week']
+    metadata['worst week sales'] = json_data[ID]['metadata']['stats']['sales']['worst_week_sales']
+    metadata['worst week'] = json_data[ID]['metadata']['stats']['sales']['worst_week']
+    metadata['mean sales'] = round(float(json_data[ID]['metadata']['stats']['sales']['mean']),2)
+
+    metadata['mean of this specific series'] = float(round(np.mean(ts), 2))
+    metadata['minimum of this specific series'] = float(round(min(ts), 2))
+    metadata['maximum of this specific series'] = float(round(max(ts), 2))   
+    
+    
   return metadata, ts
 
 # the following function does not preclude that no sample is duplicated, there's a very slim chance that it occurs
@@ -987,10 +1021,10 @@ def get_request(dataset_name, metadata, ts, external_knowledge=False):
           Answer in a single paragraph of four sentences at most, without bullet points or any formatting.
           """
   elif dataset_name == "online retail":
-    request = f"""I will give you a time series about the {metadata['sampling frequency']} {metadata['attribute']} of the item: "{metadata['item']}" from an online retailer in the  {metadata['country']}. 
+    request = f"""I will give you a time series about the {metadata['sampling frequency']} {metadata['attribute'].replace("_", " ")} of the item: "{metadata['item']}" from an online retailer in the  {metadata['country']}. 
     
     The time series covers the period from the week of {metadata['start week of this series']} to the week of {metadata['end week of this series']}.
-    Here is the time series: \n {ts}
+    Here is the time series expressed in GBP: \n {ts}
            
           \nHere are the statistics for this specific time series for {metadata['item']}. \nMean: {metadata['mean of this specific series']} \nMinimum: {metadata['minimum of this specific series']} \nMaximum: {metadata['maximum of this specific series']}
           
@@ -1009,6 +1043,29 @@ def get_request(dataset_name, metadata, ts, external_knowledge=False):
 
           Answer in a single paragraph of four sentences at most, without bullet points or any formatting.
           """
+          
+  elif dataset_name == "walmart":
+    request = f"""I will give you a time series about the {metadata['sampling frequency']} {metadata['attribute'].replace("_", " ")} of a Walmart store, from the week of {metadata['start week of this series']} to the week of {metadata['end week of this series']}.
+    Here is the time series expressed in USD: \n {ts}
+           
+          \nHere are the statistics for this specific time series. \nMean: {metadata['mean of this specific series']} \nMinimum: {metadata['minimum of this specific series']} \nMaximum: {metadata['maximum of this specific series']}
+          
+          \nHere are some additional information: \nBest ever weekly sales: {metadata['best week sales']} USD on the week of {metadata['best week']} \nWorst ever weekly sales: {metadata['worst week sales']} USD on the week of {metadata['worst week']} \nMean sales between 2010 and 2012: {metadata['mean sales']}
+
+          \n Describe this time series by focusing on trends and patterns. Discuss concrete numbers you see and pay attention to the dates. 
+          For numerical values, ensure consistency with the provided time series. If making percentage comparisons, round to the nearest whole number.Report the dates when things happened.
+          Use the statistics I provided you for comparing this example to the normalcy.
+          {"Use your broad knowledge of geopolitics, natural events, and economic trends to provide meaningful comparisons. Be specific and factual, avoiding broad generalizations." if external_knowledge else "Do not add any extra information beyond what is given."}
+          Highlight significant spikes, dips, or patterns{" and explain possible causes based on global or regional factors." if external_knowledge else "."}
+          You don't have to explicitly report the numeric values of general statistics, you just use them for reference.
+          Compare the trends in this time series to global or regional norms, explaining whether they are higher, lower, or follow expected seasonal patterns.
+          When making comparisons, clearly state whether differences are minor, moderate, or significant.
+          Use descriptive language to create engaging, natural-sounding text.
+          Avoid repetitive phrasing and overused expressions.
+
+          Answer in a single paragraph of four sentences at most, without bullet points or any formatting.
+          """
+          
           
   return request
 
@@ -2195,12 +2252,12 @@ def main():
 
   random.seed(config['general']['random_seed'])
   
-  with open("/home/ubuntu/thesis/data/processed/online_retail.json", "r") as file:
+  with open("/home/ubuntu/thesis/data/processed/walmart.json", "r") as file:
       json_data = json.load(file)
-  metadata, ts = get_sample(dataset_name="online retail", json_data=json_data)
+  metadata, ts = get_sample(dataset_name="walmart", json_data=json_data)
   print(metadata, ts)
   
-  print("\n\n", get_request("online retail", metadata, ts))
+  print("\n\n", get_request("walmart", metadata, ts))
   
 
   #print(check_single_fact_confidence("The sun is smaller than the Earth", checking_model="Google Gemini-2.0-Flash"))
