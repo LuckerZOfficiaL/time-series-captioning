@@ -22,20 +22,22 @@ TITLE_MAP = {
         "diet": "average daily kilocalories consumed per person across years",
         "walmart": "weekly sales in USD across weeks",
         "online retail": "weekly value across weeks",
+        "agriculture": "values across years",
         
     }
 X_LABEL_MAP = {
-        "air quality": "hourly timestep",
-        "border crossing": "montly timestep",
-        "crime": "daily timestep",
-        "demography": "yearly timestep",
+        "air quality": "hourly timestamp",
+        "border crossing": "montly timestamp",
+        "crime": "daily timestamp",
+        "demography": "yearly timestamp",
         "heart rate": "measurement",
-        "road injuries": "yearly timestep",
-        "covid": "daily timestep",
+        "road injuries": "yearly timestamp",
+        "covid": "daily timestamp",
         "co2": "yearly timestamp",
         "diet": "yearly timestamp",
-        "walmart": "weekly sales in USD",
-        "online retail": "weekly value",
+        "walmart": "weekly timestamp",
+        "online retail": "weekly timestamp",
+        "agriculture": "yearly timestamp",
     }
 Y_LABEL_MAP = {
         "air quality": "value",
@@ -47,8 +49,9 @@ Y_LABEL_MAP = {
         "covid": "daily count",
         "co2": "co2 emission in million metric tons",
         "diet": "average daily kilocalories consumed per person",
-        "walmart": "weekly timestamp",
-        "online retail": "weekly timestamp",
+        "walmart": "weekly sales in USD",
+        "online retail": "weekly value",
+        "agriculture": "yearly value",
     }
 
 

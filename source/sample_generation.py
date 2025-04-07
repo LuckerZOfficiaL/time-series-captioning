@@ -36,6 +36,7 @@ FILE_MAPPING = {
         "diet": "diet.json",
         "walmart": "walmart.json",
         "online retail": "online_retail.json",
+        "agriculture": "agricultural_productivity.json",
         
         
         #"heart rate": "hr_data.json"

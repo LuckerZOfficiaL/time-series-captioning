@@ -1,3 +1,4 @@
+from attr import attrib
 import requests 
 import random 
 import numpy as np 
@@ -816,7 +817,47 @@ def get_sample(dataset_name: str, json_data, series_len = None, start_idx = None
     metadata['minimum of this specific series'] = float(round(min(ts), 2))
     metadata['maximum of this specific series'] = float(round(max(ts), 2))   
     
+  if dataset_name == "agriculture":
+    country = random.choice(list(json_data.keys()))
+    sampling_frequency = "yearly"
+    attribute = random.choice(list(json_data[country]))
+    while attribute == "metadata" or attribute == "years" or attribute == "Output quantity": # redraw the attribtue
+      attribute = random.choice(list(json_data[country]))
     
+    if series_len is None:
+      series_len = random.randint(5, min(150, 5+int(len(json_data[country][attribute]))))
+    if start_idx is None:
+      start_idx = random.randint(0, len(json_data[country][attribute]) - series_len)
+    ts = json_data[country][attribute][start_idx:start_idx+series_len]
+    ts = [round(x, 2) for x in ts]
+    
+    
+    start_year = json_data[country]['years'][start_idx]
+    end_year = json_data[country]['years'][start_idx+series_len]
+    
+    metadata = {}
+    metadata['country'] = country
+    metadata['attribute'] = attribute
+    metadata['sampling frequency'] = sampling_frequency
+    metadata['start year of this series'] = start_year
+    metadata['end year of this series'] = end_year
+    
+    metrics_info = json_data[country]['metadata']['metrics_definition'][attribute]
+    if "components" in metrics_info:
+      info = f"The {attribute} comprises the following components: {", ".join(metrics_info['components'])}."
+    elif "calculation" in metrics_info:
+      info = f"The {attribute} is computed as the {metrics_info['calculation']}."
+    
+    metadata['metrics info'] = info
+    metadata['historical max'] = round(float(max(json_data[country][attribute])), 2)
+    metadata['historical min'] = round(float(min(json_data[country][attribute])), 2)
+    metadata['historical mean'] = round(float(min(json_data[country][attribute])), 2)
+
+    metadata['mean of this specific series'] = float(round(np.mean(ts), 2))
+    metadata['minimum of this specific series'] = float(round(min(ts), 2))
+    metadata['maximum of this specific series'] = float(round(max(ts), 2))
+    
+      
   return metadata, ts
 
 # the following function does not preclude that no sample is duplicated, there's a very slim chance that it occurs
@@ -1051,6 +1092,27 @@ def get_request(dataset_name, metadata, ts, external_knowledge=False):
           \nHere are the statistics for this specific time series. \nMean: {metadata['mean of this specific series']} \nMinimum: {metadata['minimum of this specific series']} \nMaximum: {metadata['maximum of this specific series']}
           
           \nHere are some additional information: \nBest ever weekly sales: {metadata['best week sales']} USD on the week of {metadata['best week']} \nWorst ever weekly sales: {metadata['worst week sales']} USD on the week of {metadata['worst week']} \nMean sales between 2010 and 2012: {metadata['mean sales']}
+
+          \n Describe this time series by focusing on trends and patterns. Discuss concrete numbers you see and pay attention to the dates. 
+          For numerical values, ensure consistency with the provided time series. If making percentage comparisons, round to the nearest whole number.Report the dates when things happened.
+          Use the statistics I provided you for comparing this example to the normalcy.
+          {"Use your broad knowledge of geopolitics, natural events, and economic trends to provide meaningful comparisons. Be specific and factual, avoiding broad generalizations." if external_knowledge else "Do not add any extra information beyond what is given."}
+          Highlight significant spikes, dips, or patterns{" and explain possible causes based on global or regional factors." if external_knowledge else "."}
+          You don't have to explicitly report the numeric values of general statistics, you just use them for reference.
+          Compare the trends in this time series to global or regional norms, explaining whether they are higher, lower, or follow expected seasonal patterns.
+          When making comparisons, clearly state whether differences are minor, moderate, or significant.
+          Use descriptive language to create engaging, natural-sounding text.
+          Avoid repetitive phrasing and overused expressions.
+
+          Answer in a single paragraph of four sentences at most, without bullet points or any formatting.
+          """
+  elif dataset_name == "agriculture":
+    request = f"""I will give you a time series about the {metadata['sampling frequency']} {metadata['attribute']} in the country of {metadata['country']}, from {metadata['start year of this series']} to {metadata['end year of this series']}. {metadata['metrics info']}
+    Here is the time series: \n {ts}
+           
+          \nHere are the statistics for this specific time series. \nMean: {metadata['mean of this specific series']} \nMinimum: {metadata['minimum of this specific series']} \nMaximum: {metadata['maximum of this specific series']}
+          
+          \nHere are some additional information until 2019: \nHistorical maximum: {metadata['historical max']} \nHistorical minimum: {metadata['historical min']} \nHistorical mean: {metadata['historical mean']}
 
           \n Describe this time series by focusing on trends and patterns. Discuss concrete numbers you see and pay attention to the dates. 
           For numerical values, ensure consistency with the provided time series. If making percentage comparisons, round to the nearest whole number.Report the dates when things happened.
@@ -2252,12 +2314,12 @@ def main():
 
   random.seed(config['general']['random_seed'])
   
-  with open("/home/ubuntu/thesis/data/processed/walmart.json", "r") as file:
+  with open("/home/ubuntu/thesis/data/processed/agricultural_productivity.json", "r") as file:
       json_data = json.load(file)
-  metadata, ts = get_sample(dataset_name="walmart", json_data=json_data)
+  metadata, ts = get_sample(dataset_name="agriculture", json_data=json_data)
   print(metadata, ts)
   
-  print("\n\n", get_request("walmart", metadata, ts))
+  print("\n\n", get_request("agriculture", metadata, ts))
   
 
   #print(check_single_fact_confidence("The sun is smaller than the Earth", checking_model="Google Gemini-2.0-Flash"))
