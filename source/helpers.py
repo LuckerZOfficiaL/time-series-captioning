@@ -638,7 +638,7 @@ def get_sample(dataset_name: str, json_data, series_len = None, start_idx = None
       ts = [round(x, 2) for x in ts]
     
     start_date = pd.to_datetime(json_data[country_ID]['metadata']['start_date']) + pd.DateOffset(days=start_idx)
-    end_date = pd.to_datetime(json_data[country_ID]['metadata']['start_date']) + pd.DateOffset(days=start_idx+series_len)
+    end_date = pd.to_datetime(json_data[country_ID]['metadata']['start_date']) + pd.DateOffset(days=start_idx+series_len-1)
     start_date = start_date.strftime('%Y-%m-%d')
     end_date = end_date.strftime('%Y-%m-%d')
     
@@ -685,7 +685,7 @@ def get_sample(dataset_name: str, json_data, series_len = None, start_idx = None
     ts = [round(x, 2) for x in ts]
     
     start_year = json_data[country_ID]['metadata']['years'][start_idx]
-    end_year = json_data[country_ID]['metadata']['years'][start_idx+series_len]
+    end_year = json_data[country_ID]['metadata']['years'][start_idx+series_len-1]
     
     metadata = {}
     metadata['country'] = country
@@ -696,7 +696,7 @@ def get_sample(dataset_name: str, json_data, series_len = None, start_idx = None
     metadata['region'] = json_data[country_ID]['metadata']['region'] # south asia
 
     metadata['population at the start year'] = json_data[country_ID]['population'][start_idx]
-    metadata['population at the end year'] = json_data[country_ID]['population'][start_idx+series_len]
+    metadata['population at the end year'] = json_data[country_ID]['population'][start_idx+series_len-1]
     
     #metadata['historical minimum in this country'] = float(round(json_data[country_ID]['metadata']['stats']['min'][attribute]))
     #metadata['historical maximum in this country'] = float(round(json_data[country_ID]['metadata']['stats']['max'][attribute]))
@@ -732,7 +732,7 @@ def get_sample(dataset_name: str, json_data, series_len = None, start_idx = None
     
     
     start_year = json_data[country_ID]['metadata']['years'][start_idx]
-    end_year = json_data[country_ID]['metadata']['years'][start_idx+series_len]
+    end_year = json_data[country_ID]['metadata']['years'][start_idx+series_len-1]
     
     metadata = {}
     metadata['country'] = country
@@ -767,7 +767,7 @@ def get_sample(dataset_name: str, json_data, series_len = None, start_idx = None
     
     
     start_week = json_data[transaction_ID]['time_series']['dates'][start_idx]
-    end_week = json_data[transaction_ID]['time_series']['dates'][start_idx+series_len]
+    end_week = json_data[transaction_ID]['time_series']['dates'][start_idx+series_len-1]
     
     metadata = {}
     metadata['item'] = item
@@ -799,7 +799,7 @@ def get_sample(dataset_name: str, json_data, series_len = None, start_idx = None
     
     
     start_week = json_data[ID]['time_series']['dates'][start_idx]
-    end_week = json_data[ID]['time_series']['dates'][start_idx+series_len]
+    end_week = json_data[ID]['time_series']['dates'][start_idx+series_len-1]
     
     metadata = {}
     metadata['attribute'] = attribute
@@ -833,7 +833,7 @@ def get_sample(dataset_name: str, json_data, series_len = None, start_idx = None
     
     
     start_year = json_data[country]['years'][start_idx]
-    end_year = json_data[country]['years'][start_idx+series_len]
+    end_year = json_data[country]['years'][start_idx+series_len-1]
     
     metadata = {}
     metadata['country'] = country
