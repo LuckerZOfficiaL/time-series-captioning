@@ -1,4 +1,9 @@
-data/
+datasets/
+fact bank/
+factcheck/
+samples/
+processed/
+
 .aws/
 .credentials/
 checkpoints/
