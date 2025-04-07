@@ -85,11 +85,11 @@ def main():
 
         samples = get_samples(dataset_name, json_data=json_data, n=n_samples)
 
-        print(f"\n{dataset_name} has {len(samples)} samples.")
+        print(f"{dataset_name} has {len(samples)} samples.\nNow generating {len(used_models)*len(samples)} captions out of them using {len(used_models)} oracles...")
         requests = []
         for i in range(len(samples)): 
             metadata, ts = samples[i]
-            print(f"Generated {"RAG" if use_rag else ""} prompt request for {i+1}/{len(samples)}")
+            #print(f"Generated {"RAG" if use_rag else ""} prompt request for {i+1}/{len(samples)}")
             #print("\nMetadata: ", metadata)
             #print("\nSeries: ", ts)
             #print(metadata, ts)
@@ -201,6 +201,7 @@ def main():
                 save_file([meta_and_ts[1] for meta_and_ts in samples][i%len(samples)], series_filepath) 
 
                 idx += 1
+        print(f"Done for {dataset_name}")
 
 
 if __name__ == "__main__":

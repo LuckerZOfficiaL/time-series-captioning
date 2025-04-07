@@ -677,12 +677,17 @@ def get_sample(dataset_name: str, json_data, series_len = None, start_idx = None
     country = json_data[country_ID]['metadata']['country_name']
     attribute = "co2_emissions"
       
-    if series_len is None:
-      series_len = random.randint(5, min(150, 5+int(len(json_data[country_ID][attribute]))))
-    if start_idx is None:
-      start_idx = random.randint(0, len(json_data[country_ID][attribute]) - series_len)
-    ts = json_data[country_ID][attribute][start_idx:start_idx+series_len]
-    ts = [round(x, 2) for x in ts]
+    while True:
+      try:
+        if series_len is None:
+          series_len = random.randint(5, min(150, 5 + int(len(json_data[country_ID][attribute]) / 8)))
+        if start_idx is None:
+          start_idx = random.randint(0, len(json_data[country_ID][attribute]) - series_len)
+        ts = json_data[country_ID][attribute][start_idx:start_idx + series_len]
+        ts = [round(x, 2) for x in ts]
+        break
+      except Exception as e:
+        print(f"Error occurred: {e}. Retrying...")
     
     start_year = json_data[country_ID]['metadata']['years'][start_idx]
     end_year = json_data[country_ID]['metadata']['years'][start_idx+series_len-1]
@@ -713,26 +718,46 @@ def get_sample(dataset_name: str, json_data, series_len = None, start_idx = None
     country = json_data[country_ID]['metadata']['country_name']
     attribute = random.choice(list(json_data[country_ID]["time_series"]))
       
-    if series_len is None:
-      series_len = random.randint(5, min(150, 5+int(len(json_data[country_ID]["time_series"][attribute]))))
-    if start_idx is None:
-      start_idx = random.randint(0, len(json_data[country_ID]["time_series"][attribute]) - series_len)
-    ts = json_data[country_ID]['time_series'][attribute][start_idx:start_idx+series_len]
-    ts = [round(x, 2) for x in ts]
-  
-    if (ts.count(0) / len(ts)) > 0.2: # redraw a sample if at least 20% of values are 0
+    while True:
+      try:
+        country_ID = random.choice(list(json_data.keys()))
+        country = json_data[country_ID]['metadata']['country_name']
+        attribute = random.choice(list(json_data[country_ID]["time_series"]))
+        if series_len is None:
+          series_len = random.randint(5, len(json_data[country_ID]["time_series"][attribute])-10)
+        if start_idx is None:
+          start_idx = random.randint(0, len(json_data[country_ID]["time_series"][attribute]) - series_len)
+        ts = json_data[country_ID]['time_series'][attribute][start_idx:start_idx+series_len]
+        break
+      except Exception as e:
+        print(f"Error occurred: {e}. Retrying...")
+        
+    if (ts.count(0) / len(ts)) >= 0.2: # redraw a sample if at least 20% of values are 0
       country_ID = random.choice(list(json_data.keys()))
       country = json_data[country_ID]['metadata']['country_name']
       attribute = random.choice(list(json_data[country_ID]["time_series"]))
-      if series_len is None:
-        series_len = random.randint(5, min(150, 5+int(len(json_data[country_ID]["time_series"][attribute]))))
-      if start_idx is None:
-        start_idx = random.randint(0, len(json_data[country_ID]["time_series"][attribute]) - series_len)
-      ts = json_data[country_ID]['time_series'][attribute][start_idx:start_idx+series_len]
+      country_ID = random.choice(list(json_data.keys()))
+      country = json_data[country_ID]['metadata']['country_name']
+      attribute = random.choice(list(json_data[country_ID]["time_series"]))
+      while True:
+        try:
+          if series_len is None:
+            series_len = random.randint(5, len(json_data[country_ID]["time_series"][attribute])-10)
+          if start_idx is None:
+            start_idx = random.randint(0, len(json_data[country_ID]["time_series"][attribute]) - series_len)
+          ts = json_data[country_ID]['time_series'][attribute][start_idx:start_idx+series_len]
+          break
+        except Exception as e:
+          print(f"Error occurred: {e}. Retrying...")
     
+    ts = [round(x, 2) for x in ts]
     
     start_year = json_data[country_ID]['metadata']['years'][start_idx]
-    end_year = json_data[country_ID]['metadata']['years'][start_idx+series_len-1]
+    #print(f"start {start_idx}, series len {series_len}, tot series len {len(json_data[country_ID]["time_series"][attribute])}")
+    #print(json_data[country_ID]['metadata']['years'])
+    end_year = int(start_year) + series_len - 1
+    
+  
     
     metadata = {}
     metadata['country'] = country
@@ -750,21 +775,26 @@ def get_sample(dataset_name: str, json_data, series_len = None, start_idx = None
     metadata['maximum of this specific series'] = float(round(max(ts), 2)) 
     
     
-  if dataset_name == "online retail":
-    transaction_ID = random.choice(list(json_data.keys()))
-    item = json_data[transaction_ID]["metadata"]['description']
-    country = "United Kingdom"
-    attribute = random.choice(list(json_data[transaction_ID]["time_series"]))
-    while attribute == "dates": # redraw a sample if "dates" has been picked
-      attribute = random.choice(list(json_data[transaction_ID]["time_series"]))
-      
-    if series_len is None:
-      series_len = random.randint(5, min(150, 5+int(len(json_data[transaction_ID]["time_series"][attribute]))))
-    if start_idx is None:
-      start_idx = random.randint(0, len(json_data[transaction_ID]["time_series"][attribute]) - series_len)
-    ts = json_data[transaction_ID]['time_series'][attribute][start_idx:start_idx+series_len]
-    ts = [round(x, 2) for x in ts]
-    
+  if dataset_name == "online retail":     
+    while True:
+      try:
+        transaction_ID = random.choice(list(json_data.keys()))
+        item = json_data[transaction_ID]["metadata"]['description']
+        country = "United Kingdom"
+        attribute = random.choice(list(json_data[transaction_ID]["time_series"]))
+        
+        while attribute == "dates": # redraw a sample if "dates" has been picked
+          attribute = random.choice(list(json_data[transaction_ID]["time_series"]))
+          
+        if series_len is None:
+          series_len = random.randint(5, len(json_data[transaction_ID]["time_series"][attribute]))
+        if start_idx is None:
+          start_idx = random.randint(0, len(json_data[transaction_ID]["time_series"][attribute]) - series_len)
+        ts = json_data[transaction_ID]['time_series'][attribute][start_idx:start_idx+series_len]
+        ts = [round(x, 2) for x in ts]
+        break
+      except Exception as e:
+        print(f"Error occurred: {e}. Retrying...")
     
     start_week = json_data[transaction_ID]['time_series']['dates'][start_idx]
     end_week = json_data[transaction_ID]['time_series']['dates'][start_idx+series_len-1]
@@ -785,18 +815,30 @@ def get_sample(dataset_name: str, json_data, series_len = None, start_idx = None
     metadata['maximum of this specific series'] = float(round(max(ts), 2))   
     
   
-  if dataset_name == "walmart":
+  if dataset_name == "walmart":  
     ID = random.choice(list(json_data.keys()))
     sampling_frequency = json_data[ID]['metadata']['sampling_frequency']
     attribute = "weekly_sales"
-    
     if series_len is None:
-      series_len = random.randint(5, min(150, 5+int(len(json_data[ID]["time_series"][attribute]))))
+      series_len = random.randint(5, len(json_data[ID]["time_series"][attribute]))
     if start_idx is None:
       start_idx = random.randint(0, len(json_data[ID]["time_series"][attribute]) - series_len)
     ts = json_data[ID]['time_series'][attribute][start_idx:start_idx+series_len]
     ts = [round(x, 2) for x in ts]
-    
+    while True:
+      try:
+        ID = random.choice(list(json_data.keys()))
+        sampling_frequency = json_data[ID]['metadata']['sampling_frequency']
+        attribute = "weekly_sales"
+        if series_len is None:
+          series_len = random.randint(5, len(json_data[ID]["time_series"][attribute]))
+        if start_idx is None:
+          start_idx = random.randint(0, len(json_data[ID]["time_series"][attribute]) - series_len)
+        ts = json_data[ID]['time_series'][attribute][start_idx:start_idx+series_len]
+        ts = [round(x, 2) for x in ts]
+        break
+      except Exception as e:
+        print(f"Error occurred: {e}. Retrying...")
     
     start_week = json_data[ID]['time_series']['dates'][start_idx]
     end_week = json_data[ID]['time_series']['dates'][start_idx+series_len-1]
@@ -817,20 +859,24 @@ def get_sample(dataset_name: str, json_data, series_len = None, start_idx = None
     metadata['minimum of this specific series'] = float(round(min(ts), 2))
     metadata['maximum of this specific series'] = float(round(max(ts), 2))   
     
-  if dataset_name == "agriculture":
-    country = random.choice(list(json_data.keys()))
-    sampling_frequency = "yearly"
-    attribute = random.choice(list(json_data[country]))
-    while attribute == "metadata" or attribute == "years" or attribute == "Output quantity": # redraw the attribtue
-      attribute = random.choice(list(json_data[country]))
-    
-    if series_len is None:
-      series_len = random.randint(5, min(150, 5+int(len(json_data[country][attribute]))))
-    if start_idx is None:
-      start_idx = random.randint(0, len(json_data[country][attribute]) - series_len)
-    ts = json_data[country][attribute][start_idx:start_idx+series_len]
-    ts = [round(x, 2) for x in ts]
-    
+  if dataset_name == "agriculture":     
+    while True:
+      try:
+        country = random.choice(list(json_data.keys()))
+        sampling_frequency = "yearly"
+        attribute = random.choice(list(json_data[country]))
+        while attribute == "metadata" or attribute == "years" or attribute == "Output quantity": # redraw the attribtue
+          attribute = random.choice(list(json_data[country]))
+      
+        if series_len is None:
+          series_len = random.randint(5, len(json_data[country][attribute]))
+        if start_idx is None:
+          start_idx = random.randint(0, len(json_data[country][attribute]) - series_len)
+        ts = json_data[country][attribute][start_idx:start_idx+series_len]
+        ts = [round(x, 2) for x in ts]
+        break
+      except Exception as e:
+        print(f"Error occurred: {e}. Retrying...")
     
     start_year = json_data[country]['years'][start_idx]
     end_year = json_data[country]['years'][start_idx+series_len-1]
