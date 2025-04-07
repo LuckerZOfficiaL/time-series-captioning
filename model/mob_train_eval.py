@@ -48,6 +48,8 @@ class Mob(nn.Module):
         
         for param in self.chronos.chronos.model.parameters():
             param.requires_grad = False
+        #for param in self.internvl.parameters():
+        #    param.requires_grad = False
             
         if projector_init == "zero":
             nn.init.zeros_(self.projector.weight)
@@ -327,7 +329,7 @@ def main():
 
     print(f"\nResponses:\n")
     for response in responses:
-        print("\n", response)
+        print("\n---------------------------------------------------------------------------------------\n", response)
 
 # You might neet to run this script many times without any change since there are too many examples to fit into memory for a single run. 
 if __name__ == "__main__":

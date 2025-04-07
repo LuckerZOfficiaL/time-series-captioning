@@ -1,1 +1,1 @@
-batch_inference
+use_chronos

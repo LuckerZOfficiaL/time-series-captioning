@@ -60,7 +60,7 @@ class InternVLDataset(Dataset):
             {item['metadata']}
             \n
             Discuss concrete numbers and the trend. Do not mention any line chart, just directly describe the time series. 
-            Give your answer in a single paragraph, without additional explanations or formatting.        
+            Give your answer in a single concise paragraph, without additional explanations or formatting.        
         """       
 
         # Read grond truth

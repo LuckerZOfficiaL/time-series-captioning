@@ -66,6 +66,8 @@ def custom_forward(
                 #print(input_embeds.shape)#[40, 256, 2048]  
                 #print(ts_emb.unsqueeze(1).shape) # [40, 1, 2048]
                 input_embeds[:,0,:] += ts_emb.squeeze(1)
+            elif sum_ts_emb_to == "last":
+                input_embeds[:,-1,:] += ts_emb.squeeze(1)
 
             #input_embeds = torch.cat((ts_emb, input_embeds), dim=1)  # Concatenate along the sequence dimension
             #attention_mask = torch.cat((torch.ones((attention_mask.shape[0], 1), device=attention_mask.device, dtype=attention_mask.dtype), attention_mask), dim=1)
@@ -173,6 +175,8 @@ def custom_generate(
                 input_embeds = input_embeds + ts_emb.unsqueeze(1) # add the chronos ts vector to all the prompt embedding tokens if ts_emb is available, else do nothing and run vanilla internVL
             elif sum_ts_emb_to == "first":
                 input_embeds[:,0,:] += ts_emb.squeeze(1)
+            elif sum_ts_emb_to == "last":
+                input_embeds[:,-1,:] += ts_emb.squeeze(1)
                 
         outputs = self.language_model.generate(
             inputs_embeds=input_embeds,
