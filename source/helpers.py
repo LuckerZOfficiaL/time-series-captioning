@@ -923,7 +923,7 @@ def get_samples(dataset_name, json_data, n, series_len=None) -> list: # returns 
 
 def get_request(dataset_name, metadata, ts, external_knowledge=False):
   if dataset_name == "air quality":
-    request = f"""Here is a time series about {metadata["sampling frequency"]} {metadata["measure"]} in the Indian city of {metadata['city']}: \n {ts} \n Here is the detailed metadata: \n {str(metadata)}.
+    request = f"""Here is a time series about {metadata["sampling frequency"]} {metadata["measure"]} in the Indian city of {metadata['city']}: \n {ts} \n
           \n Describe this time series by focusing on trends and patterns. Discuss concrete numbers you see and pay attention to the dates.
           For numerical values, ensure consistency with the provided time series. If making percentage comparisons, round to the nearest whole number.Report the dates when things happened.
           Use the statistics I provided you for comparing this example to the normalcy.
@@ -941,8 +941,6 @@ def get_request(dataset_name, metadata, ts, external_knowledge=False):
   
   elif dataset_name == "crime":
     request = f"""Here is a time series about the number of {metadata["sampling frequency"]} crimes {metadata["town"]}, Los Angeles, from {metadata["start date of the series"]} to {metadata["end date of the series"]}: \n {ts}
-          \nThe all-time statistics of {metadata["town"]} until today are: \n Mean: {metadata["general mean in the history of this town"]} \n Standard Deviation: {metadata["general standard deviation in the history of this town"]} \n Minimum: {metadata["general minimum in the history of this town"]} \n Maximum: {metadata["general maximum in the history of this town"]}
-          \nAnd the statistics for this specific time series are: \n Mean: {metadata["mean of this specific series"]} \n Standard Deviation: {metadata["standard deviation of this specific series"]} \n Minimum: {metadata["minimum of this specific series"]} \n Maximum: {metadata["maximum of this specific series"]}
 
          \nDescribe this time series by focusing on trends and patterns. Discuss concrete   numbers you see and pay attention to the dates.
           For numerical values, ensure consistency with the provided time series. If making percentage comparisons, round to the nearest whole number.Report the dates when things happened.
@@ -961,9 +959,6 @@ def get_request(dataset_name, metadata, ts, external_knowledge=False):
 
   elif dataset_name == "border crossing":
     request = f"""Here is a time series about the number of {metadata['sampling frequency']} {metadata['means']} crossing the port of {metadata['port']} at the {metadata["border"]} border, starting from {metadata["start date of the series"]}: \n {ts}
-          \nThe all-time statistics until today of {metadata['means']} crossing {metadata['port']} are: \n Mean: {metadata["general mean in the history of this port"]} \n Standard Deviation: {metadata["general standard deviation in the history of this port"]} \n Minimum: {metadata["general minimum in the history of this port"]} \n Maximum: {metadata["general maximum in the history of this port"]}
-          Note that these all-time statistics are computed from then all the way until today. These are not historical, these are all-time.
-          \nThe statistics for this specific time series are: \n Mean: {metadata['mean of this specific series']} \n Standard Deviation: {metadata['standard deviation of this specific series']} \n Minimum: {metadata['minimum in this specific series']} \n Maximum: {metadata['maximum in this specific series']}
 
            \n Describe this time series by focusing on trends and patterns. Discuss concrete numbers you see and pay attention to the dates.
           For numerical values, ensure consistency with the provided time series. If making percentage comparisons, round to the nearest whole number.Report the dates when things happened.
@@ -981,9 +976,7 @@ def get_request(dataset_name, metadata, ts, external_knowledge=False):
 
   elif dataset_name == "heart rate":
     request = f"""Here is a time series about the heart rate of a {metadata["category"]}{' ' + metadata["moment"] if "moment" in metadata else ''}, it's measured as instantaneous heart rates across measurements. Here it is: \n {ts}
-          \nThe general statistics of this person{' ' + metadata["moment"] if "moment" in metadata else ''} are: \n Mean: {metadata['general mean of this patient in this situation']} \n Standard Deviation: {metadata['general standard deviation of this patient in this situation']} \n Minimum: {metadata['general minimum of this patient in this situation']} \n Maximum: {metadata['general maximum of this patient in this situation']}
-          \nThe statistics for this specific time series are: \n Mean: {metadata['mean of this specific series']} \n Standard Deviation: {metadata['standard deviation of this specific series']} \n Minimum: {metadata['minimum of this specific series']} \n Maximum: {metadata['maximum of this specific series']}
-
+          
           \n Describe this time series by focusing on trends and patterns. Discuss concrete numbers you see and pay attention to the dates.
           For numerical values, ensure consistency with the provided time series. If making percentage comparisons, round to the nearest whole number.Report the dates when things happened.
           Use the statistics I provided you for comparing this example to the normalcy.
@@ -1002,8 +995,6 @@ def get_request(dataset_name, metadata, ts, external_knowledge=False):
     request = f"""I will give you a time series about the {metadata['sampling frequency']} {metadata['attribute']} of {metadata['country']} from {metadata['starting year']} to {metadata['end year']}, it's measured as number per 1000 people.
           {metadata['country']} is categorized as a country with these attributes: {metadata['category by income']}.
            Here is the time series: \n {ts}
-          \nHere are the statistics for this specific time series for {metadata['country']}: \n Mean: {metadata['mean of this specific series']} \n Standard Deviation: {metadata['standard deviation of this specific series']} \n Minimum: {metadata['minimum of this specific series']} \n Maximum: {metadata['maximum of this specific series']}
-          \nHere is the global average time series for {metadata['attribute']} across all countries in the same period: \n {metadata['global average time series']}, whose standard deviation is {metadata['global standard deviation']}
 
           \n Describe this time series by focusing on trends and patterns. Discuss concrete numbers you see and pay attention to the dates.
           For numerical values, ensure consistency with the provided time series. If making percentage comparisons, round to the nearest whole number.Report the dates when things happened.
@@ -1022,8 +1013,6 @@ def get_request(dataset_name, metadata, ts, external_knowledge=False):
     request = f"""I will give you a time series about the {metadata['sampling frequency']} number of people getting {metadata['severity']} on the road by means of {metadata['mode']}. The location is the {metadata['geotype']} of {metadata['location']}  and the period is from {metadata['starting year']} to {metadata['end year']}.
           {metadata['location']} has a total population of {metadata['total population']}.
            Here is the time series: \n {ts}
-          \nHere are the statistics for this specific time series for {metadata['location']} from {metadata['starting year']} to {metadata['end year']}: \n Mean: {metadata['mean of this specific series']} \n Standard Deviation: {metadata['standard deviation of this specific series']} \n Minimum: {metadata['minimum of this specific series']} \n Maximum: {metadata['maximum of this specific series']}
-          \nHere is the average time series of a typical {metadata['geotype']} in California in the same period of years. \n {metadata['average time series of this type of location']}, whose standard deviation is {metadata['standard deviation of this type of location']}
 
           \n Describe this time series by focusing on trends and patterns. Discuss concrete numbers you see and pay attention to the dates.
           For numerical values, ensure consistency with the provided time series. If making percentage comparisons, round to the nearest whole number.Report the dates when things happened.
@@ -1046,9 +1035,6 @@ def get_request(dataset_name, metadata, ts, external_knowledge=False):
     
            Here is the time series: \n {ts}
            
-          \nHere are the statistics for this specific time series for {metadata['country']} from {metadata['start date of this series']} to {metadata['end date of this series']}: \n Mean: {metadata['mean of this specific series']} \n Standard Deviation: {metadata['standard deviation of this specific series']} \n Minimum: {metadata['minimum of this specific series']} \n Maximum: {metadata['maximum of this specific series']}
-          \nHere are the general statistics about the  {metadata['sampling frequency']} {metadata['attribute']} in {metadata['country']}. \n Mean: {metadata['historical mean in this country']} \n Standard Deviation: {metadata['historical standard deviation in this country']} \n Minimum: {metadata["historical minimum in this country"]} \n Maximum: {metadata["historical maximum in this country"]}
-
           \n Describe this time series by focusing on trends and patterns. Discuss concrete numbers you see and pay attention to the dates.
           For numerical values, ensure consistency with the provided time series. If making percentage comparisons, round to the nearest whole number.Report the dates when things happened.
           Use the statistics I provided you for comparing this example to the normalcy.
@@ -1069,8 +1055,6 @@ def get_request(dataset_name, metadata, ts, external_knowledge=False):
     
     Here is the time series: \n {ts}
            
-          \nHere are the statistics for this specific time series for {metadata['country']} from {metadata['start year of this series']} to {metadata['end year of this series']}: \n Mean: {metadata['mean of this specific series']} \n Standard Deviation: {metadata['standard deviation of this specific series']} \n Minimum: {metadata['minimum of this specific series']} \n Maximum: {metadata['maximum of this specific series']}
-
           \n Describe this time series by focusing on trends and patterns. Discuss concrete numbers you see and pay attention to the dates. 
           For numerical values, ensure consistency with the provided time series. If making percentage comparisons, round to the nearest whole number.Report the dates when things happened.
           Use the statistics I provided you for comparing this example to the normalcy.
@@ -1090,10 +1074,6 @@ def get_request(dataset_name, metadata, ts, external_knowledge=False):
     The time series covers the period from {metadata['start year of this series']} to {metadata['end year of this series']}.
     Here is the time series: \n {ts}
            
-          \nHere are the statistics for this specific time series for {metadata['country']} from {metadata['start year of this series']} to {metadata['end year of this series']}: \nMean: {metadata['mean of this specific series']} \nMinimum: {metadata['minimum of this specific series']} \nMaximum: {metadata['maximum of this specific series']}
-          
-          \nHere are the all-time statistics of the {metadata["attribute"]} in {metadata['country']}, until the present year. \nAll-time minimum: {metadata['historical minimum in this country']}\nAll-time maximum: {metadata['historical maximum in this country']} \nAll-time mean: {metadata['historical mean in this country']}
-
           \n Describe this time series by focusing on trends and patterns. Discuss concrete numbers you see and pay attention to the dates. 
           For numerical values, ensure consistency with the provided time series. If making percentage comparisons, round to the nearest whole number.Report the dates when things happened.
           Use the statistics I provided you for comparing this example to the normalcy.
@@ -1113,10 +1093,6 @@ def get_request(dataset_name, metadata, ts, external_knowledge=False):
     The time series covers the period from the week of {metadata['start week of this series']} to the week of {metadata['end week of this series']}.
     Here is the time series expressed in GBP: \n {ts}
            
-          \nHere are the statistics for this specific time series for {metadata['item']}. \nMean: {metadata['mean of this specific series']} \nMinimum: {metadata['minimum of this specific series']} \nMaximum: {metadata['maximum of this specific series']}
-          
-          \nHere are some additional information: \nAverage weekly customers of this item: {metadata['average weekly customers']} \nMaximum weekly sales ever: {metadata['max sales']} GBP.
-
           \n Describe this time series by focusing on trends and patterns. Discuss concrete numbers you see and pay attention to the dates. 
           For numerical values, ensure consistency with the provided time series. If making percentage comparisons, round to the nearest whole number.Report the dates when things happened.
           Use the statistics I provided you for comparing this example to the normalcy.
@@ -1135,10 +1111,6 @@ def get_request(dataset_name, metadata, ts, external_knowledge=False):
     request = f"""I will give you a time series about the {metadata['sampling frequency']} {metadata['attribute'].replace("_", " ")} of a Walmart store, from the week of {metadata['start week of this series']} to the week of {metadata['end week of this series']}.
     Here is the time series expressed in USD: \n {ts}
            
-          \nHere are the statistics for this specific time series. \nMean: {metadata['mean of this specific series']} \nMinimum: {metadata['minimum of this specific series']} \nMaximum: {metadata['maximum of this specific series']}
-          
-          \nHere are some additional information: \nBest ever weekly sales: {metadata['best week sales']} USD on the week of {metadata['best week']} \nWorst ever weekly sales: {metadata['worst week sales']} USD on the week of {metadata['worst week']} \nMean sales between 2010 and 2012: {metadata['mean sales']}
-
           \n Describe this time series by focusing on trends and patterns. Discuss concrete numbers you see and pay attention to the dates. 
           For numerical values, ensure consistency with the provided time series. If making percentage comparisons, round to the nearest whole number.Report the dates when things happened.
           Use the statistics I provided you for comparing this example to the normalcy.
@@ -1156,10 +1128,6 @@ def get_request(dataset_name, metadata, ts, external_knowledge=False):
     request = f"""I will give you a time series about the {metadata['sampling frequency']} {metadata['attribute']} in the country of {metadata['country']}, from {metadata['start year of this series']} to {metadata['end year of this series']}. {metadata['metrics info']}
     Here is the time series: \n {ts}
            
-          \nHere are the statistics for this specific time series. \nMean: {metadata['mean of this specific series']} \nMinimum: {metadata['minimum of this specific series']} \nMaximum: {metadata['maximum of this specific series']}
-          
-          \nHere are some additional information until 2019: \nHistorical maximum: {metadata['historical max']} \nHistorical minimum: {metadata['historical min']} \nHistorical mean: {metadata['historical mean']}
-
           \n Describe this time series by focusing on trends and patterns. Discuss concrete numbers you see and pay attention to the dates. 
           For numerical values, ensure consistency with the provided time series. If making percentage comparisons, round to the nearest whole number.Report the dates when things happened.
           Use the statistics I provided you for comparing this example to the normalcy.
