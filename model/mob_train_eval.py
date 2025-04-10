@@ -25,7 +25,7 @@ import os
 from tqdm import tqdm
 from typing import Optional
 import types
-import jsonx
+import json
 
 
 
@@ -179,9 +179,7 @@ def generate_captions(model, ts_folder_path, metadata_folder_path, image_folder_
                 
             prompt = generate_prompt_for_baseline(dataset_name=dataset_name, metadata=metadata, ts=values)
             prompt_list.append(prompt)
-            print(prompt)
-            exit()
-            
+                        
             # Append image path
             image_paths.append(image_folder_path+"/"+filename[:-4]+".jpeg")
 
@@ -354,7 +352,7 @@ if __name__ == "__main__":
                 projector_init=config['mobtep']['projector_init'],
                 sum_ts_emb_to=config['mobtep']['sum_ts_emb_to']).to(device)
     
-    generate_captions(model, ts_folder_path, metadata_folder_pth, image_folder_path, save_folder_path, batch_size=20, use_chronos=config['mobtep']['use_chronos'])
+    generate_captions(model, ts_folder_path, metadata_folder_pth, image_folder_path, save_folder_path, batch_size=15, use_chronos=config['mobtep']['use_chronos'])
     
     
     ############################# TOY DEMO ##################################
