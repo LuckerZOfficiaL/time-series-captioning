@@ -40,7 +40,7 @@ def write_caption(ts_name):
     with open(os.path.join(DATA_DIR, "time series", f"{ts_name}.txt"), 'r') as fh:
         ts = fh.read()
     prompt = generate_prompt_for_baseline(dataset_name, metadata, ts)
-    image_file = os.path.join(DATA_DIR, "plots", f"{ts_name}.jpeg")
+    image_file = os.path.join(DATA_DIR, "plots_2.0", f"{ts_name}.jpeg")
     caption = _eval_model(prompt, image_file)
     with open(os.path.join(OUT_DIR, f"{ts_name}.txt"), "w+") as fh:
         fh.write(caption)
