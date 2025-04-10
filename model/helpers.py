@@ -112,6 +112,189 @@ def cross_entropy_loss(logits, target, pad_token_id):
                            ignore_index=pad_token_id, reduction='mean')
     return loss
 
+def generate_prompt_for_baseline(dataset_name, metadata, ts):
+  config=load_config()
+  external_knowledge = config['data']['external_knowledge']
+  
+  if dataset_name == "air quality":
+    request = f"""Here is a time series about {metadata["sampling frequency"]} {metadata["measure"]} in the Indian city of {metadata['city']}: \n {ts} \n
+    \n Describe this time series by focusing on trends and patterns. 
+    Discuss concrete numbers you see and pay attention to the dates.
+    For numerical values, ensure consistency with the provided time series. If making percentage comparisons, round to the nearest whole number. Report the dates when things happened.
+          
+    Compare the trends in this time series to global or regional norms, explaining whether they are higher, lower, or follow expected seasonal patterns.
+    When making comparisons, clearly state whether differences are minor, moderate, or significant.
+    Use descriptive language to create engaging, natural-sounding text.
+    Avoid repetitive phrasing and overused expressions.
+
+    Answer in a single paragraph of four sentences at most, without bullet points or any formatting.
+    """
+
+  elif dataset_name == "crime":
+    request = f"""Here is a time series about the number of {metadata["sampling frequency"]} crimes {metadata["town"]}, Los Angeles, from {metadata["start date of the series"]} to {metadata["end date of the series"]}: \n {ts}
+
+    \n Describe this time series by focusing on trends and patterns. 
+    Discuss concrete numbers you see and pay attention to the dates.
+    For numerical values, ensure consistency with the provided time series. If making percentage comparisons, round to the nearest whole number. Report the dates when things happened.
+          
+    Compare the trends in this time series to global or regional norms, explaining whether they are higher, lower, or follow expected seasonal patterns.
+    When making comparisons, clearly state whether differences are minor, moderate, or significant.
+    Use descriptive language to create engaging, natural-sounding text.
+    Avoid repetitive phrasing and overused expressions.
+
+    Answer in a single paragraph of four sentences at most, without bullet points or any formatting.
+     """
+
+  elif dataset_name == "border crossing":
+    request = f"""Here is a time series about the number of {metadata['sampling frequency']} {metadata['means']} crossing the port of {metadata['port']} at the {metadata["border"]} border, starting from {metadata["start date of the series"]}Here is the time series: \n {ts}
+
+    \n Describe this time series by focusing on trends and patterns. 
+    Discuss concrete numbers you see and pay attention to the dates.
+    For numerical values, ensure consistency with the provided time series. If making percentage comparisons, round to the nearest whole number. Report the dates when things happened.
+          
+    Compare the trends in this time series to global or regional norms, explaining whether they are higher, lower, or follow expected seasonal patterns.
+    When making comparisons, clearly state whether differences are minor, moderate, or significant.
+    Use descriptive language to create engaging, natural-sounding text.
+    Avoid repetitive phrasing and overused expressions.
+
+    Answer in a single paragraph of four sentences at most, without bullet points or any formatting.
+     """
+
+
+  elif dataset_name == "demography":
+    request = f"""I will give you a time series about the {metadata['sampling frequency']} {metadata['attribute']} of {metadata['country']} from {metadata['starting year']} to {metadata['end year']}, it's measured as number per 1000 people.{metadata['country']} is categorized as a country with these attributes: {metadata['category by income']}.
+    Here is the time series: \n {ts}
+
+    \n Describe this time series by focusing on trends and patterns. 
+    Discuss concrete numbers you see and pay attention to the dates.
+    For numerical values, ensure consistency with the provided time series. If making percentage comparisons, round to the nearest whole number. Report the dates when things happened.
+          
+    Compare the trends in this time series to global or regional norms, explaining whether they are higher, lower, or follow expected seasonal patterns.
+    When making comparisons, clearly state whether differences are minor, moderate, or significant.
+    Use descriptive language to create engaging, natural-sounding text.
+    Avoid repetitive phrasing and overused expressions.
+
+    Answer in a single paragraph of four sentences at most, without bullet points or any formatting.
+     """
+  elif dataset_name == "road injuries":
+    request = f"""I will give you a time series about the {metadata['sampling frequency']} number of people getting {metadata['severity']} on the road by means of {metadata['mode']}. The location is the {metadata['geotype']} of {metadata['location']}  and the period is from {metadata['starting year']} to {metadata['end year']}. {metadata['location']} has a total population of {metadata['total population']}.
+    Here is the time series: \n {ts}
+
+    \n Describe this time series by focusing on trends and patterns. 
+    Discuss concrete numbers you see and pay attention to the dates.
+    For numerical values, ensure consistency with the provided time series. If making percentage comparisons, round to the nearest whole number. Report the dates when things happened.
+          
+    Compare the trends in this time series to global or regional norms, explaining whether they are higher, lower, or follow expected seasonal patterns.
+    When making comparisons, clearly state whether differences are minor, moderate, or significant.
+    Use descriptive language to create engaging, natural-sounding text.
+    Avoid repetitive phrasing and overused expressions.
+
+    Answer in a single paragraph of four sentences at most, without bullet points or any formatting.
+     """
+  elif dataset_name == "covid":
+    request = f"""I will give you a time series about the {metadata['sampling frequency']} {metadata['attribute']} due to Covid 19 in the country of {metadata['country']}, {metadata['region']}. The country has a population of {metadata['population']} and is classified as {metadata['income group']}. {f"The country has a GDP per capita of {metadata['gdp per capita']}." if 'gpt per capita' in metadata.keys() else ""}
+    {f"The percentage of over 65 is {metadata['over 65']}." if 'over 65' in metadata.keys() else ""} {f"The median age in the country is {metadata['median age']}." if 'median age' in metadata.keys() else ""} {f"The country has a population density of {metadata['population density']}." if 'population density' in metadata.keys() else ""}
+
+    The time series covers the period from {metadata['start date of this series']} to {metadata['end date of this series']}.
+
+    Here is the time series: \n {ts}
+
+    \n Describe this time series by focusing on trends and patterns. 
+    Discuss concrete numbers you see and pay attention to the dates.
+    For numerical values, ensure consistency with the provided time series. If making percentage comparisons, round to the nearest whole number. Report the dates when things happened.
+          
+    Compare the trends in this time series to global or regional norms, explaining whether they are higher, lower, or follow expected seasonal patterns.
+    When making comparisons, clearly state whether differences are minor, moderate, or significant.
+    Use descriptive language to create engaging, natural-sounding text.
+    Avoid repetitive phrasing and overused expressions.
+
+    Answer in a single paragraph of four sentences at most, without bullet points or any formatting.
+     """
+  elif dataset_name == "co2":
+    request = f"""I will give you a time series about the {metadata['sampling frequency']} co2 emissions measured in million metric tons, in the country of {metadata['country']}, located in {metadata['region']}.
+
+    The time series covers the period from {metadata['start year of this series']} to {metadata['end year of this series']}, with the national population of {metadata['population at the start year']} and {metadata['population at the end year']} respectively.
+
+    Here is the time series: \n {ts}
+
+   \n Describe this time series by focusing on trends and patterns. 
+    Discuss concrete numbers you see and pay attention to the dates.
+    For numerical values, ensure consistency with the provided time series. If making percentage comparisons, round to the nearest whole number. Report the dates when things happened.
+          
+    Compare the trends in this time series to global or regional norms, explaining whether they are higher, lower, or follow expected seasonal patterns.
+    When making comparisons, clearly state whether differences are minor, moderate, or significant.
+    Use descriptive language to create engaging, natural-sounding text.
+    Avoid repetitive phrasing and overused expressions.
+
+    Answer in a single paragraph of four sentences at most, without bullet points or any formatting.
+     """
+  elif dataset_name == "diet":
+    request = f"""I will give you a time series about the {metadata['sampling frequency']} average per capita daily kilocalories consumed from {metadata['attribute']} in the country of {metadata['country']}.
+
+    The time series covers the period from {metadata['start year of this series']} to {metadata['end year of this series']}.
+    Here is the time series: \n {ts}
+
+    \n Describe this time series by focusing on trends and patterns. 
+    Discuss concrete numbers you see and pay attention to the dates.
+    For numerical values, ensure consistency with the provided time series. If making percentage comparisons, round to the nearest whole number. Report the dates when things happened.
+          
+    Compare the trends in this time series to global or regional norms, explaining whether they are higher, lower, or follow expected seasonal patterns.
+    When making comparisons, clearly state whether differences are minor, moderate, or significant.
+    Use descriptive language to create engaging, natural-sounding text.
+    Avoid repetitive phrasing and overused expressions.
+
+    Answer in a single paragraph of four sentences at most, without bullet points or any formatting.
+     """
+  elif dataset_name == "online retail":
+    request = f"""I will give you a time series about the {metadata['sampling frequency']} {metadata['attribute'].replace("_", " ")} of the item: "{metadata['item']}" from an online retailer in the  {metadata['country']}.
+
+    The time series covers the period from the week of {metadata['start week of this series']} to the week of {metadata['end week of this series']}.
+    Here is the time series expressed in GBP: \n {ts}
+
+    \n Describe this time series by focusing on trends and patterns. 
+    Discuss concrete numbers you see and pay attention to the dates.
+    For numerical values, ensure consistency with the provided time series. If making percentage comparisons, round to the nearest whole number. Report the dates when things happened.
+          
+    Compare the trends in this time series to global or regional norms, explaining whether they are higher, lower, or follow expected seasonal patterns.
+    When making comparisons, clearly state whether differences are minor, moderate, or significant.
+    Use descriptive language to create engaging, natural-sounding text.
+    Avoid repetitive phrasing and overused expressions.
+
+    Answer in a single paragraph of four sentences at most, without bullet points or any formatting.
+     """
+
+  elif dataset_name == "walmart":
+    request = f"""I will give you a time series about the {metadata['sampling frequency']} {metadata['attribute'].replace("_", " ")} of a Walmart store, from the week of {metadata['start week of this series']} to the week of {metadata['end week of this series']}.
+    Here is the time series expressed in USD: \n {ts}
+
+    \n Describe this time series by focusing on trends and patterns. 
+    Discuss concrete numbers you see and pay attention to the dates.
+    For numerical values, ensure consistency with the provided time series. If making percentage comparisons, round to the nearest whole number. Report the dates when things happened.
+          
+    Compare the trends in this time series to global or regional norms, explaining whether they are higher, lower, or follow expected seasonal patterns.
+    When making comparisons, clearly state whether differences are minor, moderate, or significant.
+    Use descriptive language to create engaging, natural-sounding text.
+    Avoid repetitive phrasing and overused expressions.
+
+    Answer in a single paragraph of four sentences at most, without bullet points or any formatting.
+     """
+  elif dataset_name == "agriculture":
+    request = f"""I will give you a time series about the {metadata['sampling frequency']} {metadata['attribute']} in the country of {metadata['country']}, from {metadata['start year of this series']} to {metadata['end year of this series']}. {metadata['metrics info']}
+    Here is the time series: \n {ts}
+
+    \n Describe this time series by focusing on trends and patterns. 
+    Discuss concrete numbers you see and pay attention to the dates.
+    For numerical values, ensure consistency with the provided time series. If making percentage comparisons, round to the nearest whole number. Report the dates when things happened.
+          
+    Compare the trends in this time series to global or regional norms, explaining whether they are higher, lower, or follow expected seasonal patterns.
+    When making comparisons, clearly state whether differences are minor, moderate, or significant.
+    Use descriptive language to create engaging, natural-sounding text.
+    Avoid repetitive phrasing and overused expressions.
+
+    Answer in a single paragraph of four sentences at most, without bullet points or any formatting.
+     """
+  return request
+
 def main():
     logits = torch.randn((3, 180, 500))
     target = torch.randint(0, 500, (3, 180))

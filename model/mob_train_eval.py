@@ -1,5 +1,6 @@
 from helpers import(
-    load_config
+    load_config,
+    generate_prompt_for_baseline
 )
 from internVL import(
     batch_inference,
@@ -24,6 +25,7 @@ import os
 from tqdm import tqdm
 from typing import Optional
 import types
+import jsonx
 
 
 
@@ -134,7 +136,7 @@ class Mob(nn.Module):
     
     
     
-def evaluate_mob(model, ts_folder_path, metadata_folder_path, image_folder_path, save_folder_path, batch_size=32, use_chronos=True):
+def generate_captions(model, ts_folder_path, metadata_folder_path, image_folder_path, save_folder_path, batch_size=32, use_chronos=True):
     config = load_config()
     model.eval()
     ts_files = os.listdir(ts_folder_path)
@@ -154,6 +156,7 @@ def evaluate_mob(model, ts_folder_path, metadata_folder_path, image_folder_path,
         print(f"\nPreparing inputs for batch {batch_start_idx}-{batch_end_idx-1}...")
         for i in range(batch_start_idx, batch_end_idx):
             filename = ts_files[i]
+            dataset_name = filename.split("_")[0]
             #print("Preparing inputs for: ", filename[:-4])
 
             # Read ts and append it to a list, later to be tensorized after the loop
@@ -167,20 +170,17 @@ def evaluate_mob(model, ts_folder_path, metadata_folder_path, image_folder_path,
             tensor = torch.tensor(values)
             ts_list.append(tensor)
 
-            # Read metadata, prepend a prompt to it and add to the prompt list
+            # Read metadata, generate a prompt out of it and append to the prompt list
             metadata_filename = metadata_folder_path+"/"+filename[:-4]+".json"
+            
             with open(metadata_filename, 'r') as metadata_file:
-                metadata_text = metadata_file.read()
-            prompt = f"""Provide a description for the following time series, given its line plot and auxiliary metadata: 
-            \n
-            Time Series:{values}
-            \n
-            {metadata_text}
-            \n
-            Discuss concrete numbers and the trend. Do not mention any line chart, just directly describe the time series. 
-            Give your answer in a single paragraph, without additional explanations or formatting.        
-            """
+                metadata = json.load(metadata_file)
+                
+                
+            prompt = generate_prompt_for_baseline(dataset_name=dataset_name, metadata=metadata, ts=values)
             prompt_list.append(prompt)
+            print(prompt)
+            exit()
             
             # Append image path
             image_paths.append(image_folder_path+"/"+filename[:-4]+".jpeg")
@@ -333,13 +333,13 @@ def main():
 
 # You might neet to run this script many times without any change since there are too many examples to fit into memory for a single run. 
 if __name__ == "__main__":
-    main()
+    #main()
     
     ################### GENERATE CAPTION FILES ##################################
-    """config = load_config()
+    config = load_config()
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     
-    model = Mob(chronos_name=config['mobtep']['chronos_name'], internvl_name=config['mobtep']['internvl_name']).to(device)
+    
     
     #checkpoint_path = "/home/ubuntu/thesis/model/checkpoints/InternVL2_5-2B_5.388.pth"
     #model.load_state_dict(torch.load(checkpoint_path, map_location=device))
@@ -348,9 +348,13 @@ if __name__ == "__main__":
     metadata_folder_pth = "/home/ubuntu/thesis/data/samples/metadata"
     image_folder_path = "/home/ubuntu/thesis/data/samples/plots"
     save_folder_path="/home/ubuntu/thesis/data/samples/captions/generated/pretrained internVL"
-    sum_ts_emb_to = config['mobtep']['sum_ts_emb_to']
     
-    evaluate_mob(model, ts_folder_path, metadata_folder_pth, image_folder_path, save_folder_path, sum_ts_emb_to=sum_ts_emb_to, batch_size=20, use_chronos=config['mobtep']['use_chronos'])"""
+    model = Mob(chronos_name=config['mobtep']['chronos_name'], 
+                internvl_name=config['mobtep']['internvl_name'],
+                projector_init=config['mobtep']['projector_init'],
+                sum_ts_emb_to=config['mobtep']['sum_ts_emb_to']).to(device)
+    
+    generate_captions(model, ts_folder_path, metadata_folder_pth, image_folder_path, save_folder_path, batch_size=20, use_chronos=config['mobtep']['use_chronos'])
     
     
     ############################# TOY DEMO ##################################
