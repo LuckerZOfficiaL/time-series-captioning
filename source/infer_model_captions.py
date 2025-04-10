@@ -49,7 +49,7 @@ def write_caption(ts_name):
 def main():
     ts_names = [Path(fn).stem for fn in os.listdir(os.path.join(DATA_DIR, "time series"))]
     done_names = {Path(fn).stem for fn in os.listdir(OUT_DIR)}
-    ts_names = [name for name in ts_names if name not in done_names]
+    ts_names = sorted([name for name in ts_names if name not in done_names])
     for ts_name in ts_names:
         print(f"Writing caption for {ts_name}")
         write_caption(ts_name)
