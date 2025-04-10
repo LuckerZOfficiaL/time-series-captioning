@@ -1328,18 +1328,43 @@ def factual_checking(caption, model="Google Gemini-2.0-Flash"):
                             top_p=0.85)
     return response
 
-def generate_line_plot(ts, xlabel, ylabel, title, savepath, height=None, width=None): 
-  figsize = (width, height) if width is not None and height is not None else None
-  plt.figure(figsize=figsize)
+def generate_line_plot(
+    ts, xlabel, ylabel, title, savepath,
+    height=None, width=None, color="blue",
+    linewidth=1, marker='o', linestyle='-',
+    grid=False, show_nums_on_line=False,
+    x_start=None, x_end=None
+):
+    # Set figure size if specified
+    figsize = (width, height) if width and height else None
+    plt.figure(figsize=figsize)
 
-  plt.plot(ts, marker='o', linestyle='-')  # Plot the time series
-  plt.xlabel(xlabel)
-  plt.ylabel(ylabel)
-  plt.title(title)
-  plt.grid(True)
+    # Plot the time series with the specified style
+    plt.plot(
+        ts,
+        color=color,
+        linewidth=linewidth,
+        marker=marker,
+        linestyle=linestyle
+    )
+    
+    if x_start is not None and x_end is not None:
+        plt.xticks([0, len(ts) - 1], [x_start, x_end])
+        
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
+    plt.title(title)
+    plt.grid(grid)
+    
+    if show_nums_on_line:
+      if len(ts) < 15:
+        for i, val in enumerate(ts):
+          plt.text(i, val, f'{val:.2f}', ha='center', va='bottom', fontsize=8)
 
-  plt.savefig(savepath, dpi=100)  # Save the plot
-  plt.close()
+    # Save and close the plot
+    plt.tight_layout()
+    plt.savefig(savepath, dpi=100)
+    plt.close()
   
 def extract_facts(caption, model="Google Gemini-2.0-Flash", return_list=False, extract_sentences=False):
   if extract_sentences:
@@ -2360,130 +2385,98 @@ def generate_prompt_for_baseline(dataset_name, metadata, ts):
   
   if dataset_name == "air quality":
     request = f"""Here is a time series about {metadata["sampling frequency"]} {metadata["measure"]} in the Indian city of {metadata['city']}: \n {ts} \n
-          \n Describe this time series by focusing on trends and patterns. Discuss concrete numbers you see and pay attention to the dates.
-          For numerical values, ensure consistency with the provided time series. If making percentage comparisons, round to the nearest whole number.Report the dates when things happened.
-          Use the statistics I provided you for comparing this example to the normalcy.
-          {"Use your broad knowledge of geopolitics, natural events, and economic trends to provide meaningful comparisons. Be specific and factual, avoiding broad generalizations." if external_knowledge else "Do not add any extra information beyond what is given."}
-          Highlight significant spikes, dips, or patterns{" and explain possible causes based on global or regional factors." if external_knowledge else "."}
-          You don't have to explicitly report the numeric values of general statistics, you just use them for reference.
-          Compare the trends in this time series to global or regional norms, explaining whether they are higher, lower, or follow expected seasonal patterns.
-          When making comparisons, clearly state whether differences are minor, moderate, or significant.
-          Use descriptive language to create engaging, natural-sounding text.
-          Avoid repetitive phrasing and overused expressions.
+    \n Describe this time series by focusing on trends and patterns. 
+    Discuss concrete numbers you see and pay attention to the dates.
+    For numerical values, ensure consistency with the provided time series. If making percentage comparisons, round to the nearest whole number. Report the dates when things happened.
+          
+    Compare the trends in this time series to global or regional norms, explaining whether they are higher, lower, or follow expected seasonal patterns.
+    When making comparisons, clearly state whether differences are minor, moderate, or significant.
+    Use descriptive language to create engaging, natural-sounding text.
+    Avoid repetitive phrasing and overused expressions.
 
-          Answer in a single paragraph of four sentences at most, without bullet points or any formatting.
-
-          """
+    Answer in a single paragraph of four sentences at most, without bullet points or any formatting.
+    """
 
   elif dataset_name == "crime":
     request = f"""Here is a time series about the number of {metadata["sampling frequency"]} crimes {metadata["town"]}, Los Angeles, from {metadata["start date of the series"]} to {metadata["end date of the series"]}: \n {ts}
 
-         \nDescribe this time series by focusing on trends and patterns. Discuss concrete   numbers you see and pay attention to the dates.
-          For numerical values, ensure consistency with the provided time series. If making percentage comparisons, round to the nearest whole number.Report the dates when things happened.
-          Use the statistics I provided you for comparing this example to the normalcy.
-          {"Use your broad knowledge of geopolitics, natural events, and economic trends to provide meaningful comparisons. Be specific and factual, avoiding broad generalizations." if external_knowledge else "Do not add any extra information beyond what is given."}
-          Highlight significant spikes, dips, or patterns{" and explain possible causes based on global or regional factors." if external_knowledge else "."}
-          You don't have to explicitly report the numeric values of general statistics, you just use them for reference.
-          Compare the trends in this time series to global or regional norms, explaining whether they are higher, lower, or follow expected seasonal patterns.
-          When making comparisons, clearly state whether differences are minor, moderate, or significant.
-          Use descriptive language to create engaging, natural-sounding text.
-          Avoid repetitive phrasing and overused expressions.
+    \n Describe this time series by focusing on trends and patterns. 
+    Discuss concrete numbers you see and pay attention to the dates.
+    For numerical values, ensure consistency with the provided time series. If making percentage comparisons, round to the nearest whole number. Report the dates when things happened.
+          
+    Compare the trends in this time series to global or regional norms, explaining whether they are higher, lower, or follow expected seasonal patterns.
+    When making comparisons, clearly state whether differences are minor, moderate, or significant.
+    Use descriptive language to create engaging, natural-sounding text.
+    Avoid repetitive phrasing and overused expressions.
 
-          Answer in a single paragraph of four sentences at most, without bullet points or any formatting.
-
-          """
+    Answer in a single paragraph of four sentences at most, without bullet points or any formatting.
+     """
 
   elif dataset_name == "border crossing":
-    request = f"""Here is a time series about the number of {metadata['sampling frequency']} {metadata['means']} crossing the port of {metadata['port']} at the {metadata["border"]} border, starting from {metadata["start date of the series"]}: \n {ts}
+    request = f"""Here is a time series about the number of {metadata['sampling frequency']} {metadata['means']} crossing the port of {metadata['port']} at the {metadata["border"]} border, starting from {metadata["start date of the series"]}Here is the time series: \n {ts}
 
-           \n Describe this time series by focusing on trends and patterns. Discuss concrete numbers you see and pay attention to the dates.
-          For numerical values, ensure consistency with the provided time series. If making percentage comparisons, round to the nearest whole number.Report the dates when things happened.
-          Use the statistics I provided you for comparing this example to the normalcy.
-         {"Use your broad knowledge of geopolitics, natural events, and economic trends to provide meaningful comparisons. Be specific and factual, avoiding broad generalizations." if external_knowledge else "Do not add any extra information beyond what is given."}
-          Highlight significant spikes, dips, or patterns{" and explain possible causes based on global or regional factors." if external_knowledge else "."}
-          You don't have to explicitly report the numeric values of general statistics, you just use them for reference.
-          Compare the trends in this time series to global or regional norms, explaining whether they are higher, lower, or follow expected seasonal patterns.
-          When making comparisons, clearly state whether differences are minor, moderate, or significant.
-          Use descriptive language to create engaging, natural-sounding text.
-          Avoid repetitive phrasing and overused expressions.
+    \n Describe this time series by focusing on trends and patterns. 
+    Discuss concrete numbers you see and pay attention to the dates.
+    For numerical values, ensure consistency with the provided time series. If making percentage comparisons, round to the nearest whole number. Report the dates when things happened.
+          
+    Compare the trends in this time series to global or regional norms, explaining whether they are higher, lower, or follow expected seasonal patterns.
+    When making comparisons, clearly state whether differences are minor, moderate, or significant.
+    Use descriptive language to create engaging, natural-sounding text.
+    Avoid repetitive phrasing and overused expressions.
 
-          Answer in a single paragraph of four sentences at most, without bullet points or any formatting.
-          """
+    Answer in a single paragraph of four sentences at most, without bullet points or any formatting.
+     """
 
-  elif dataset_name == "heart rate":
-    request = f"""Here is a time series about the heart rate of a {metadata["category"]}{' ' + metadata["moment"] if "moment" in metadata else ''}, it's measured as instantaneous heart rates across measurements. Here it is: \n {ts}
-
-          \n Describe this time series by focusing on trends and patterns. Discuss concrete numbers you see and pay attention to the dates.
-          For numerical values, ensure consistency with the provided time series. If making percentage comparisons, round to the nearest whole number.Report the dates when things happened.
-          Use the statistics I provided you for comparing this example to the normalcy.
-          {"Use your broad knowledge of geopolitics, natural events, and economic trends to provide meaningful comparisons. Be specific and factual, avoiding broad generalizations." if external_knowledge else "Do not add any extra information beyond what is given."}
-          Highlight significant spikes, dips, or patterns{" and explain possible causes based on global or regional factors." if external_knowledge else "."}
-          You don't have to explicitly report the numeric values of general statistics, you just use them for reference.
-          Compare the trends in this time series to global or regional norms, explaining whether they are higher, lower, or follow expected seasonal patterns.
-          When making comparisons, clearly state whether differences are minor, moderate, or significant.
-          Use descriptive language to create engaging, natural-sounding text.
-          Avoid repetitive phrasing and overused expressions.
-
-          Answer in a single paragraph of four sentences at most, without bullet points or any formatting.
-          """
 
   elif dataset_name == "demography":
-    request = f"""I will give you a time series about the {metadata['sampling frequency']} {metadata['attribute']} of {metadata['country']} from {metadata['starting year']} to {metadata['end year']}, it's measured as number per 1000 people.
-          {metadata['country']} is categorized as a country with these attributes: {metadata['category by income']}.
-           Here is the time series: \n {ts}
+    request = f"""I will give you a time series about the {metadata['sampling frequency']} {metadata['attribute']} of {metadata['country']} from {metadata['starting year']} to {metadata['end year']}, it's measured as number per 1000 people.{metadata['country']} is categorized as a country with these attributes: {metadata['category by income']}.
+    Here is the time series: \n {ts}
 
-          \n Describe this time series by focusing on trends and patterns. Discuss concrete numbers you see and pay attention to the dates.
-          For numerical values, ensure consistency with the provided time series. If making percentage comparisons, round to the nearest whole number.Report the dates when things happened.
-          Use the statistics I provided you for comparing this example to the normalcy.
-          {"Use your broad knowledge of geopolitics, natural events, and economic trends to provide meaningful comparisons. Be specific and factual, avoiding broad generalizations." if external_knowledge else "Do not add any extra information beyond what is given."}
-          Highlight significant spikes, dips, or patterns{" and explain possible causes based on global or regional factors." if external_knowledge else "."}
-          You don't have to explicitly report the numeric values of general statistics, you just use them for reference.
-          Compare the trends in this time series to global or regional norms, explaining whether they are higher, lower, or follow expected seasonal patterns.
-          When making comparisons, clearly state whether differences are minor, moderate, or significant.
-          Use descriptive language to create engaging, natural-sounding text.
-          Avoid repetitive phrasing and overused expressions.
+    \n Describe this time series by focusing on trends and patterns. 
+    Discuss concrete numbers you see and pay attention to the dates.
+    For numerical values, ensure consistency with the provided time series. If making percentage comparisons, round to the nearest whole number. Report the dates when things happened.
+          
+    Compare the trends in this time series to global or regional norms, explaining whether they are higher, lower, or follow expected seasonal patterns.
+    When making comparisons, clearly state whether differences are minor, moderate, or significant.
+    Use descriptive language to create engaging, natural-sounding text.
+    Avoid repetitive phrasing and overused expressions.
 
-          Answer in a single paragraph of four sentences at most, without bullet points or any formatting.
-          """
+    Answer in a single paragraph of four sentences at most, without bullet points or any formatting.
+     """
   elif dataset_name == "road injuries":
-    request = f"""I will give you a time series about the {metadata['sampling frequency']} number of people getting {metadata['severity']} on the road by means of {metadata['mode']}. The location is the {metadata['geotype']} of {metadata['location']}  and the period is from {metadata['starting year']} to {metadata['end year']}.
-          {metadata['location']} has a total population of {metadata['total population']}.
-           Here is the time series: \n {ts}
+    request = f"""I will give you a time series about the {metadata['sampling frequency']} number of people getting {metadata['severity']} on the road by means of {metadata['mode']}. The location is the {metadata['geotype']} of {metadata['location']}  and the period is from {metadata['starting year']} to {metadata['end year']}. {metadata['location']} has a total population of {metadata['total population']}.
+    Here is the time series: \n {ts}
 
-          \n Describe this time series by focusing on trends and patterns. Discuss concrete numbers you see and pay attention to the dates.
-          For numerical values, ensure consistency with the provided time series. If making percentage comparisons, round to the nearest whole number.Report the dates when things happened.
-          Use the statistics I provided you for comparing this example to the normalcy.
-          {"Use your broad knowledge of geopolitics, natural events, and economic trends to provide meaningful comparisons. Be specific and factual, avoiding broad generalizations." if external_knowledge else "Do not add any extra information beyond what is given."}
-          Highlight significant spikes, dips, or patterns{" and explain possible causes based on global or regional factors." if external_knowledge else "."}
-          You don't have to explicitly report the numeric values of general statistics, you just use them for reference.
-          Compare the trends in this time series to global or regional norms, explaining whether they are higher, lower, or follow expected seasonal patterns.
-          When making comparisons, clearly state whether differences are minor, moderate, or significant.
-          Use descriptive language to create engaging, natural-sounding text.
-          Avoid repetitive phrasing and overused expressions.
+    \n Describe this time series by focusing on trends and patterns. 
+    Discuss concrete numbers you see and pay attention to the dates.
+    For numerical values, ensure consistency with the provided time series. If making percentage comparisons, round to the nearest whole number. Report the dates when things happened.
+          
+    Compare the trends in this time series to global or regional norms, explaining whether they are higher, lower, or follow expected seasonal patterns.
+    When making comparisons, clearly state whether differences are minor, moderate, or significant.
+    Use descriptive language to create engaging, natural-sounding text.
+    Avoid repetitive phrasing and overused expressions.
 
-          Answer in a single paragraph of four sentences at most, without bullet points or any formatting.
-          """
+    Answer in a single paragraph of four sentences at most, without bullet points or any formatting.
+     """
   elif dataset_name == "covid":
     request = f"""I will give you a time series about the {metadata['sampling frequency']} {metadata['attribute']} due to Covid 19 in the country of {metadata['country']}, {metadata['region']}. The country has a population of {metadata['population']} and is classified as {metadata['income group']}. {f"The country has a GDP per capita of {metadata['gdp per capita']}." if 'gpt per capita' in metadata.keys() else ""}
     {f"The percentage of over 65 is {metadata['over 65']}." if 'over 65' in metadata.keys() else ""} {f"The median age in the country is {metadata['median age']}." if 'median age' in metadata.keys() else ""} {f"The country has a population density of {metadata['population density']}." if 'population density' in metadata.keys() else ""}
 
     The time series covers the period from {metadata['start date of this series']} to {metadata['end date of this series']}.
 
-           Here is the time series: \n {ts}
+    Here is the time series: \n {ts}
 
-          \n Describe this time series by focusing on trends and patterns. Discuss concrete numbers you see and pay attention to the dates.
-          For numerical values, ensure consistency with the provided time series. If making percentage comparisons, round to the nearest whole number.Report the dates when things happened.
-          Use the statistics I provided you for comparing this example to the normalcy.
-          {"Use your broad knowledge of geopolitics, natural events, and economic trends to provide meaningful comparisons. Be specific and factual, avoiding broad generalizations." if external_knowledge else "Do not add any extra information beyond what is given."}
-          Highlight significant spikes, dips, or patterns{" and explain possible causes based on global or regional factors." if external_knowledge else "."}
-          You don't have to explicitly report the numeric values of general statistics, you just use them for reference.
-          Compare the trends in this time series to global or regional norms, explaining whether they are higher, lower, or follow expected seasonal patterns.
-          When making comparisons, clearly state whether differences are minor, moderate, or significant.
-          Use descriptive language to create engaging, natural-sounding text.
-          Avoid repetitive phrasing and overused expressions.
+    \n Describe this time series by focusing on trends and patterns. 
+    Discuss concrete numbers you see and pay attention to the dates.
+    For numerical values, ensure consistency with the provided time series. If making percentage comparisons, round to the nearest whole number. Report the dates when things happened.
+          
+    Compare the trends in this time series to global or regional norms, explaining whether they are higher, lower, or follow expected seasonal patterns.
+    When making comparisons, clearly state whether differences are minor, moderate, or significant.
+    Use descriptive language to create engaging, natural-sounding text.
+    Avoid repetitive phrasing and overused expressions.
 
-          Answer in a single paragraph of four sentences at most, without bullet points or any formatting.
-          """
+    Answer in a single paragraph of four sentences at most, without bullet points or any formatting.
+     """
   elif dataset_name == "co2":
     request = f"""I will give you a time series about the {metadata['sampling frequency']} co2 emissions measured in million metric tons, in the country of {metadata['country']}, located in {metadata['region']}.
 
@@ -2491,94 +2484,83 @@ def generate_prompt_for_baseline(dataset_name, metadata, ts):
 
     Here is the time series: \n {ts}
 
-          \n Describe this time series by focusing on trends and patterns. Discuss concrete numbers you see and pay attention to the dates.
-          For numerical values, ensure consistency with the provided time series. If making percentage comparisons, round to the nearest whole number.Report the dates when things happened.
-          Use the statistics I provided you for comparing this example to the normalcy.
-          {"Use your broad knowledge of geopolitics, natural events, and economic trends to provide meaningful comparisons. Be specific and factual, avoiding broad generalizations." if external_knowledge else "Do not add any extra information beyond what is given."}
-          Highlight significant spikes, dips, or patterns{" and explain possible causes based on global or regional factors." if external_knowledge else "."}
-          You don't have to explicitly report the numeric values of general statistics, you just use them for reference.
-          Compare the trends in this time series to global or regional norms, explaining whether they are higher, lower, or follow expected seasonal patterns.
-          When making comparisons, clearly state whether differences are minor, moderate, or significant.
-          Use descriptive language to create engaging, natural-sounding text.
-          Avoid repetitive phrasing and overused expressions.
+   \n Describe this time series by focusing on trends and patterns. 
+    Discuss concrete numbers you see and pay attention to the dates.
+    For numerical values, ensure consistency with the provided time series. If making percentage comparisons, round to the nearest whole number. Report the dates when things happened.
+          
+    Compare the trends in this time series to global or regional norms, explaining whether they are higher, lower, or follow expected seasonal patterns.
+    When making comparisons, clearly state whether differences are minor, moderate, or significant.
+    Use descriptive language to create engaging, natural-sounding text.
+    Avoid repetitive phrasing and overused expressions.
 
-          Answer in a single paragraph of four sentences at most, without bullet points or any formatting.
-          """
+    Answer in a single paragraph of four sentences at most, without bullet points or any formatting.
+     """
   elif dataset_name == "diet":
     request = f"""I will give you a time series about the {metadata['sampling frequency']} average per capita daily kilocalories consumed from {metadata['attribute']} in the country of {metadata['country']}.
 
     The time series covers the period from {metadata['start year of this series']} to {metadata['end year of this series']}.
     Here is the time series: \n {ts}
 
-          \n Describe this time series by focusing on trends and patterns. Discuss concrete numbers you see and pay attention to the dates.
-          For numerical values, ensure consistency with the provided time series. If making percentage comparisons, round to the nearest whole number.Report the dates when things happened.
-          Use the statistics I provided you for comparing this example to the normalcy.
-          {"Use your broad knowledge of geopolitics, natural events, and economic trends to provide meaningful comparisons. Be specific and factual, avoiding broad generalizations." if external_knowledge else "Do not add any extra information beyond what is given."}
-          Highlight significant spikes, dips, or patterns{" and explain possible causes based on global or regional factors." if external_knowledge else "."}
-          You don't have to explicitly report the numeric values of general statistics, you just use them for reference.
-          Compare the trends in this time series to global or regional norms, explaining whether they are higher, lower, or follow expected seasonal patterns.
-          When making comparisons, clearly state whether differences are minor, moderate, or significant.
-          Use descriptive language to create engaging, natural-sounding text.
-          Avoid repetitive phrasing and overused expressions.
+    \n Describe this time series by focusing on trends and patterns. 
+    Discuss concrete numbers you see and pay attention to the dates.
+    For numerical values, ensure consistency with the provided time series. If making percentage comparisons, round to the nearest whole number. Report the dates when things happened.
+          
+    Compare the trends in this time series to global or regional norms, explaining whether they are higher, lower, or follow expected seasonal patterns.
+    When making comparisons, clearly state whether differences are minor, moderate, or significant.
+    Use descriptive language to create engaging, natural-sounding text.
+    Avoid repetitive phrasing and overused expressions.
 
-          Answer in a single paragraph of four sentences at most, without bullet points or any formatting.
-          """
+    Answer in a single paragraph of four sentences at most, without bullet points or any formatting.
+     """
   elif dataset_name == "online retail":
     request = f"""I will give you a time series about the {metadata['sampling frequency']} {metadata['attribute'].replace("_", " ")} of the item: "{metadata['item']}" from an online retailer in the  {metadata['country']}.
 
     The time series covers the period from the week of {metadata['start week of this series']} to the week of {metadata['end week of this series']}.
     Here is the time series expressed in GBP: \n {ts}
 
-          \n Describe this time series by focusing on trends and patterns. Discuss concrete numbers you see and pay attention to the dates.
-          For numerical values, ensure consistency with the provided time series. If making percentage comparisons, round to the nearest whole number.Report the dates when things happened.
-          Use the statistics I provided you for comparing this example to the normalcy.
-          {"Use your broad knowledge of geopolitics, natural events, and economic trends to provide meaningful comparisons. Be specific and factual, avoiding broad generalizations." if external_knowledge else "Do not add any extra information beyond what is given."}
-          Highlight significant spikes, dips, or patterns{" and explain possible causes based on global or regional factors." if external_knowledge else "."}
-          You don't have to explicitly report the numeric values of general statistics, you just use them for reference.
-          Compare the trends in this time series to global or regional norms, explaining whether they are higher, lower, or follow expected seasonal patterns.
-          When making comparisons, clearly state whether differences are minor, moderate, or significant.
-          Use descriptive language to create engaging, natural-sounding text.
-          Avoid repetitive phrasing and overused expressions.
+    \n Describe this time series by focusing on trends and patterns. 
+    Discuss concrete numbers you see and pay attention to the dates.
+    For numerical values, ensure consistency with the provided time series. If making percentage comparisons, round to the nearest whole number. Report the dates when things happened.
+          
+    Compare the trends in this time series to global or regional norms, explaining whether they are higher, lower, or follow expected seasonal patterns.
+    When making comparisons, clearly state whether differences are minor, moderate, or significant.
+    Use descriptive language to create engaging, natural-sounding text.
+    Avoid repetitive phrasing and overused expressions.
 
-          Answer in a single paragraph of four sentences at most, without bullet points or any formatting.
-          """
+    Answer in a single paragraph of four sentences at most, without bullet points or any formatting.
+     """
 
   elif dataset_name == "walmart":
     request = f"""I will give you a time series about the {metadata['sampling frequency']} {metadata['attribute'].replace("_", " ")} of a Walmart store, from the week of {metadata['start week of this series']} to the week of {metadata['end week of this series']}.
     Here is the time series expressed in USD: \n {ts}
 
-          \n Describe this time series by focusing on trends and patterns. Discuss concrete numbers you see and pay attention to the dates.
-          For numerical values, ensure consistency with the provided time series. If making percentage comparisons, round to the nearest whole number.Report the dates when things happened.
-          Use the statistics I provided you for comparing this example to the normalcy.
-          {"Use your broad knowledge of geopolitics, natural events, and economic trends to provide meaningful comparisons. Be specific and factual, avoiding broad generalizations." if external_knowledge else "Do not add any extra information beyond what is given."}
-          Highlight significant spikes, dips, or patterns{" and explain possible causes based on global or regional factors." if external_knowledge else "."}
-          You don't have to explicitly report the numeric values of general statistics, you just use them for reference.
-          Compare the trends in this time series to global or regional norms, explaining whether they are higher, lower, or follow expected seasonal patterns.
-          When making comparisons, clearly state whether differences are minor, moderate, or significant.
-          Use descriptive language to create engaging, natural-sounding text.
-          Avoid repetitive phrasing and overused expressions.
+    \n Describe this time series by focusing on trends and patterns. 
+    Discuss concrete numbers you see and pay attention to the dates.
+    For numerical values, ensure consistency with the provided time series. If making percentage comparisons, round to the nearest whole number. Report the dates when things happened.
+          
+    Compare the trends in this time series to global or regional norms, explaining whether they are higher, lower, or follow expected seasonal patterns.
+    When making comparisons, clearly state whether differences are minor, moderate, or significant.
+    Use descriptive language to create engaging, natural-sounding text.
+    Avoid repetitive phrasing and overused expressions.
 
-          Answer in a single paragraph of four sentences at most, without bullet points or any formatting.
-          """
+    Answer in a single paragraph of four sentences at most, without bullet points or any formatting.
+     """
   elif dataset_name == "agriculture":
     request = f"""I will give you a time series about the {metadata['sampling frequency']} {metadata['attribute']} in the country of {metadata['country']}, from {metadata['start year of this series']} to {metadata['end year of this series']}. {metadata['metrics info']}
     Here is the time series: \n {ts}
 
-          \n Describe this time series by focusing on trends and patterns. Discuss concrete numbers you see and pay attention to the dates.
-          For numerical values, ensure consistency with the provided time series. If making percentage comparisons, round to the nearest whole number.Report the dates when things happened.
-          Use the statistics I provided you for comparing this example to the normalcy.
-          {"Use your broad knowledge of geopolitics, natural events, and economic trends to provide meaningful comparisons. Be specific and factual, avoiding broad generalizations." if external_knowledge else "Do not add any extra information beyond what is given."}
-          Highlight significant spikes, dips, or patterns{" and explain possible causes based on global or regional factors." if external_knowledge else "."}
-          You don't have to explicitly report the numeric values of general statistics, you just use them for reference.
-          Compare the trends in this time series to global or regional norms, explaining whether they are higher, lower, or follow expected seasonal patterns.
-          When making comparisons, clearly state whether differences are minor, moderate, or significant.
-          Use descriptive language to create engaging, natural-sounding text.
-          Avoid repetitive phrasing and overused expressions.
+    \n Describe this time series by focusing on trends and patterns. 
+    Discuss concrete numbers you see and pay attention to the dates.
+    For numerical values, ensure consistency with the provided time series. If making percentage comparisons, round to the nearest whole number. Report the dates when things happened.
+          
+    Compare the trends in this time series to global or regional norms, explaining whether they are higher, lower, or follow expected seasonal patterns.
+    When making comparisons, clearly state whether differences are minor, moderate, or significant.
+    Use descriptive language to create engaging, natural-sounding text.
+    Avoid repetitive phrasing and overused expressions.
 
-          Answer in a single paragraph of four sentences at most, without bullet points or any formatting.
-          """
+    Answer in a single paragraph of four sentences at most, without bullet points or any formatting.
+     """
   return request
-  
 
 def main():
   config = load_config()
