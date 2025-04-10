@@ -69,6 +69,7 @@ eval:
   bertscore_model: microsoft/deberta-xlarge-mnli #bert-base-uncased, roberta-large
   batch_size: 32
   val_split: 0.2
+  use_img_input: True
 
 mobtep:
   chronos_name: amazon/chronos-t5-small
