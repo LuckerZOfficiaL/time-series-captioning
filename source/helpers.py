@@ -1357,9 +1357,9 @@ def generate_line_plot(
     plt.grid(grid)
     
     if show_nums_on_line:
-      if len(ts) < 15:
+      if len(ts) < 25:
         for i, val in enumerate(ts):
-          plt.text(i, val, f'{val:.2f}', ha='center', va='bottom', fontsize=8)
+          plt.text(i, val, f'{val}', ha='center', va='bottom', fontsize=random.randint(7, 12))
 
     # Save and close the plot
     plt.tight_layout()

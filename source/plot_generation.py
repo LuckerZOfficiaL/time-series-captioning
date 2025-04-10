@@ -83,11 +83,11 @@ def main():
                 end_time_keys = [key for key in metadata.keys() if "end" in key]
                           
                 if len(start_time_keys) == 1:
-                    start_time=start_time_keys[0]
+                    start_time=metadata[start_time_keys[0]]
                 else: start_time = None
                 
                 if len(end_time_keys) == 1:
-                    end_time=end_time_keys[0]
+                    end_time=metadata[end_time_keys[0]]
                 else: end_time = None
                 #################################################################
                 
@@ -95,8 +95,8 @@ def main():
                 
                 
                 ########################## Random Plot Configs ###############################
-                plot_height = random.randint(3, 8)  # Height in inches
-                plot_width = random.randint(4, 12)  # Width in inches
+                plot_height = random.randint(3, 7)  # Height in inches
+                plot_width = random.randint(7, 12)  # Width in inches
 
                 # Random color
                 colors = ['blue', 'green', 'red', 'purple', 'orange', 'cyan', 'magenta', 'black']
@@ -110,11 +110,11 @@ def main():
                 show_nums_on_line = random.choice([True, False])
 
                 # Random marker
-                markers = ['o', 's', 'D', '^', 'v', '*', 'x', '+', 'p', 'H']
+                markers = [None, ".", 'o', 's', 'D']
                 marker = random.choice(markers)
 
                 # Random line style
-                linestyles = ['-', '--', '-.', ':']
+                linestyles = ['-']
                 linestyle = random.choice(linestyles)
     
                 ################################################################################
