@@ -2688,7 +2688,7 @@ def bleu_score(generated_caption, gt_caption, n_gram_weights=(0.25, 0.25, 0.25, 
                                smoothing_function=smoothie)
     return round(score, 4)
   
-def rouge_scores(generated_caption, gt_caption, rouge_types=None):
+def rouge_score(generated_caption, gt_caption, rouge_types=['rougeL'], metric="f1"):
     """
     Calculate ROUGE scores between a generated caption and ground truth caption.
     
@@ -2729,7 +2729,7 @@ def rouge_scores(generated_caption, gt_caption, rouge_types=None):
             'f1': scores[rouge_type].fmeasure
         }
     
-    return result
+    return result[rouge_type][metric]
   
     
 def main():
