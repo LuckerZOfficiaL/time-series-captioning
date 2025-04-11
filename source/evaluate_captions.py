@@ -8,6 +8,7 @@ from helpers import(
     oracle_score,
     bleu_score,
     rouge_score,
+    meteor_score,
     save_file
     
 )
@@ -85,17 +86,15 @@ def main():
                     gt_captions[dataset] = []
                 gt_captions[dataset].append(gt_caption)
 
-
+    result_dict = {}
+    for dataset in dataset_generated_caption_paths:
+            result_dict[dataset] = {}
+            
     for dataset in dataset_gt_caption_paths.keys():
         gen_capts = generated_captions[dataset]
         gt_capts = gt_captions[dataset]
     
         print(f"\n\n{dataset}: {len(gen_capts)} captions are being scored...")
-        
-        
-        result_dict = {}
-        for dataset in dataset_generated_caption_paths:
-            result_dict[dataset] = {}
         
         ############################### BERT SCORE #############################################
         
@@ -141,6 +140,52 @@ def main():
         
         result_dict[dataset]['rouge score'] = round(rouge, 3)
         
+        ############################### METEOR SCORE #############################################
+        
+        meteor = get_batch_score(generated_captions=gen_capts, gt_captions=gt_capts, score_function=meteor_score)
+        
+        print(f"METEOR SCORE: {round(rouge, 3)}")
+        
+        result_dict[dataset]['meteor score'] = round(meteor, 3)
+        
+        
+        ############################### AVERAGE SCORE #############################################
+        
+        # Calculate average scores across all datasets
+        average_scores = {
+            "bert score": {
+                "precision": 0,
+                "recall": 0,
+                "f1": 0
+            },
+            "numeric score": 0,
+            "bleu score": 0,
+            "rouge score": 0,
+            "meteor score": 0
+        }
+
+        dataset_count = len(dataset_gt_caption_paths)
+
+        for dataset in result_dict:
+            average_scores["bert score"]["precision"] += result_dict[dataset]["bert score"]["precision"]
+            average_scores["bert score"]["recall"] += result_dict[dataset]["bert score"]["recall"]
+            average_scores["bert score"]["f1"] += result_dict[dataset]["bert score"]["f1"]
+            average_scores["numeric score"] += result_dict[dataset]["numeric score"]
+            average_scores["bleu score"] += result_dict[dataset]["bleu score"]
+            average_scores["rouge score"] += result_dict[dataset]["rouge score"]
+            average_scores["meteor score"] += result_dict[dataset]["meteor score"]
+
+        # Compute the mean for each score
+        average_scores["bert score"]["precision"] /= dataset_count
+        average_scores["bert score"]["recall"] /= dataset_count
+        average_scores["bert score"]["f1"] /= dataset_count
+        average_scores["numeric score"] /= dataset_count
+        average_scores["bleu score"] /= dataset_count
+        average_scores["rouge score"] /= dataset_count
+        average_scores["meteor score"] /= dataset_count
+
+        # Add the average scores to the result dictionary
+        result_dict["average"] = average_scores
         
         
     print("\n\n", result_dict)
