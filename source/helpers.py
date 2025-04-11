@@ -20,12 +20,18 @@ import re
 import yaml
 import spacy
 import nltk
+from nltk.translate.meteor_score import meteor_score as meteor_sc
 from nltk.corpus import wordnet
 from llm_axe.agents import OnlineAgent
 from llm_axe.models import OllamaChat
 from llm_axe import OnlineAgent, OllamaChat
 import re
 from typing import Optional
+from collections import defaultdict
+from nltk.translate.bleu_score import sentence_bleu, SmoothingFunction
+import nltk
+from rouge_score import rouge_scorer
+
 
 
 def load_config(filepath="/home/ubuntu/thesis/source/configs/config.yaml"):
@@ -2316,7 +2322,7 @@ def bert_score(bert_model, tokenizer, generated_captions, gt_captions):
 
     return score
 
-def oracle_score_caption(generated_caption, gt_caption, model="Google Gemini-2.0-Flash"):
+def oracle_score(generated_caption, gt_caption, model="Google Gemini-2.0-Flash"):
   prompt = f"""
   You are an expert evaluator of artificially generated captions against ground truth captions. 
   Your task is to provide scores (0-100) for the generated caption's quality in comparison to the ground truth.
@@ -2562,17 +2568,226 @@ def generate_prompt_for_baseline(dataset_name, metadata, ts):
      """
   return request
 
+def remove_years(nums):
+    """
+    Remove numbers that represent years from the list.
+    
+    A number is considered a year if:
+    1. It's between 1960 and 2025 (inclusive)
+    2. It doesn't have a non-zero decimal part (e.g., 1960.0 counts as a year, but 1960.1 doesn't)
+    
+    Args:
+        nums: List of numbers (can be int or float)
+        
+    Returns:
+        List of numbers with years removed
+    """
+    result = []
+    
+    for num in nums:
+        # Check if the number is between 1960 and 2025
+        if 1960 <= num <= 2025:
+            # Check if it has no decimal part or if the decimal part is zero
+            if isinstance(num, int) or num.is_integer():
+                continue  # Skip this number as it's a year
+        
+        # If we got here, the number isn't a year, so add it to the result
+        result.append(num)
+    
+    return result
+
+def numeric_score(generated_caption, gt_caption, tolerance=0.05, acc_coef=0.3, recall_coef=0.7):
+    """extract the non-temporal numbers from both and compare the numbers extracted from generated_caption to the number extracted from gt_caption
+    check how good is their matching. If some numbers in gt are not in the generated_caption, that's a penalty. Also if some values are very close, it should be tolerated."""
+    
+    # Extract numbers from captions using regex
+    # Pattern matches numbers including optional decimal point, but excludes temporal patterns like dates, times
+    # Excluding temporal patterns like MM/DD/YYYY, HH:MM, etc.
+    pattern = r'-?\d+(?:\.\d+)?'
+    gen_numbers = [float(match) for match in re.findall(pattern, generated_caption)]
+    gt_numbers = [float(match) for match in re.findall(pattern, gt_caption)]
+    
+    gen_numbers = remove_years(gen_numbers)
+    gt_numbers = remove_years(gt_numbers)
+    
+    #print("gen numbers: ", gen_numbers)
+    #print("gt numbers: ", gt_numbers)
+    
+    if not gt_numbers:
+        # If no numbers in ground truth, return perfect score
+        return 1.0
+    
+    if not gen_numbers:
+        # If no numbers in generated caption but there are in ground truth, return 0
+        return 0.0
+    
+    # Group similar numbers (accounting for different units possibly)
+    # For each GT number, find the closest match in generated numbers
+    matches = []
+    unmatched_gt = []
+    used_gen_indices = set()
+       
+    for gt_num in gt_numbers:
+        best_match = None
+        best_match_idx = -1
+        best_relative_diff = float('inf')
+        
+        for i, gen_num in enumerate(gen_numbers):
+            if i in used_gen_indices:
+                continue
+                
+            # Calculate relative difference
+            relative_diff = abs(gt_num - gen_num) / max(abs(gt_num), 1e-10)
+            
+            if relative_diff < best_relative_diff:
+                best_relative_diff = relative_diff
+                best_match = gen_num
+                best_match_idx = i
+        
+        # If found a match within tolerance
+        if best_match is not None and best_relative_diff <= tolerance:
+            matches.append((gt_num, best_match, best_relative_diff))
+            used_gen_indices.add(best_match_idx)
+        else:
+            unmatched_gt.append(gt_num)
+    
+    # Calculate score components
+    recall = len(matches) / len(gt_numbers)  # How many GT numbers were matched
+    
+    # Calculate average accuracy of matches (how close were the matches)
+    if matches:
+        avg_accuracy = np.mean([1 - min(diff, tolerance) / tolerance for _, _, diff in matches])
+    else:
+        avg_accuracy = 0.0
+    
+    # Final score is a weighted combination of recall and accuracy
+    score = acc_coef * avg_accuracy + recall_coef * recall
+    
+    return round(score, 2)
+
+def bleu_score(generated_caption, gt_caption, n_gram_weights=(0.25, 0.25, 0.25, 0.25)): # n_gram_weights contains the weights for 1, 2, 3, and 4-grams.
+    """
+    Calculate BLEU score between a generated caption and ground truth caption.
+    
+    Args:
+        generated_caption (str): The caption generated by a model
+        gt_caption (str): The ground truth caption
+        
+    Returns:
+        float: BLEU score between 0 and 1
+    """
+    # Tokenize the captions
+    reference_tokens = [nltk.word_tokenize(gt_caption.lower())]
+    candidate_tokens = nltk.word_tokenize(generated_caption.lower())
+    
+    # Apply smoothing to handle cases where n-grams don't match
+    smoothie = SmoothingFunction().method1
+    
+    score = sentence_bleu(reference_tokens, 
+                               candidate_tokens, 
+                               weights=n_gram_weights, 
+                               smoothing_function=smoothie)
+    return round(score, 4)
+  
+def rouge_score(generated_caption, gt_caption, rouge_types=['rougeL'], metric="f1"):
+    """
+    Calculate ROUGE scores between a generated caption and ground truth caption.
+    
+    Uses the rouge-score package which is a Python implementation of ROUGE.
+    
+    Args:
+        generated_caption (str): The caption generated by a model
+        gt_caption (str): The ground truth caption
+        rouge_types (list, optional): List of ROUGE types to calculate.
+                                     Options: 'rouge1', 'rouge2', 'rougeL'
+                                     If None, all three types are calculated.
+        
+    Returns:
+        dict: Dictionary containing requested ROUGE scores (precision, recall, and F1)
+    """
+    # Default to all ROUGE types if none specified
+    if rouge_types is None:
+        rouge_types = ['rouge1', 'rouge2', 'rougeL']
+    
+    # Validate rouge_types
+    valid_types = {'rouge1', 'rouge2', 'rougeL'}
+    for r_type in rouge_types:
+        if r_type not in valid_types:
+            raise ValueError(f"Invalid ROUGE type: {r_type}. Valid options are: {valid_types}")
+    
+    # Initialize the ROUGE scorer with requested types
+    scorer = rouge_scorer.RougeScorer(rouge_types, use_stemmer=True)
+    
+    # Calculate scores
+    scores = scorer.score(gt_caption, generated_caption)
+    
+    # Create a more readable output dictionary
+    result = {}
+    for rouge_type in rouge_types:
+        result[rouge_type] = {
+            'precision': scores[rouge_type].precision,
+            'recall': scores[rouge_type].recall,
+            'f1': scores[rouge_type].fmeasure
+        }
+    
+    return result[rouge_type][metric]
+
+def meteor_score(generated_caption, gt_caption):
+    """
+    Calculate the METEOR score between a generated caption and a ground truth caption.
+    
+    METEOR (Metric for Evaluation of Translation with Explicit ORdering) is a metric
+    for evaluating machine translation output that is based on the harmonic mean of
+    unigram precision and recall, with recall weighted higher than precision.
+    
+    Args:
+        generated_caption (str): The caption generated by a model
+        gt_caption (str): The ground truth caption
+        
+    Returns:
+        float: METEOR score between 0 and 1
+    """
+    # Download required NLTK resources if not already downloaded
+    try:
+        # Check if wordnet is available
+        nltk.data.find('wordnet')
+    except LookupError:
+        print("Downloading wordnet...")
+        nltk.download('wordnet')
+    
+    try:
+        # Check if punkt is available
+        nltk.data.find('punkt')
+    except LookupError:
+        print("Downloading punkt...")
+        nltk.download('punkt')
+    
+    # Tokenize the captions
+    reference_tokens = [gt_caption.split()]  # METEOR expects a list of references
+    candidate_tokens = generated_caption.split()
+    
+    # Calculate METEOR score
+    score = meteor_sc(reference_tokens, candidate_tokens)
+    
+    return score
+    
 def main():
   config = load_config()
 
   random.seed(config['general']['random_seed'])
   
-  with open("/home/ubuntu/thesis/data/processed/agricultural_productivity.json", "r") as file:
+  generated_caption = "This time series of daily crime rate in Hollywood starts from 19 in 25 June 2015 and rises to 30 by 30 June 2015. The series then drops down to 9 by the end of July 2015."
+  gt_caption = "This time series of daily crime rate in Hollywood starts from 20 in 25 June 2015 and rises to 28 by 30 June 2015. The series then drops down to 9 by the end of July 2015."
+  
+  #nltk.download('punkt_tab')
+  print("\nscore: ", meteor_score(generated_caption, gt_caption))
+  
+  """with open("/home/ubuntu/thesis/data/processed/agricultural_productivity.json", "r") as file:
       json_data = json.load(file)
   metadata, ts = get_sample(dataset_name="agriculture", json_data=json_data)
   print(metadata, ts)
   
-  print("\n\n", get_request("agriculture", metadata, ts))
+  print("\n\n", get_request("agriculture", metadata, ts))"""
   
 
   #print(check_single_fact_confidence("The sun is smaller than the Earth", checking_model="Google Gemini-2.0-Flash"))
