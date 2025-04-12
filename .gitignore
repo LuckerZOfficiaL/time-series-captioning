@@ -7,3 +7,5 @@ processed/
 .aws/
 .credentials/
 checkpoints/
+
+source/claude_api.py

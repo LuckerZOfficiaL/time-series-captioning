@@ -9,6 +9,10 @@ from helpers import(
     save_file,
     get_response
 )
+from claude_api import(
+    get_claude_response,
+    get_claude_image_response
+)
 
 
 def get_vlm_response(model_name, prompt, image_path):
@@ -64,10 +68,19 @@ def main():
         
         prompt = generate_prompt_for_baseline(dataset_name=dataset_name, metadata=metadata, ts=ts)
         if use_img_input:
-            generated_caption = get_vlm_response(model_name=model_name, prompt=prompt, image_path=image_path)
+            if "claude" in model_name:
+                generated_caption = get_claude_image_response(image_path, prompt)
+            else:
+                generated_caption = get_vlm_response(model_name=model_name, prompt=prompt, image_path=image_path)
+            
         else:
-            if model_name == "gemini-2.0-flash": model = "Google Gemini-2.0-Flash"
-            generated_caption = get_response(prompt=prompt, model=model)
+            if "claude" in model_name: 
+                generated_caption = get_claude_response(prompt)
+            else:
+                if model_name == "gemini-2.0-flash": 
+                    model = "Google Gemini-2.0-Flash"
+            
+                generated_caption = get_response(prompt=prompt, model=model)
         
         #print(generated_caption)
         save_file(data=generated_caption, filepath=save_folder_path+"/"+filename[:-4]+"txt")

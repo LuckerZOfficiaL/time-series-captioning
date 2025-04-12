@@ -190,7 +190,7 @@ def main():
         
     print("\n\n", result_dict)
     save_path = config['path']['evaluation_results_folder_path']+"/"+eval_model+".json"
-    print(save_path)
+    #print(save_path)
     save_file(result_dict, filepath=save_path)
         
         
