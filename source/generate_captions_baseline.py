@@ -39,11 +39,11 @@ def main():
     print(get_vlm_response(model_name="gemini-2.0-flash", prompt=prompt, image_path=image_path))"""
     
     
-    model_name = "gemini-2.0-flash"
+    model_name = config['eval']['evaluated_model']
     
     ts_folder_path = "/home/ubuntu/thesis/data/samples/time series"
     metadata_folder_path = "/home/ubuntu/thesis/data/samples/metadata"
-    image_folder_path = "/home/ubuntu/thesis/data/samples/plots"
+    image_folder_path = "/home/ubuntu/thesis/data/samples/plots_2.0"
     save_folder_path = f"/home/ubuntu/thesis/data/samples/captions/generated/{model_name}{"" if use_img_input else "_text"}"
     
     done_caption_ids = [filename.split(".")[0] for filename in os.listdir(save_folder_path)]
@@ -67,6 +67,7 @@ def main():
             metadata = json.load(metadata_file)
         
         prompt = generate_prompt_for_baseline(dataset_name=dataset_name, metadata=metadata, ts=ts)
+        prompt = prompt + "\nI have attached a line plot of the time series to support you."
         if use_img_input:
             if "claude" in model_name:
                 generated_caption = get_claude_image_response(image_path, prompt)

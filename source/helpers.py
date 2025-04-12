@@ -2373,17 +2373,18 @@ def oracle_score(generated_caption, gt_caption, model="Google Gemini-2.0-Flash")
   response = get_response(prompt, model=model, temperature=0.25)
   #print(f"Scoring response:\n{response}")
   response = response.lower()
-  semantic_similarity_score = int(re.search(r"semantic similarity: (\d+)", response).group(1))
-  information_overlap_score = int(re.search(r"information overlap: (\d+)", response).group(1))
-  numeric_correctness_score = int(re.search(r"numeric correctness: (\d+)", response).group(1))
+  #semantic_similarity_score = int(re.search(r"semantic similarity: (\d+)", response).group(1))
+  #information_overlap_score = int(re.search(r"information overlap: (\d+)", response).group(1))
+  #numeric_correctness_score = int(re.search(r"numeric correctness: (\d+)", response).group(1))
   overall_score = int(re.search(r"overall: (\d+)", response).group(1))
 
-  return {
+  """return {
       "semantic similarity": semantic_similarity_score,
       "information overlap": information_overlap_score,
       "numeric correctness": numeric_correctness_score,
       "overall": overall_score
-  }
+  }"""
+  return overall_score
 
 def generate_prompt_for_baseline(dataset_name, metadata, ts):
   config=load_config()
@@ -2747,7 +2748,7 @@ def meteor_score(generated_caption, gt_caption):
     Returns:
         float: METEOR score between 0 and 1
     """
-    # Download required NLTK resources if not already downloaded
+    """# Download required NLTK resources if not already downloaded
     try:
         # Check if wordnet is available
         nltk.data.find('wordnet')
@@ -2760,7 +2761,7 @@ def meteor_score(generated_caption, gt_caption):
         nltk.data.find('punkt')
     except LookupError:
         print("Downloading punkt...")
-        nltk.download('punkt')
+        nltk.download('punkt')"""
     
     # Tokenize the captions
     reference_tokens = [gt_caption.split()]  # METEOR expects a list of references
@@ -2776,11 +2777,29 @@ def main():
 
   random.seed(config['general']['random_seed'])
   
-  generated_caption = "This time series of daily crime rate in Hollywood starts from 19 in 25 June 2015 and rises to 30 by 30 June 2015. The series then drops down to 9 by the end of July 2015."
+  """# Directory containing the files
+  directory = "/home/ubuntu/thesis/data/samples/captions/generated/llava-mistral-7b"
+
+  # Iterate through all files in the directory
+  for filename in os.listdir(directory):
+    # Extract the numeric ID
+    try:
+      numeric_id = int(filename.split("_")[1].split(".")[0])
+      # Check if the numeric ID is not a multiple of 3
+      if numeric_id % 3 != 0:
+        # Construct the full file path
+        file_path = os.path.join(directory, filename)
+        # Remove the file
+        os.remove(file_path)
+        print(f"Removed: {file_path}")
+    except (IndexError, ValueError):
+      print(f"Skipping invalid filename: {filename}")"""
+  
+  """generated_caption = "This time series of daily crime rate in Hollywood starts from 19 in 25 June 2015 and rises to 30 by 30 June 2015. The series then drops down to 9 by the end of July 2015."
   gt_caption = "This time series of daily crime rate in Hollywood starts from 20 in 25 June 2015 and rises to 28 by 30 June 2015. The series then drops down to 9 by the end of July 2015."
   
   #nltk.download('punkt_tab')
-  print("\nscore: ", meteor_score(generated_caption, gt_caption))
+  print("\nscore: ", meteor_score(generated_caption, gt_caption))"""
   
   """with open("/home/ubuntu/thesis/data/processed/agricultural_productivity.json", "r") as file:
       json_data = json.load(file)
