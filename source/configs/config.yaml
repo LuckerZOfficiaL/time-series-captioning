@@ -49,7 +49,7 @@ path: # paths that have "folder" in its name are folder paths, otherwise they ar
   all_facts_no_common_sense_path: /home/ubuntu/thesis/data/fact bank/all_facts_no_common_sense.txt
   all_facts_by_period_folder_path: /home/ubuntu/thesis/data/fact bank/by period #/{BIN_YEARS}/all_facts_by_{BIN_YEARS}years.json
   prototypes_path: /home/ubuntu/thesis/model/prototype_words.txt
-  generated_captions_folder_path: /home/ubuntu/thesis/data/samples/captions/generated/phi-4-multimodal-instruct
+  generated_captions_folder_path: /home/ubuntu/thesis/data/samples/captions/generated/internvl_text
   gt_captions_folder_path: /home/ubuntu/thesis/data/samples/captions/no external
   checkpoints_folder_path: /home/ubuntu/thesis/model/checkpoints
   evaluation_results_folder_path: /home/ubuntu/thesis/data/evaluation results
@@ -68,7 +68,6 @@ train:
 
 eval:
   evaluated_model: claude-3.5-haiku #gemini-2.0-flash
-  all_metrics: [bert_score, numeric_score, bleu_score, rouge_score] # oracle_score
   bertscore_model: microsoft/deberta-xlarge-mnli #bert-base-uncased, roberta-large
   batch_size: 32
   val_split: 0.2

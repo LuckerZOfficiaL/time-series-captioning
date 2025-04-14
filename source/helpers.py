@@ -12,6 +12,7 @@ from google import genai
 from google.genai import types
 from google.genai.types import Tool, GenerateContentConfig, GoogleSearch
 import os
+#from sklearn.conftest import dataset_fetchers
 import torch
 from sklearn.metrics.pairwise import cosine_similarity
 from sentence_transformers import SentenceTransformer
@@ -2777,8 +2778,108 @@ def main():
 
   random.seed(config['general']['random_seed'])
   
-  """# Directory containing the files
-  directory = "/home/ubuntu/thesis/data/samples/captions/generated/llava-mistral-7b"
+  """datasets = [
+    "Air Quality", "Border Crossing", "Crime", "Demography", "Road Injuries",
+    "Covid", "Co2", "Diet", "Walmart", "Online Retail", "Agriculture"
+]
+
+  time_steps = np.array([
+      285654436/250, 396618, 38416, 14322, 37354,
+      720236, 33842, 233506, 6435, 7416, 48728
+  ])
+
+  # Reduce Air Quality weight by half
+  adjusted_steps = time_steps.copy()
+  adjusted_steps[0] = adjusted_steps[0] / 2
+
+  total_samples = 20000
+  min_samples = 500
+
+  # Step 1: Assign minimum samples
+  n_datasets = len(datasets)
+  assigned = np.full(n_datasets, min_samples)
+  remaining = total_samples - min_samples * n_datasets
+
+  # Step 2: Proportional distribution
+  weights = adjusted_steps / adjusted_steps.sum()
+  proportional = np.floor(weights * remaining).astype(int)
+
+  # Step 3: Final allocation
+  final_samples = assigned + proportional
+
+  # Step 4: Fix rounding errors
+  while final_samples.sum() < total_samples:
+      final_samples[np.argmax(weights)] += 1
+  while final_samples.sum() > total_samples:
+      final_samples[np.argmax(final_samples)] -= 1
+
+  # Print result
+  for name, samples in zip(datasets, final_samples):
+      print(f"{name:<16} {samples}")"""
+  
+  """folder_path="/home/ubuntu/thesis/data/processed"
+  timesteps_dict={}
+  for filename in os.listdir(folder_path):
+     if filename.endswith(".json"):
+      file_path = os.path.join(folder_path, filename)
+      with open(file_path, "r") as file:
+        data = json.load(file)
+        def count_numbers(data):
+          def is_year(value):
+            return isinstance(value, (int, float)) and 1960 <= value <= 2025
+
+          def count_in_list(lst):
+            return sum(1 for item in lst if isinstance(item, (int, float)) and not is_year(item))
+
+          def count_in_dict(dct):
+            count = 0
+            for key, value in dct.items():
+              if isinstance(value, list):
+                count += count_in_list(value)
+              elif isinstance(value, dict):
+                count += count_in_dict(value)
+            return count
+
+          return count_in_dict(data)
+
+        number_count = count_numbers(data)
+        timesteps_dict[filename] = number_count
+        print(f"{filename}: {number_count}")
+  print(f"{timesteps_dict}")"""
+  
+  
+  """directory = "/home/ubuntu/thesis/data/samples/time series"
+
+  dataset_names = []
+  for filename in os.listdir(directory):
+      dataset = filename.split("_")[0]
+      if dataset not in dataset_names:
+        dataset_names.append(dataset)
+  
+  print(dataset_names)
+  
+  avg_lens = {}
+  for dataset_name in dataset_names:
+    dataset_files = [f for f in os.listdir(directory) if f.startswith(dataset_name)]
+    total_length = 0
+    count = 0
+
+    for file in dataset_files:
+      if file.endswith(".txt"):
+        ts = read_txt_to_num_list(os.path.join(directory, file))
+        total_length += len(ts)
+        count += 1
+
+    if count > 0:
+      avg_lens[dataset_name] = total_length / count
+    else:
+      avg_lens[dataset_name] = 0
+
+  print("Average time series lengths:", avg_lens)"""
+     
+  
+  """
+  directory = "/home/ubuntu/thesis/data/samples/captions/generated/qwenvl_vl"
 
   # Iterate through all files in the directory
   for filename in os.listdir(directory):

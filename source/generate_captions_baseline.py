@@ -67,8 +67,8 @@ def main():
             metadata = json.load(metadata_file)
         
         prompt = generate_prompt_for_baseline(dataset_name=dataset_name, metadata=metadata, ts=ts)
-        prompt = prompt + "\nI have attached a line plot of the time series to support you."
         if use_img_input:
+            prompt = prompt + "\nI have attached a line plot of the time series to support you."
             if "claude" in model_name:
                 generated_caption = get_claude_image_response(image_path, prompt)
             else:

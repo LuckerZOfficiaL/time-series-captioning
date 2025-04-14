@@ -324,10 +324,10 @@ def preprocess_road_injuries():
 
 def main():
     #preprocess_heart_rate()
-    #preprocess_air_quality()
-    #preprocess_demographics()
-    #preprocess_crime()
-    #preprocess_border_crossing()
+    preprocess_air_quality()
+    preprocess_demographics()
+    preprocess_crime()
+    preprocess_border_crossing()
     preprocess_road_injuries()
 
     
