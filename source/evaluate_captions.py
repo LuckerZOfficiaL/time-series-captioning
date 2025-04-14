@@ -1,6 +1,7 @@
 import os
 from transformers import BertForSequenceClassification, BertTokenizer
 from bert_score import score
+import json
 
 from helpers import(
     load_config,
@@ -86,18 +87,30 @@ def main():
                     gt_captions[dataset] = []
                 gt_captions[dataset].append(gt_caption)
 
-    result_dict = {}
-    for dataset in dataset_generated_caption_paths:
-            result_dict[dataset] = {}
+
+    
+    save_path = config['path']['evaluation_results_folder_path'] + "/" + eval_model + ".json"
+
+    if os.path.exists(save_path):
+        print(f"Evaluation results already exist at {save_path}. Loading existing results...")
+        with open(save_path, 'r') as file:
+            result_dict = json.load(file)
+    else:   
+        print(f"Creating result dictionary from scratch...")
+        result_dict = {}
+        for dataset in dataset_generated_caption_paths:
+                result_dict[dataset] = {}
             
     for dataset in dataset_gt_caption_paths.keys():
+        if result_dict[dataset] != {}:
+            continue
+        
         gen_capts = generated_captions[dataset]
         gt_capts = gt_captions[dataset]
     
         print(f"\n\n{dataset}: {len(gen_capts)} captions are being scored...")
         
-        ############################### BERT SCORE #############################################
-        
+        ################################# BERT SCORE ##############################################
         """
             P (Precision): Measures how much of the candidate text's meaning is captured in the reference text.
             R (Recall): Measures how much of the reference text's meaning is captured in the candidate text.
@@ -116,7 +129,7 @@ def main():
             "recall": round(r_mean.item(), 3),
             "f1": round(f1_mean.item(), 3)
         }
-        ############################### Numeric Score #############################################
+        ################################# Numeric Score ###############################################
         
         num_score = get_batch_score(generated_captions=gen_capts, gt_captions=gt_capts, score_function=numeric_score)
         
@@ -124,7 +137,7 @@ def main():
         
         result_dict[dataset]['numeric score'] = round(num_score, 3)
         
-        ############################### BLEU SCORE #############################################
+        ################################# BLEU SCORE ###############################################
         
         bleu = get_batch_score(generated_captions=gen_capts, gt_captions=gt_capts, score_function=bleu_score)
         
@@ -132,7 +145,7 @@ def main():
         
         result_dict[dataset]['bleu score'] = round(bleu, 3)
         
-        ############################### ROUGE SCORE #############################################
+        ################################# ROUGE SCORE ###############################################
         
         rouge = get_batch_score(generated_captions=gen_capts, gt_captions=gt_capts, score_function=rouge_score)
         
@@ -140,7 +153,7 @@ def main():
         
         result_dict[dataset]['rouge score'] = round(rouge, 3)
         
-        ############################### METEOR SCORE #############################################
+        ################################# METEOR SCORE ###############################################
         
         meteor = get_batch_score(generated_captions=gen_capts, gt_captions=gt_capts, score_function=meteor_score)
         
@@ -149,50 +162,64 @@ def main():
         result_dict[dataset]['meteor score'] = round(meteor, 3)
         
         
-        ############################### AVERAGE SCORE #############################################
+        ################################# ORACLE SCORE ###############################################
         
-        # Calculate average scores across all datasets
-        average_scores = {
-            "bert score": {
-                "precision": 0,
-                "recall": 0,
-                "f1": 0
-            },
-            "numeric score": 0,
-            "bleu score": 0,
-            "rouge score": 0,
-            "meteor score": 0
-        }
-
-        dataset_count = len(dataset_gt_caption_paths)
-
-        for dataset in result_dict:
-            average_scores["bert score"]["precision"] += result_dict[dataset]["bert score"]["precision"]
-            average_scores["bert score"]["recall"] += result_dict[dataset]["bert score"]["recall"]
-            average_scores["bert score"]["f1"] += result_dict[dataset]["bert score"]["f1"]
-            average_scores["numeric score"] += result_dict[dataset]["numeric score"]
-            average_scores["bleu score"] += result_dict[dataset]["bleu score"]
-            average_scores["rouge score"] += result_dict[dataset]["rouge score"]
-            average_scores["meteor score"] += result_dict[dataset]["meteor score"]
-
-        # Compute the mean for each score
-        average_scores["bert score"]["precision"] /= dataset_count
-        average_scores["bert score"]["recall"] /= dataset_count
-        average_scores["bert score"]["f1"] /= dataset_count
-        average_scores["numeric score"] /= dataset_count
-        average_scores["bleu score"] /= dataset_count
-        average_scores["rouge score"] /= dataset_count
-        average_scores["meteor score"] /= dataset_count
-
-        # Add the average scores to the result dictionary
-        result_dict["average"] = average_scores
+        oracle_sc = get_batch_score(generated_captions=gen_capts, gt_captions=gt_capts, score_function=oracle_score)
+        
+        print(f"ORACLE SCORE: {round(oracle_sc, 3)}")
+        
+        result_dict[dataset]['oracle score'] = round(oracle_sc, 3)
         
         
-    print("\n\n", result_dict)
-    save_path = config['path']['evaluation_results_folder_path']+"/"+eval_model+".json"
-    print(save_path)
+        ################################ SAVE CHECKPOINT ###############################################
+        save_file(result_dict, filepath=save_path)
+        
+        
+    ############################### AVERAGE SCORE #############################################
+    
+    average_scores = {
+    "bert score": {
+        "precision": 0,
+        "recall": 0,
+        "f1": 0
+        },
+        "numeric score": 0,
+        "bleu score": 0,
+        "rouge score": 0,
+        "meteor score": 0,
+        "oracle score": 0
+    }
+
+    # Don't include 'average' in the dataset count or loop
+    datasets = [d for d in result_dict if d != "average"]
+    dataset_count = len(datasets)
+
+    for dataset in datasets:
+        average_scores["bert score"]["precision"] += result_dict[dataset]["bert score"]["precision"]
+        average_scores["bert score"]["recall"] += result_dict[dataset]["bert score"]["recall"]
+        average_scores["bert score"]["f1"] += result_dict[dataset]["bert score"]["f1"]
+        average_scores["numeric score"] += result_dict[dataset]["numeric score"]
+        average_scores["bleu score"] += result_dict[dataset]["bleu score"]
+        average_scores["rouge score"] += result_dict[dataset]["rouge score"]
+        average_scores["meteor score"] += result_dict[dataset]["meteor score"]
+        average_scores["oracle score"] += result_dict[dataset]["oracle score"]
+
+    # Compute the mean for each score
+    average_scores["bert score"]["precision"] /= dataset_count
+    average_scores["bert score"]["recall"] /= dataset_count
+    average_scores["bert score"]["f1"] /= dataset_count
+    average_scores["numeric score"] /= dataset_count
+    average_scores["bleu score"] /= dataset_count
+    average_scores["rouge score"] /= dataset_count
+    average_scores["meteor score"] /= dataset_count
+    average_scores["oracle score"] /= dataset_count
+
+    # Now safe to modify the dictionary
+    result_dict["average"] = average_scores
+
+    # Save the result
     save_file(result_dict, filepath=save_path)
-        
+            
         
     
 if __name__ == "__main__":
