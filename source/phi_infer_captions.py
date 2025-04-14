@@ -11,7 +11,7 @@ from helpers import generate_prompt_for_baseline
 
 MODEL_PATH = "microsoft/Phi-4-multimodal-instruct"
 DATA_DIR = "/home/ubuntu/time-series-captioning/data/samples/"
-OUT_DIR = "/home/ubuntu/time-series-captioning/phi_captions"
+OUT_DIR = "/home/ubuntu/time-series-captioning/phi_captions_text"
 
 
 import requests
@@ -52,10 +52,10 @@ def eval_batch_phi(prompts, image_files):
     assistant_prompt = '<|assistant|>'
     prompt_suffix = '<|end|>'
     
-    images = [Image.open(fn) for fn in image_files]
-    prompts = [f'{user_prompt}<|image_1|>{caption_prompt}{prompt_suffix}{assistant_prompt}'
+#    images = [Image.open(fn) for fn in image_files]
+    prompts = [f'{user_prompt}{caption_prompt}{prompt_suffix}{assistant_prompt}'
                for caption_prompt in prompts]
-    inputs = processor(text=prompts, images=images, return_tensors='pt').to('cuda:0')
+    inputs = processor(text=prompts, return_tensors='pt').to('cuda')
     
     # Generate response
     stime = time.time()
@@ -64,7 +64,8 @@ def eval_batch_phi(prompts, image_files):
         max_new_tokens=256,
         generation_config=generation_config,
         temperature=0.3,
-        do_sample=True
+        do_sample=True,
+        num_logits_to_keep=0,
     )
     print("RUNTIME", time.time() - stime)
     generate_ids = generate_ids[:, inputs['input_ids'].shape[1]:]
@@ -86,7 +87,7 @@ def write_caption(ts_names):
           metadata = json.load(fh)
       with open(os.path.join(DATA_DIR, "time series", f"{ts_name}.txt"), 'r') as fh:
           ts = fh.read()
-      prompt = generate_prompt_for_baseline(dataset_name, metadata, ts)
+      prompt = generate_prompt_for_baseline(dataset_name, metadata, ts, use_image=False)
       image_file = os.path.join(DATA_DIR, "plots_2.0", f"{ts_name}.jpeg")
       prompts.append(prompt)
       image_files.append(image_file)

@@ -12,7 +12,7 @@ from helpers import generate_prompt_for_baseline
 
 MODEL_PATH = "llava-hf/llava-v1.6-mistral-7b-hf"
 DATA_DIR = "/home/ubuntu/time-series-captioning/data/samples/"
-OUT_DIR = "/home/ubuntu/time-series-captioning/llava_captions_mistral7b"
+OUT_DIR = "/home/ubuntu/time-series-captioning/llava_captions_text"
 
 
 import requests
@@ -35,15 +35,14 @@ def eval_batch_llava(prompts, image_files):
     conversations = [{
             "role": "user",
             "content": [
-                {"type": "image"},
+#                {"type": "image"},
                 {"type": "text", "text": f"{prompt}"},
             ],
     } for prompt in prompts]
-    images = [Image.open(fn) for fn in image_files]
     model, processor = _load_batch_llava_model(MODEL_PATH)
     prompts = [processor.apply_chat_template([c], add_generation_prompt=True)
                for c in conversations]
-    inputs = processor(images=images, text=prompts, padding=True, return_tensors="pt").to(model.device)
+    inputs = processor(text=prompts, padding=True, return_tensors="pt").to(model.device)
     stime = time.time()
     generate_ids = model.generate(**inputs, max_new_tokens=256, temperature=0.3, do_sample=True)
     print("BATCH TIME:", time.time() - stime)
@@ -53,7 +52,7 @@ def eval_batch_llava(prompts, image_files):
     return captions
 
 
-def write_caption(ts_names):
+def write_caption(ts_names, eval_fn):
     """
     Given ts_name, write a caption .txt file for the time series.
     """
@@ -65,25 +64,25 @@ def write_caption(ts_names):
           metadata = json.load(fh)
       with open(os.path.join(DATA_DIR, "time series", f"{ts_name}.txt"), 'r') as fh:
           ts = fh.read()
-      prompt = generate_prompt_for_baseline(dataset_name, metadata, ts)
+      prompt = generate_prompt_for_baseline(dataset_name, metadata, ts, use_image=False)
       image_file = os.path.join(DATA_DIR, "plots_2.0", f"{ts_name}.jpeg")
       prompts.append(prompt)
       image_files.append(image_file)
 
-    captions = eval_batch_llava(prompts, image_files)
+    captions = eval_fn(prompts, image_files)
     for ts_name, caption in zip(ts_names, captions):
         with open(os.path.join(OUT_DIR, f"{ts_name}.txt"), "w+") as fh:
             fh.write(caption)
 
 
-def main():
+def main(eval_fn):
     ts_names = [Path(fn).stem for fn in os.listdir(os.path.join(DATA_DIR, "time series"))]
     done_names = {Path(fn).stem for fn in os.listdir(OUT_DIR)}
     ts_names = sorted([name for name in ts_names if name not in done_names])
     batch_size = 10
     for i in range(0, len(ts_names), batch_size):
         ts_batch = ts_names[i:i+batch_size]
-        write_caption(ts_batch)
+        write_caption(ts_batch, eval_fn)
 
 if __name__ == "__main__":
-    main()
+    main(eval_batch_llava)
