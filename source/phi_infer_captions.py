@@ -27,7 +27,6 @@ from PIL import Image
 from transformers import AutoModelForCausalLM, AutoProcessor, GenerationConfig
 from urllib.request import urlopen
 
-### NOTE: Only works with transformers==4.48.2, not newer version 4.51.2 ###
 
 @lru_cache
 def _load_batch_phi_model(model_name):

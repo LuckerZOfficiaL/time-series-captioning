@@ -52,7 +52,7 @@ def eval_batch_llava(prompts, image_files):
     return captions
 
 
-def write_caption(ts_names, eval_fn):
+def write_caption(ts_names, eval_fn, out_dir):
     """
     Given ts_name, write a caption .txt file for the time series.
     """
@@ -71,18 +71,18 @@ def write_caption(ts_names, eval_fn):
 
     captions = eval_fn(prompts, image_files)
     for ts_name, caption in zip(ts_names, captions):
-        with open(os.path.join(OUT_DIR, f"{ts_name}.txt"), "w+") as fh:
+        with open(os.path.join(out_dir, f"{ts_name}.txt"), "w+") as fh:
             fh.write(caption)
 
 
-def main(eval_fn):
+def main(eval_fn, out_dir):
     ts_names = [Path(fn).stem for fn in os.listdir(os.path.join(DATA_DIR, "time series"))]
-    done_names = {Path(fn).stem for fn in os.listdir(OUT_DIR)}
+    done_names = {Path(fn).stem for fn in os.listdir(out_dir)}
     ts_names = sorted([name for name in ts_names if name not in done_names])
     batch_size = 10
     for i in range(0, len(ts_names), batch_size):
         ts_batch = ts_names[i:i+batch_size]
-        write_caption(ts_batch, eval_fn)
+        write_caption(ts_batch, eval_fn, out_dir)
 
 if __name__ == "__main__":
-    main(eval_batch_llava)
+    main(eval_batch_llava, OUT_DIR)
