@@ -71,7 +71,6 @@ def eval_batch_phi(prompts, image_files):
     captions = processor.batch_decode(
         generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False
     )
-    import pdb; pdb.set_trace()
     return captions
 
 
