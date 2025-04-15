@@ -342,10 +342,10 @@ if __name__ == "__main__":
     #checkpoint_path = "/home/ubuntu/thesis/model/checkpoints/InternVL2_5-2B_5.388.pth"
     #model.load_state_dict(torch.load(checkpoint_path, map_location=device))
     
-    ts_folder_path = "/home/ubuntu/thesis/data/samples/time series"
-    metadata_folder_pth = "/home/ubuntu/thesis/data/samples/metadata"
-    image_folder_path = "/home/ubuntu/thesis/data/samples/plots"
-    save_folder_path="/home/ubuntu/thesis/data/samples/captions/generated/pretrained internVL"
+    ts_folder_path = "/home/ubuntu/thesis/data/samples/test/time series"
+    metadata_folder_pth = "/home/ubuntu/thesis/data/samples/test/metadata"
+    image_folder_path = "/home/ubuntu/thesis/data/samples/test/plots"
+    save_folder_path="/home/ubuntu/thesis/data/samples/generated captions/internvl"
     
     model = Mob(chronos_name=config['mobtep']['chronos_name'], 
                 internvl_name=config['mobtep']['internvl_name'],

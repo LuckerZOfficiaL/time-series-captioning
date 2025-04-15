@@ -12,6 +12,7 @@ from google import genai
 from google.genai import types
 from google.genai.types import Tool, GenerateContentConfig, GoogleSearch
 import os
+#from sklearn.conftest import dataset_fetchers
 import torch
 from sklearn.metrics.pairwise import cosine_similarity
 #from sentence_transformers import SentenceTransformer
@@ -31,6 +32,9 @@ from collections import defaultdict
 from nltk.translate.bleu_score import sentence_bleu, SmoothingFunction
 import nltk
 from rouge_score import rouge_scorer
+import shutil
+from collections import Counter
+
 
 
 
@@ -619,7 +623,7 @@ def get_sample(dataset_name: str, json_data, series_len = None, start_idx = None
       attribute = random.choice(list(json_data[country_ID].keys()))
       
     if series_len is None:
-      series_len = random.randint(5, min(150, 5+int(len(json_data[country_ID][attribute])/8)))
+      series_len = random.randint(5, min(150, 5+int(len(json_data[country_ID][attribute])/5)))
     if start_idx is None:
       start_idx = random.randint(0, len(json_data[country_ID][attribute]) - series_len)
     ts = json_data[country_ID][attribute][start_idx:start_idx+series_len]
@@ -633,7 +637,7 @@ def get_sample(dataset_name: str, json_data, series_len = None, start_idx = None
         attribute = random.choice(list(json_data[country_ID].keys()))
         
       if series_len is None:
-        series_len = random.randint(5, min(150, 5+int(len(json_data[country_ID][attribute])/8)))
+        series_len = random.randint(5, min(150, 5+int(len(json_data[country_ID][attribute])/5)))
       if start_idx is None:
         start_idx = random.randint(0, len(json_data[country_ID][attribute]) - series_len)
       ts = json_data[country_ID][attribute][start_idx:start_idx+series_len]
@@ -718,67 +722,73 @@ def get_sample(dataset_name: str, json_data, series_len = None, start_idx = None
     metadata['standard deviation of this specific series'] = float(round(np.std(ts), 2))
     metadata['minimum of this specific series'] = float(round(min(ts), 2))
     metadata['maximum of this specific series'] = float(round(max(ts), 2))
-    
+
+
   if dataset_name == "diet":
-    country_ID = random.choice(list(json_data.keys()))
-    country = json_data[country_ID]['metadata']['country_name']
-    attribute = random.choice(list(json_data[country_ID]["time_series"]))
-      
+    valid_keys = list(json_data.keys())
+
     while True:
-      try:
-        country_ID = random.choice(list(json_data.keys()))
-        country = json_data[country_ID]['metadata']['country_name']
-        attribute = random.choice(list(json_data[country_ID]["time_series"]))
-        if series_len is None:
-          series_len = random.randint(5, len(json_data[country_ID]["time_series"][attribute])-10)
-        if start_idx is None:
-          start_idx = random.randint(0, len(json_data[country_ID]["time_series"][attribute]) - series_len)
-        ts = json_data[country_ID]['time_series'][attribute][start_idx:start_idx+series_len]
-        break
-      except Exception as e:
-        print(f"Error occurred: {e}. Retrying...")
-        
-    if (ts.count(0) / len(ts)) >= 0.2: # redraw a sample if at least 20% of values are 0
-      country_ID = random.choice(list(json_data.keys()))
-      country = json_data[country_ID]['metadata']['country_name']
-      attribute = random.choice(list(json_data[country_ID]["time_series"]))
-      country_ID = random.choice(list(json_data.keys()))
-      country = json_data[country_ID]['metadata']['country_name']
-      attribute = random.choice(list(json_data[country_ID]["time_series"]))
-      while True:
         try:
-          if series_len is None:
-            series_len = random.randint(5, len(json_data[country_ID]["time_series"][attribute])-10)
-          if start_idx is None:
-            start_idx = random.randint(0, len(json_data[country_ID]["time_series"][attribute]) - series_len)
-          ts = json_data[country_ID]['time_series'][attribute][start_idx:start_idx+series_len]
-          break
+            # Randomly choose a country and attribute with enough data
+            country_ID = random.choice(valid_keys)
+            country_data = json_data[country_ID]
+            country = country_data['metadata']['country_name']
+            
+            attributes = list(country_data["time_series"].keys())
+            random.shuffle(attributes)  # Shuffle to reduce repeat attempts
+
+            found_valid_series = False
+
+            for attribute in attributes:
+                series = country_data["time_series"][attribute]
+                series_length = len(series)
+
+                # We need at least 15 data points to allow min series_len of 5 and margin of 10
+                if series_length >= 15:
+                    if series_len is None:
+                        series_len = random.randint(5, series_length - 10)
+                    if start_idx is None:
+                        max_start = series_length - series_len
+                        if max_start <= 0:
+                            continue  # Not enough room to sample
+                        start_idx = random.randint(0, max_start)
+
+                    ts = series[start_idx:start_idx + series_len]
+                    start_year = country_data['metadata']['years'][start_idx]
+                    end_year = int(start_year) + series_len - 1
+
+                    # Redraw if too many zeroes
+                    if (ts.count(0) / len(ts)) >= 0.2:
+                        continue
+
+                    found_valid_series = True
+                    break
+
+            if not found_valid_series:
+                continue  # Try a different country
+
+            break  # Valid sample found
+
         except Exception as e:
-          print(f"Error occurred: {e}. Retrying...")
-    
+            print(f"Error occurred: {e}. Retrying...")
+
+    # Final processing
     ts = [round(x, 2) for x in ts]
-    
-    start_year = json_data[country_ID]['metadata']['years'][start_idx]
-    #print(f"start {start_idx}, series len {series_len}, tot series len {len(json_data[country_ID]["time_series"][attribute])}")
-    #print(json_data[country_ID]['metadata']['years'])
-    end_year = int(start_year) + series_len - 1
-    
-  
-    
-    metadata = {}
-    metadata['country'] = country
-    metadata['attribute'] = attribute
-    metadata['sampling frequency'] = "yearly"
-    metadata['start year of this series'] = start_year
-    metadata['end year of this series'] = end_year
-    
-    metadata['historical minimum in this country'] = float(round(json_data[country_ID]['metadata']['stats'][attribute]['min']))
-    metadata['historical maximum in this country'] = float(round(json_data[country_ID]['metadata']['stats'][attribute]['max']))
-    metadata['historical mean in this country'] = float(round(json_data[country_ID]['metadata']['stats'][attribute]['mean']))
-    
-    metadata['mean of this specific series'] = float(round(np.mean(ts), 2))
-    metadata['minimum of this specific series'] = float(round(min(ts), 2))
-    metadata['maximum of this specific series'] = float(round(max(ts), 2)) 
+
+    metadata = {
+        'country': country,
+        'attribute': attribute,
+        'sampling frequency': "yearly",
+        'start year of this series': start_year,
+        'end year of this series': end_year,
+        'historical minimum in this country': float(round(country_data['metadata']['stats'][attribute]['min'])),
+        'historical maximum in this country': float(round(country_data['metadata']['stats'][attribute]['max'])),
+        'historical mean in this country': float(round(country_data['metadata']['stats'][attribute]['mean'])),
+        'mean of this specific series': float(round(np.mean(ts), 2)),
+        'minimum of this specific series': float(round(min(ts), 2)),
+        'maximum of this specific series': float(round(max(ts), 2))
+  }
+ 
     
     
   if dataset_name == "online retail":     
@@ -2774,14 +2784,176 @@ def meteor_score(generated_caption, gt_caption):
     score = meteor_sc(reference_tokens, candidate_tokens)
     
     return score
+ 
     
 def main():
   config = load_config()
 
   random.seed(config['general']['random_seed'])
   
-  """# Directory containing the files
-  directory = "/home/ubuntu/thesis/data/samples/captions/generated/llava-mistral-7b"
+  """directory = "/home/ubuntu/thesis/data/samples/test/gt_captions"
+  dataset_counts = Counter()
+
+  for filename in os.listdir(directory):
+    dataset = filename.split("_")[0]
+    dataset_counts[dataset] += 1
+
+  print("Dataset counts:", dataset_counts)"""
+
+  """with open("/home/ubuntu/thesis/data/samples/data_sizes.json", "r") as file:
+    data_sizes = json.load(file)
+
+  what = "plots"
+  folder_path = f"/home/ubuntu/thesis/data/samples/new/{what}"
+  train_path = f"/home/ubuntu/thesis/data/samples/train/{what}"
+  test_path = f"/home/ubuntu/thesis/data/samples/test/{what}"
+  
+  for filename in os.listdir(folder_path):
+    if "_" in filename and "." in filename:
+      try:
+        dataset_name = filename.split("_")[0]
+        sample_id = int(filename.split("_")[1].split(".")[0])
+        data_size = data_sizes[dataset_name]
+        split_idx = int(data_size*0.8)
+        
+        source_path = os.path.join(folder_path, filename)
+        if sample_id < split_idx:
+          dest_path = os.path.join(train_path, filename)
+        else:
+          dest_path = os.path.join(test_path, filename)
+
+        shutil.copy(source_path, dest_path)
+      except (IndexError, ValueError):
+        print(f"Skipping invalid filename: {filename}")"""
+
+  
+  """directory = "/home/ubuntu/thesis/data/samples/test/gt_captions"
+  file_count = len([name for name in os.listdir(directory) if os.path.isfile(os.path.join(directory, name))])
+  print(f"Number of files in {directory}: {file_count}")
+  
+  directory = "/home/ubuntu/thesis/data/samples/test/time series"
+  file_count = len([name for name in os.listdir(directory) if os.path.isfile(os.path.join(directory, name))])
+  print(f"Number of files in {directory}: {file_count}")
+  
+  directory = "/home/ubuntu/thesis/data/samples/test/plots"
+  file_count = len([name for name in os.listdir(directory) if os.path.isfile(os.path.join(directory, name))])
+  print(f"Number of files in {directory}: {file_count}")
+  
+  directory = "/home/ubuntu/thesis/data/samples/test/metadata"
+  file_count = len([name for name in os.listdir(directory) if os.path.isfile(os.path.join(directory, name))])
+  print(f"Number of files in {directory}: {file_count}")"""
+  
+  
+  """with open("/home/ubuntu/thesis/data/processed/agricultural_productivity.json", "r") as file:
+        data = json.load(file)
+  for key in data:
+    if 'output_quantity' in data[key]:
+      del data[key]['output_quantity']
+  with open("/home/ubuntu/thesis/data/processed/agricultural_productivity.json", "w") as file:
+      json.dump(data, file, indent=4, separators=(",", ":"))"""
+  
+  """datasets = [
+    "Air Quality", "Border Crossing", "Crime", "Demography", "Road Injuries",
+    "Covid", "Co2", "Diet", "Walmart", "Online Retail", "Agriculture"
+]
+
+  time_steps = np.array([
+      285654436/250, 396618, 38416, 14322, 37354,
+      720236, 33842, 233506, 6435, 7416, 48728
+  ])
+
+  # Reduce Air Quality weight by half
+  adjusted_steps = time_steps.copy()
+  adjusted_steps[0] = adjusted_steps[0] / 2
+
+  total_samples = 20000
+  min_samples = 500
+
+  # Step 1: Assign minimum samples
+  n_datasets = len(datasets)
+  assigned = np.full(n_datasets, min_samples)
+  remaining = total_samples - min_samples * n_datasets
+
+  # Step 2: Proportional distribution
+  weights = adjusted_steps / adjusted_steps.sum()
+  proportional = np.floor(weights * remaining).astype(int)
+
+  # Step 3: Final allocation
+  final_samples = assigned + proportional
+
+  # Step 4: Fix rounding errors
+  while final_samples.sum() < total_samples:
+      final_samples[np.argmax(weights)] += 1
+  while final_samples.sum() > total_samples:
+      final_samples[np.argmax(final_samples)] -= 1
+
+  # Print result
+  for name, samples in zip(datasets, final_samples):
+      print(f"{name:<16} {samples}")"""
+  
+  """folder_path="/home/ubuntu/thesis/data/processed"
+  timesteps_dict={}
+  for filename in os.listdir(folder_path):
+     if filename.endswith(".json"):
+      file_path = os.path.join(folder_path, filename)
+      with open(file_path, "r") as file:
+        data = json.load(file)
+        def count_numbers(data):
+          def is_year(value):
+            return isinstance(value, (int, float)) and 1960 <= value <= 2025
+
+          def count_in_list(lst):
+            return sum(1 for item in lst if isinstance(item, (int, float)) and not is_year(item))
+
+          def count_in_dict(dct):
+            count = 0
+            for key, value in dct.items():
+              if isinstance(value, list):
+                count += count_in_list(value)
+              elif isinstance(value, dict):
+                count += count_in_dict(value)
+            return count
+
+          return count_in_dict(data)
+
+        number_count = count_numbers(data)
+        timesteps_dict[filename] = number_count
+        print(f"{filename}: {number_count}")
+  print(f"{timesteps_dict}")"""
+  
+  
+  """directory = "/home/ubuntu/thesis/data/samples/time series"
+
+  dataset_names = []
+  for filename in os.listdir(directory):
+      dataset = filename.split("_")[0]
+      if dataset not in dataset_names:
+        dataset_names.append(dataset)
+  
+  print(dataset_names)
+  
+  avg_lens = {}
+  for dataset_name in dataset_names:
+    dataset_files = [f for f in os.listdir(directory) if f.startswith(dataset_name)]
+    total_length = 0
+    count = 0
+
+    for file in dataset_files:
+      if file.endswith(".txt"):
+        ts = read_txt_to_num_list(os.path.join(directory, file))
+        total_length += len(ts)
+        count += 1
+
+    if count > 0:
+      avg_lens[dataset_name] = total_length / count
+    else:
+      avg_lens[dataset_name] = 0
+
+  print("Average time series lengths:", avg_lens)"""
+     
+  
+  """
+  directory = "/home/ubuntu/thesis/data/samples/captions/generated/qwenvl_vl"
 
   # Iterate through all files in the directory
   for filename in os.listdir(directory):

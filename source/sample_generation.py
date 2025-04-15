@@ -58,11 +58,14 @@ BIN_PERIOD = 10 # the size of the bins. Each bin represents one period of time""
 def main():
     config = load_config()
     random.seed(config['general']['random_seed'])
+    
+    with open("/home/ubuntu/thesis/data/samples/data_sizes.json", 'r') as f:
+        data_sizes = json.load(f)
 
     dataset_names = config['data']['dataset_names']
     request_augmentations = config['data']['request_augmentations']
-    n_samples = config['data']['n_samples']
-    all_models = config['model']['all_models']
+    #n_samples = config['data']['n_samples']
+    #all_models = config['model']['all_models']
     used_models = config['model']['used_models']
     ranking_model = config['model']['ranking_model']
     save_top_k = config['data']['save_top_k']
@@ -76,6 +79,8 @@ def main():
     if use_rag: embedding_model = SentenceTransformer(embedding_model)
 
     for dataset_name in dataset_names:
+        n_samples = data_sizes[dataset_name]
+        
         print(f"\nGenerating{" RAG " if use_rag else " "}samples for", dataset_name)
         filepath = f"/home/ubuntu/thesis/data/processed/{FILE_MAPPING[dataset_name]}"
         with open(filepath) as f:
@@ -161,7 +166,7 @@ def main():
         responses = [] 
         for model in used_models: # for each model, all requests are asked and the responses are collected
             model_responses = get_response(requests, model=model,
-                                    temperature = 0.75,
+                                    temperature = 0.3,
                                     top_p = 0.85)
             responses.extend(model_responses)
         #print("\n\Responses: ", responses)
@@ -170,7 +175,7 @@ def main():
         if use_rag:
             save_folder = "/home/ubuntu/thesis/data/samples/captions/rag"
         elif config['data']['external_knowledge'] == False:
-            save_folder = "/home/ubuntu/thesis/data/samples/captions/no external"
+            save_folder = "/home/ubuntu/thesis/data/samples/new/gt_captions"
         else: save_folder = "/home/ubuntu/thesis/data/samples/captions/raw"
 
 
@@ -194,10 +199,10 @@ def main():
                 caption_filepath = f"{save_folder}/{dataset_name}_{idx}.txt" 
                 save_file(responses[i], caption_filepath)
 
-                metadata_filepath = f"/home/ubuntu/thesis/data/samples/metadata/{dataset_name}_{idx}.json" 
+                metadata_filepath = f"/home/ubuntu/thesis/data/samples/new/metadata/{dataset_name}_{idx}.json" 
                 save_file([meta_and_ts[0] for meta_and_ts in samples][i%len(samples)], metadata_filepath)   
 
-                series_filepath = f"/home/ubuntu/thesis/data/samples/time series/{dataset_name}_{idx}.txt" 
+                series_filepath = f"/home/ubuntu/thesis/data/samples/new/time series/{dataset_name}_{idx}.txt" 
                 save_file([meta_and_ts[1] for meta_and_ts in samples][i%len(samples)], series_filepath) 
 
                 idx += 1

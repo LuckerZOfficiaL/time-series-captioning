@@ -10,7 +10,7 @@ data:
 
 model:
   all_models: [Google Gemini-2.0-Flash, Online Gemini-2.0-Flash, OpenAI GPT-4o, Anthropic Claude-3.5, Ollama llama3.3, Ollama gemma3, Ollama mixtral 8x7b, Ollama mixtral 8x22b, Ollama qwen2.5-1m:14b, Ollama nemotron, Ollama llama3.2 uncensored, Ollama qwq, Ollama deepseek-r1:14b, Ollama phi4, Ollama lumimaid-v0.2:12b, GPT-4o, Claude-3.5-Haiku, Gemini-1.5-Flash, Gemini-1.5-Pro, DeepSeek-R1-FW] # available model choices, the first two are from official APIs
-  used_models: [OpenAI GPT-4o, Anthropic Claude-3.5, Google Gemini-2.0-Flash] # models to use for generating captions
+  used_models: [Google Gemini-2.0-Flash] # [OpenAI GPT-4o, Anthropic Claude-3.5, Google Gemini-2.0-Flash] # models to use for generating captions
   refinement_model: Google Gemini-2.0-Flash
   checking_model: Ollama qwen2.5-1m:14b
   extraction_model: Google Gemini-2.0-Flash
@@ -36,10 +36,10 @@ refinement:
 
 
 path: # paths that have "folder" in its name are folder paths, otherwise they are file paths
-  caption_folder_path: /home/ubuntu/thesis/data/samples/captions
-  ts_folder_path: /home/ubuntu/thesis/data/samples/time series
-  plot_folder_path: /home/ubuntu/thesis/data/samples/plots_2.0
-  metadata_folder_path: /home/ubuntu/thesis/data/samples/metadata
+  caption_folder_path: /home/ubuntu/thesis/data/samples/new/gt_captions
+  ts_folder_path: /home/ubuntu/thesis/data/samples/test/time series
+  plot_folder_path: /home/ubuntu/thesis/data/samples/test/plots
+  metadata_folder_path: /home/ubuntu/thesis/data/samples/test/metadata
   refined_captions_folder_path: /home/ubuntu/thesis/data/samples/captions/refined
   verified_captions_folder_path: /home/ubuntu/thesis/data/samples/captions/verified
   extracted_facts_folder_path: /home/ubuntu/thesis/data/samples/captions/extracted facts
@@ -49,10 +49,10 @@ path: # paths that have "folder" in its name are folder paths, otherwise they ar
   all_facts_no_common_sense_path: /home/ubuntu/thesis/data/fact bank/all_facts_no_common_sense.txt
   all_facts_by_period_folder_path: /home/ubuntu/thesis/data/fact bank/by period #/{BIN_YEARS}/all_facts_by_{BIN_YEARS}years.json
   prototypes_path: /home/ubuntu/thesis/model/prototype_words.txt
-  generated_captions_folder_path: /home/ubuntu/thesis/data/samples/captions/generated/phi-4-multimodal-instruct
-  gt_captions_folder_path: /home/ubuntu/thesis/data/samples/captions/no external
+  generated_captions_folder_path: /home/ubuntu/thesis/data/samples/captions/generated captions/internvl_text
+  gt_captions_folder_path: /home/ubuntu/thesis/data/samples/captions/test/gt_captions
   checkpoints_folder_path: /home/ubuntu/thesis/model/checkpoints
-  evaluation_results_folder_path: /home/ubuntu/thesis/data/evaluation results
+  evaluation_results_folder_path: /home/ubuntu/thesis/data/new/evaluation results
 
 train:
   lr: 1e-4
@@ -67,12 +67,11 @@ train:
   clip_grad_norm: 1.0
 
 eval:
-  evaluated_model: claude-3.5-haiku #gemini-2.0-flash
-  all_metrics: [bert_score, numeric_score, bleu_score, rouge_score] # oracle_score
+  evaluated_model: gemini-2.0-flash #claude-3.5-haiku #gemini-2.0-flash
   bertscore_model: microsoft/deberta-xlarge-mnli #bert-base-uncased, roberta-large
   batch_size: 32
   val_split: 0.2
-  use_img_input: False
+  use_img_input: True
   
 
 mobtep:

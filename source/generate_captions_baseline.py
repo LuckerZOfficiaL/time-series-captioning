@@ -41,17 +41,17 @@ def main():
     
     model_name = config['eval']['evaluated_model']
     
-    ts_folder_path = "/home/ubuntu/thesis/data/samples/time series"
-    metadata_folder_path = "/home/ubuntu/thesis/data/samples/metadata"
-    image_folder_path = "/home/ubuntu/thesis/data/samples/plots_2.0"
-    save_folder_path = f"/home/ubuntu/thesis/data/samples/captions/generated/{model_name}{"" if use_img_input else "_text"}"
+    ts_folder_path = "/home/ubuntu/thesis/data/samples/test/time series"
+    metadata_folder_path = "/home/ubuntu/thesis/data/samples/test/metadata"
+    image_folder_path = "/home/ubuntu/thesis/data/samples/test/plots"
+    save_folder_path = f"/home/ubuntu/thesis/data/samples/generated captions/{model_name}{"" if use_img_input else "_text"}"
     
     done_caption_ids = [filename.split(".")[0] for filename in os.listdir(save_folder_path)]
     
     filenames = os.listdir(image_folder_path)
     filenames = [filename for filename in filenames if filename.split(".")[0] not in done_caption_ids]
     
-    print(f"\n{len(filenames)} captions yet to be generated.\n\n")
+    print(f"\n{model_name}{"with" if use_img_input else "without"} image input: {len(filenames)} captions yet to be generated.\n\n")
     
     
     for i, filename in enumerate(filenames):
@@ -67,8 +67,8 @@ def main():
             metadata = json.load(metadata_file)
         
         prompt = generate_prompt_for_baseline(dataset_name=dataset_name, metadata=metadata, ts=ts)
-        prompt = prompt + "\nI have attached a line plot of the time series to support you."
         if use_img_input:
+            prompt = prompt + "\nI have attached a line plot of the time series to support you."
             if "claude" in model_name:
                 generated_caption = get_claude_image_response(image_path, prompt)
             else:
