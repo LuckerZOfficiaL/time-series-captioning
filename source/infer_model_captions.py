@@ -28,6 +28,7 @@ def _load_batch_llava_model(model_name, device):
         model_name,
         torch_dtype=torch.float16,
         low_cpu_mem_usage=True,
+        _attn_implementation='flash_attention_2'
     )
     model.to(device)
     processor = AutoProcessor.from_pretrained(model_name, use_fast=True)
