@@ -37,9 +37,9 @@ refinement:
 
 path: # paths that have "folder" in its name are folder paths, otherwise they are file paths
   caption_folder_path: /home/ubuntu/thesis/data/samples/new/gt_captions
-  ts_folder_path: /home/ubuntu/thesis/data/samples/new/time series
-  plot_folder_path: /home/ubuntu/thesis/data/samples/new/plots
-  metadata_folder_path: /home/ubuntu/thesis/data/samples/new/metadata
+  ts_folder_path: /home/ubuntu/thesis/data/samples/test/time series
+  plot_folder_path: /home/ubuntu/thesis/data/samples/test/plots
+  metadata_folder_path: /home/ubuntu/thesis/data/samples/test/metadata
   refined_captions_folder_path: /home/ubuntu/thesis/data/samples/captions/refined
   verified_captions_folder_path: /home/ubuntu/thesis/data/samples/captions/verified
   extracted_facts_folder_path: /home/ubuntu/thesis/data/samples/captions/extracted facts
@@ -49,10 +49,10 @@ path: # paths that have "folder" in its name are folder paths, otherwise they ar
   all_facts_no_common_sense_path: /home/ubuntu/thesis/data/fact bank/all_facts_no_common_sense.txt
   all_facts_by_period_folder_path: /home/ubuntu/thesis/data/fact bank/by period #/{BIN_YEARS}/all_facts_by_{BIN_YEARS}years.json
   prototypes_path: /home/ubuntu/thesis/model/prototype_words.txt
-  generated_captions_folder_path: /home/ubuntu/thesis/data/samples/captions/generated/internvl_text
-  gt_captions_folder_path: /home/ubuntu/thesis/data/samples/captions/new/gt_captions
+  generated_captions_folder_path: /home/ubuntu/thesis/data/samples/captions/generated captions/internvl_text
+  gt_captions_folder_path: /home/ubuntu/thesis/data/samples/captions/test/gt_captions
   checkpoints_folder_path: /home/ubuntu/thesis/model/checkpoints
-  evaluation_results_folder_path: /home/ubuntu/thesis/data/evaluation results
+  evaluation_results_folder_path: /home/ubuntu/thesis/data/new/evaluation results
 
 train:
   lr: 1e-4
@@ -67,11 +67,11 @@ train:
   clip_grad_norm: 1.0
 
 eval:
-  evaluated_model: claude-3.5-haiku #gemini-2.0-flash
+  evaluated_model: gemini-2.0-flash #claude-3.5-haiku #gemini-2.0-flash
   bertscore_model: microsoft/deberta-xlarge-mnli #bert-base-uncased, roberta-large
   batch_size: 32
   val_split: 0.2
-  use_img_input: False
+  use_img_input: True
   
 
 mobtep:

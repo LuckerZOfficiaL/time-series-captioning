@@ -33,6 +33,7 @@ from nltk.translate.bleu_score import sentence_bleu, SmoothingFunction
 import nltk
 from rouge_score import rouge_scorer
 import shutil
+from collections import Counter
 
 
 
@@ -2787,6 +2788,14 @@ def main():
 
   random.seed(config['general']['random_seed'])
   
+  """directory = "/home/ubuntu/thesis/data/samples/test/gt_captions"
+  dataset_counts = Counter()
+
+  for filename in os.listdir(directory):
+    dataset = filename.split("_")[0]
+    dataset_counts[dataset] += 1
+
+  print("Dataset counts:", dataset_counts)"""
 
   """with open("/home/ubuntu/thesis/data/samples/data_sizes.json", "r") as file:
     data_sizes = json.load(file)
@@ -2815,19 +2824,19 @@ def main():
         print(f"Skipping invalid filename: {filename}")"""
 
   
-  """directory = "/home/ubuntu/thesis/data/samples/train/gt_captions"
+  """directory = "/home/ubuntu/thesis/data/samples/test/gt_captions"
   file_count = len([name for name in os.listdir(directory) if os.path.isfile(os.path.join(directory, name))])
   print(f"Number of files in {directory}: {file_count}")
   
-  directory = "/home/ubuntu/thesis/data/samples/train/time series"
+  directory = "/home/ubuntu/thesis/data/samples/test/time series"
   file_count = len([name for name in os.listdir(directory) if os.path.isfile(os.path.join(directory, name))])
   print(f"Number of files in {directory}: {file_count}")
   
-  directory = "/home/ubuntu/thesis/data/samples/train/plots"
+  directory = "/home/ubuntu/thesis/data/samples/test/plots"
   file_count = len([name for name in os.listdir(directory) if os.path.isfile(os.path.join(directory, name))])
   print(f"Number of files in {directory}: {file_count}")
   
-  directory = "/home/ubuntu/thesis/data/samples/train/metadata"
+  directory = "/home/ubuntu/thesis/data/samples/test/metadata"
   file_count = len([name for name in os.listdir(directory) if os.path.isfile(os.path.join(directory, name))])
   print(f"Number of files in {directory}: {file_count}")"""
   
