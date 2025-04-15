@@ -10,8 +10,8 @@ import time
 from helpers import generate_prompt_for_baseline
 
 MODEL_PATH = "microsoft/Phi-4-multimodal-instruct"
-DATA_DIR = "/home/ubuntu/time-series-captioning/data/samples/"
-OUT_DIR = "/home/ubuntu/time-series-captioning/phi_captions_text"
+DATA_DIR = "/home/ubuntu/time-series-captioning/data/samples/new samples no overlap/test"
+OUT_DIR = "/home/ubuntu/time-series-captioning/phi_captions_test"
 
 
 import requests
@@ -51,10 +51,10 @@ def eval_batch_phi(prompts, image_files):
     assistant_prompt = '<|assistant|>'
     prompt_suffix = '<|end|>'
     
-#    images = [Image.open(fn) for fn in image_files]
-    prompts = [f'{user_prompt}{caption_prompt}{prompt_suffix}{assistant_prompt}'
+    images = [Image.open(fn) for fn in image_files]
+    prompts = [f'{user_prompt}<|image_1|>{caption_prompt}{prompt_suffix}{assistant_prompt}'
                for caption_prompt in prompts]
-    inputs = processor(text=prompts, return_tensors='pt').to('cuda')
+    inputs = processor(text=prompts, images=images, return_tensors='pt').to('cuda')
     
     # Generate response
     stime = time.time()
