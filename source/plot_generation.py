@@ -59,7 +59,7 @@ def main():
     dataset_names = config['data']['dataset_names']
     ts_folder_path = config['path']['ts_folder_path']
     metadata_folder_path = config['path']['metadata_folder_path']
-    save_folder_path = "/home/ubuntu/thesis/data/samples/plots_2.0"
+    save_folder_path = config['path']['plot_folder_path']
     #plot_height = config['plot']['height']
     #plot_width = config['plot']['width']
     
