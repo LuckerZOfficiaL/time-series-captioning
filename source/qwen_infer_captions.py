@@ -17,18 +17,12 @@ from phi_parallel_gpu import main
 
 MODEL_PATH = "Qwen/Qwen2.5-Omni-7B"
 DATA_DIR = "/home/ubuntu/time-series-captioning/data/samples/new samples no overlap/test"
-OUT_DIR = "/home/ubuntu/time-series-captioning/qwen_captions_test"
+OUT_DIR = "/home/ubuntu/time-series-captioning/qwen_captions_test_no_image"
 
 
 @lru_cache
 def _load_batch_qwen_model(model_name, device):
     torch.manual_seed(314)
-#    model = Qwen2_5OmniForConditionalGeneration.from_pretrained(
-#        model_name,
-#        torch_dtype="auto",
-#        device_map="auto",
-#        attn_implementation="flash_attention_2",
-#    ).to('cuda')
     model = Qwen2_5OmniForConditionalGeneration.from_pretrained("Qwen/Qwen2.5-Omni-7B", torch_dtype=torch.float16,
                                                                 _attn_implementation='flash_attention_2',
                                                                 low_cpu_mem_usage=True)
@@ -37,8 +31,18 @@ def _load_batch_qwen_model(model_name, device):
     return model, processor
 
 def eval_batch_qwen(prompts, image_files, device, use_image): 
-    # TODO: add logic for use_image=False    
+    print(f"use_image={use_image}")
     model, processor = _load_batch_qwen_model(MODEL_PATH, device)
+    if use_image:
+        content_list = [[
+            {"type": "image", "image": image_file},
+            {"type": "text", "text": prompt}
+        ] for prompt, image_file in zip(prompts, image_files)]
+    else:
+        content_list = [[
+            {"type": "text", "text": prompt}
+        ] for prompt in prompts]
+ 
     conversations = [
             [{
                 "role": "system",
@@ -46,15 +50,15 @@ def eval_batch_qwen(prompts, image_files, device, use_image):
             },
             {
                 "role": "user",
-                "content": [
-                    {"type": "image", "image": image_file},
-                    {"type": "text", "text": prompt}
-                ],
-            }] for prompt, image_file in zip(prompts, image_files)
+                "content": content,
+            }] for content in content_list 
     ]
     text = processor.apply_chat_template(conversations, add_generation_prompt=True, tokenize=False)
-    _, images, _ = process_mm_info(conversations, use_audio_in_video=False)
-    inputs = processor(text=text, images=images, return_tensors="pt", padding=True, use_audio_in_video=False)
+    if use_image:
+        _, images, _ = process_mm_info(conversations, use_audio_in_video=False)
+        inputs = processor(text=text, images=images, return_tensors="pt", padding=True, use_audio_in_video=False)
+    else:
+        inputs = processor(text=text, return_tensors="pt", padding=True, use_audio_in_video=False)
     inputs = inputs.to(model.device).to(model.dtype)
 
     # Batch Inference
@@ -67,4 +71,4 @@ def eval_batch_qwen(prompts, image_files, device, use_image):
     return captions
 
 if __name__ == "__main__":
-    main(eval_batch_qwen, DATA_DIR, OUT_DIR, use_image=True)
+    main(eval_batch_qwen, DATA_DIR, OUT_DIR, use_image=False)

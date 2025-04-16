@@ -13,7 +13,7 @@ from phi_parallel_gpu import main
 
 MODEL_PATH = "llava-hf/llava-v1.6-mistral-7b-hf"
 DATA_DIR = "/home/ubuntu/time-series-captioning/data/samples/new samples no overlap/test"
-OUT_DIR = "/home/ubuntu/time-series-captioning/llava_captions_test"
+OUT_DIR = "/home/ubuntu/time-series-captioning/llava_captions_test_no_image"
 
 
 import requests
@@ -35,20 +35,31 @@ def _load_batch_llava_model(model_name, device):
     return model, processor
 
 def eval_batch_llava(prompts, image_files, device, use_image=True):
-    # TODO: Add logic for use_image=False
-    print(f"use_image={use_image}")
-    conversations = [{
-            "role": "user",
-            "content": [
-                {"type": "image"},
-                {"type": "text", "text": f"{prompt}"},
-            ],
-    } for prompt in prompts]
     model, processor = _load_batch_llava_model(MODEL_PATH, device)
-    images = [Image.open(fn) for fn in image_files]
-    prompts = [processor.apply_chat_template([c], add_generation_prompt=True)
-               for c in conversations]
-    inputs = processor(images=images, text=prompts, padding=True, return_tensors="pt").to(device)
+    print(f"use_image={use_image}")
+    if use_image:
+        conversations = [{
+                "role": "user",
+                "content": [
+                    {"type": "image"},
+                    {"type": "text", "text": f"{prompt}"},
+                ],
+        } for prompt in prompts]
+        images = [Image.open(fn) for fn in image_files]
+        prompts = [processor.apply_chat_template([c], add_generation_prompt=True)
+                   for c in conversations]
+        inputs = processor(images=images, text=prompts, padding=True, return_tensors="pt").to(device)
+    else:
+        conversations = [{
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": f"{prompt}"},
+                ],
+        } for prompt in prompts]
+        prompts = [processor.apply_chat_template([c], add_generation_prompt=True)
+                   for c in conversations]
+        inputs = processor(text=prompts, padding=True, return_tensors="pt").to(device)
+
     stime = time.time()
     generate_ids = model.generate(**inputs, max_new_tokens=256, temperature=0.3, do_sample=True)
     print(f"RUNTIME on {device}: {time.time() - stime:.2f} seconds")    
@@ -59,4 +70,4 @@ def eval_batch_llava(prompts, image_files, device, use_image=True):
 
 
 if __name__ == "__main__":
-    main(eval_batch_llava, DATA_DIR, OUT_DIR, use_image=True)
+    main(eval_batch_llava, DATA_DIR, OUT_DIR, use_image=False)
