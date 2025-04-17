@@ -136,7 +136,7 @@ class Mob(nn.Module):
     
     
     
-def generate_captions(model, ts_folder_path, metadata_folder_path, image_folder_path, save_folder_path, batch_size=32, use_chronos=True):
+def generate_captions(model, ts_folder_path, metadata_folder_path, image_folder_path, save_folder_path, batch_size=32, use_chronos=False):
     config = load_config()
     model.eval()
     ts_files = os.listdir(ts_folder_path)
@@ -178,6 +178,7 @@ def generate_captions(model, ts_folder_path, metadata_folder_path, image_folder_
                 
                 
             prompt = generate_prompt_for_baseline(dataset_name=dataset_name, metadata=metadata, ts=values)
+            prompt = prompt + "\nI have attached the line plot of the time series to help you."
             prompt_list.append(prompt)
                         
             # Append image path
@@ -311,19 +312,40 @@ def main():
     
     
     ######################################## SAVING CHECKPOINT #######################################
-    filepath = f"{config['path']['checkpoints_folder_path']}/Mob2_5-2B_{round(val_losses[-1], 3) if val_losses != [] else ""}.pth"
+    filepath = f"{config['path']['checkpoints_folder_path']}/Mob2_5-2B_{round(val_losses[-1], 3) if val_losses != [] else ""}_{config['train']['epochs']}eps.pth"
     torch.save(model.state_dict(), filepath)
 
 
     ####################################### TOY DEMO #######################################
-    ts = torch.randn(2, 20, 1)
-    image_paths = ['/home/ubuntu/thesis/data/samples/plots/air quality_0.jpeg',
-                '/home/ubuntu/thesis/data/samples/plots/demography_0.jpeg']
+    
+    #checkpoint_path = "/home/ubuntu/thesis/model/checkpoints/Mob2_5-2B_5.099.pth"
+    #model.load_state_dict(torch.load(checkpoint_path, map_location=device))
+    
+    #ts = torch.randn(2, 20, 1)
+    image_paths = ['/home/ubuntu/thesis/data/samples/new samples no overlap/test/plots/agriculture_0_test.jpeg',
+                '/home/ubuntu/thesis/data/samples/new samples no overlap/test/plots/agriculture_1_test.jpeg']
 
-    prompts = ['Describe this line chart about the hourly CO levels in London. Discuss the values you see.', 
-                'Describe this line chart about the yearly death rates in Greece. Discuss the values you see.']
+    metadata_paths = ["/home/ubuntu/thesis/data/samples/new samples no overlap/test/metadata/agriculture_0_test.json",
+                      "/home/ubuntu/thesis/data/samples/new samples no overlap/test/metadata/agriculture_1_test.json"]
+    
+    metadata = []
+    for metadata_path in metadata_paths: 
+        with open(metadata_path, 'r') as metadata_file:
+            metadata.append(json.load(metadata_file))
+            
+    ts_file_paths = ["/home/ubuntu/thesis/data/samples/new samples no overlap/test/time series/agriculture_0_test.txt",
+                     "/home/ubuntu/thesis/data/samples/new samples no overlap/test/time series/agriculture_1_test.txt"]
+    ts = []
+    for ts_file_path in ts_file_paths:
+        with open(ts_file_path, 'r') as file:
+            lines = file.read().splitlines()
+        ts_values = [float(value) for value in lines]
+        ts.append(torch.tensor(ts_values).unsqueeze(1)) 
 
-    responses = mob_batch_inference(model=model,ts=ts, image_paths=image_paths, prompts=prompts, max_output_tokens=256)
+    prompts = [generate_prompt_for_baseline(dataset_name="agriculture", metadata=metadata[0], ts=ts[0]),
+               generate_prompt_for_baseline(dataset_name="agriculture", metadata=metadata[1], ts=ts[1])]
+
+    responses = mob_batch_inference(model=model,ts=None, image_paths=image_paths, prompts=prompts, max_output_tokens=256)
 
     print(f"\nResponses:\n")
     for response in responses:
@@ -338,19 +360,22 @@ if __name__ == "__main__":
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     
     
-    
-    #checkpoint_path = "/home/ubuntu/thesis/model/checkpoints/InternVL2_5-2B_5.388.pth"
-    #model.load_state_dict(torch.load(checkpoint_path, map_location=device))
-    
-    ts_folder_path = "/home/ubuntu/thesis/data/samples/test/time series"
-    metadata_folder_pth = "/home/ubuntu/thesis/data/samples/test/metadata"
-    image_folder_path = "/home/ubuntu/thesis/data/samples/test/plots"
-    save_folder_path="/home/ubuntu/thesis/data/samples/generated captions/internvl"
-    
     model = Mob(chronos_name=config['mobtep']['chronos_name'], 
                 internvl_name=config['mobtep']['internvl_name'],
                 projector_init=config['mobtep']['projector_init'],
                 sum_ts_emb_to=config['mobtep']['sum_ts_emb_to']).to(device)
+    
+    checkpoint_path = f"/home/ubuntu/thesis/model/checkpoints/{config['mobtep']['mob_checkpoint']}.pth"
+    model.load_state_dict(torch.load(checkpoint_path, map_location=device))
+    
+    ts_folder_path = "/home/ubuntu/thesis/data/samples/new samples no overlap/test/time series"
+    metadata_folder_pth = "/home/ubuntu/thesis/data/samples/new samples no overlap/test/metadata"
+    image_folder_path = "/home/ubuntu/thesis/data/samples/new samples no overlap/test/plots"
+    save_folder_path= f"/home/ubuntu/thesis/data/samples/new samples no overlap/generated captions/internvl_{config['mobtep']['mob_checkpoint']}"
+    
+    if not os.path.exists(save_folder_path):
+        os.makedirs(save_folder_path)
+    
     
     generate_captions(model, ts_folder_path, metadata_folder_pth, image_folder_path, save_folder_path, batch_size=15, use_chronos=config['mobtep']['use_chronos'])
     

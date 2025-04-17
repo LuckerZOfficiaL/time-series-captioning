@@ -57,11 +57,15 @@ Y_LABEL_MAP = {
 def main():
     config = load_config()
     dataset_names = config['data']['dataset_names']
-    ts_folder_path = config['path']['ts_folder_path']
+    """ts_folder_path = config['path']['ts_folder_path']
     metadata_folder_path = config['path']['metadata_folder_path']
-    save_folder_path = config['path']['plot_folder_path']
+    save_folder_path = config['path']['plot_folder_path']"""
     #plot_height = config['plot']['height']
     #plot_width = config['plot']['width']
+    
+    ts_folder_path = "/home/ubuntu/thesis/data/samples/new samples no overlap/train/time series"
+    metadata_folder_path = "/home/ubuntu/thesis/data/samples/new samples no overlap/train/metadata"
+    save_folder_path = "/home/ubuntu/thesis/data/samples/new samples no overlap/train/plots"
     
 
     
