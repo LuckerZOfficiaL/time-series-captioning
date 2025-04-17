@@ -337,7 +337,8 @@ def rank_responses(responses_list: list, model="GPT-4o") -> list: # takes a list
 
 #rank_responses(["The time series started from 5.2 and dropped to 2.9", "The time series is declining", "The time series describes the daily temperatures of Paris, dropping from 5.2 to 2.9 in 10 days."])
 
-def get_sample(dataset_name: str, json_data, series_len = None, start_idx = None): # returns the metadata and the time series
+
+def get_sample(dataset_name: str, json_data, is_train, series_len = None, start_idx = None): # returns the metadata and the time series
   if dataset_name == "air quality":
     id = random.choice(list(json_data.keys()))
     #print("\nID: ", id)
@@ -347,10 +348,16 @@ def get_sample(dataset_name: str, json_data, series_len = None, start_idx = None
     measure = random.choice(choices)
     #print("\nMeasure: ", measure)
 
+    tot_ts_len = len(json_data[id][measure])
+    train_ts_len = int(0.8*tot_ts_len)
+    
     if series_len is None:
-      series_len = random.randint(5, min(150, 5+int(len(json_data[id][measure])/8)))
+      series_len = random.randint(5, min(150, 5+int(train_ts_len/8)))
     if start_idx is None:
-      start_idx = random.randint(0, len(json_data[id][measure]) - series_len)
+      if is_train: 
+        start_idx = random.randint(0, train_ts_len - series_len)
+      else:
+        start_idx = random.randint(train_ts_len, tot_ts_len - series_len)
     #print("series len ", series_len)
     #print("start idx", start_idx),
     #print("tot series len", len(json_data[id][measure]))
@@ -363,6 +370,7 @@ def get_sample(dataset_name: str, json_data, series_len = None, start_idx = None
       print("series len ", series_len)
       print("start idx", start_idx),
       print("tot series len", len(json_data[id][measure]))
+      
       
 
     metadata = json_data[id]["metadata"].copy()
@@ -397,10 +405,17 @@ def get_sample(dataset_name: str, json_data, series_len = None, start_idx = None
   elif dataset_name == "crime":
     town = random.choice(list(json_data.keys()))
     metadata = json_data[town]['metadata'].copy()
+    
+    tot_ts_len = len(json_data[town]["data"])
+    train_ts_len = int(0.8 * tot_ts_len)
+    
     if series_len is None:
-      series_len = random.randint(5, min(150, 5+int(len(json_data[town]["data"])/8)))
+      series_len = random.randint(5, min(150, 5+int(train_ts_len/8)))
     if start_idx is None:
-      start_idx = random.randint(0, len(json_data[town]["data"]) - series_len)
+      if is_train:
+        start_idx = random.randint(0, train_ts_len - series_len)
+      else:
+        start_idx = random.randint(train_ts_len, tot_ts_len - series_len)
 
     ts = json_data[town]['data'][start_idx:start_idx + series_len]
     ts = [round(x, 2) for x in ts]
@@ -432,22 +447,34 @@ def get_sample(dataset_name: str, json_data, series_len = None, start_idx = None
     del metadata['end date']
 
   elif dataset_name == "border crossing":
-    port = random.choice(list(json_data.keys()))
+    while True:
+      try:
+        port = random.choice(list(json_data.keys()))
 
-    metadata = {}
-    means = random.choice(list(json_data[port]['data'].keys()))
-    while len(json_data[port]["data"][means]) < 20:
-      means = random.choice(list(json_data[port]['data'].keys()))
-    
+        metadata = {}
+        means = random.choice(list(json_data[port]['data'].keys()))
+        while len(json_data[port]["data"][means]) < 20:
+          means = random.choice(list(json_data[port]['data'].keys()))
+        
+        tot_ts_len = len(json_data[port]["data"][means])
+        train_ts_len = int(0.8 * tot_ts_len)
 
-    if series_len is None:
-      series_len = random.randint(5, min(150, 5+int(len(json_data[port]["data"][means])/8)))
-    if start_idx is None:
-      #print(means)
-      #print(json_data[port]["data"][means])
-      start_idx = random.randint(0, len(json_data[port]["data"][means]) - series_len)
+        if series_len is None:
+          series_len = random.randint(5, min(150, 5+int(train_ts_len/8)))
+        if start_idx is None:
+          if is_train:
+            start_idx = random.randint(0, train_ts_len - series_len)
+          else:
+            start_idx = random.randint(train_ts_len, tot_ts_len - series_len)
 
-    ts = json_data[port]['data'][means][start_idx:start_idx + series_len]
+        ts = json_data[port]['data'][means][start_idx:start_idx + series_len]
+        break
+            
+      except Exception as e:
+          print(f"{e}. Retrying with a different sample...")
+          series_len = None
+          start_idx = None
+          continue
 
 
     metadata['port'] = port
@@ -477,10 +504,16 @@ def get_sample(dataset_name: str, json_data, series_len = None, start_idx = None
     patient_id = random.choice(list(json_data.keys()))
     metadata = {}
     
+    tot_ts_len = len(json_data[patient_id]["data"]["heart rate"])
+    train_ts_len = int(0.8 * tot_ts_len)
+    
     if series_len is None:
-      series_len = random.randint(5, min(150, 5+int(len(json_data[patient_id]["data"]["heart rate"])/8)))
+      series_len = random.randint(5, min(150, 5+int(train_ts_len/8)))
     if start_idx is None:
-      start_idx = random.randint(0, len(json_data[patient_id]["data"]["heart rate"]) - series_len)
+      if is_train:
+        start_idx = random.randint(0, train_ts_len - series_len)
+      else:
+        start_idx = random.randint(train_ts_len, tot_ts_len - series_len)
 
     ts = json_data[patient_id]['data']['heart rate'][start_idx:start_idx + series_len]
     ts = [round(x, 2) for x in ts]
@@ -525,132 +558,178 @@ def get_sample(dataset_name: str, json_data, series_len = None, start_idx = None
         metadata['moment'] = "during meditation"
 
   elif dataset_name == "demography":
-    #series_len = 22 # let's fix it at 22 because we only have 22 timesteps for any country
-    country_ID = random.choice(list(json_data.keys()))
-    attribute = random.choice([key for key in json_data[country_ID].keys() if key != "metadata"])
+    while True:
+      try:
+        country_ID = random.choice(list(json_data.keys()))
+        attribute = random.choice([key for key in json_data[country_ID].keys() if key != "metadata"])
+        
+        tot_ts_len = len(json_data[country_ID][attribute])
+        train_ts_len = int(0.8 * tot_ts_len)
 
-    if series_len is None:
-      series_len = random.randint(5, len(json_data[country_ID][attribute]))
-    if start_idx is None:
-      start_idx = random.randint(0, len(json_data[country_ID][attribute]) - series_len)
+        if series_len is None:
+          series_len = random.randint(5, min(train_ts_len, tot_ts_len))
+        if start_idx is None:
+          if is_train:
+            start_idx = random.randint(0, train_ts_len - series_len)
+          else:
+            start_idx = random.randint(train_ts_len, tot_ts_len - series_len)
 
-    metadata = {}
+        metadata = {}
 
-    metadata['country'] = json_data[country_ID]['metadata']['country name']
-    metadata['attribute'] = attribute
-    metadata['category by income'] = json_data[country_ID]["metadata"]['By Income']
-    metadata['groups'] = json_data[country_ID]["metadata"]['Other Country Groups']
-    if len(metadata['groups']) == 0: del metadata['groups']
-    metadata['starting year'] = json_data[country_ID]["metadata"]['start year of the series'] + start_idx
-    metadata['end year'] = metadata['starting year'] + series_len - 1
-    metadata['sampling frequency'] = "yearly"
+        metadata['country'] = json_data[country_ID]['metadata']['country name']
+        metadata['attribute'] = attribute
+        metadata['category by income'] = json_data[country_ID]["metadata"]['By Income']
+        metadata['groups'] = json_data[country_ID]["metadata"]['Other Country Groups']
+        if len(metadata['groups']) == 0: del metadata['groups']
+        metadata['starting year'] = json_data[country_ID]["metadata"]['start year of the series'] + start_idx
+        metadata['end year'] = metadata['starting year'] + series_len - 1
+        metadata['sampling frequency'] = "yearly"
 
-    ts = json_data[country_ID][attribute][start_idx:start_idx+series_len]
-    average_ts = np.mean(
-        [json_data[country][attribute][start_idx:start_idx+series_len] 
-        for country in json_data if country != country_ID and 
-        not np.any(np.isnan(json_data[country][attribute][start_idx:start_idx+series_len]))], 
-        axis=0
-    )
-    ts = [round(x, 2) for x in ts]
-    metadata['global average time series'] = [round(x, 2) for x in average_ts]
-    metadata['global standard deviation'] = round(np.std(metadata['global average time series']), 2)
+        ts = json_data[country_ID][attribute][start_idx:start_idx+series_len]
+        average_ts = np.mean(
+            [json_data[country][attribute][start_idx:start_idx+series_len] 
+            for country in json_data if country != country_ID and 
+            not np.any(np.isnan(json_data[country][attribute][start_idx:start_idx+series_len]))], 
+            axis=0
+        )
+        ts = [round(x, 2) for x in ts]
+        metadata['global average time series'] = [round(x, 2) for x in average_ts]
+        metadata['global standard deviation'] = round(np.std(metadata['global average time series']), 2)
 
-    metadata['mean of this specific series'] = round(np.mean(ts), 2)
-    metadata['standard deviation of this specific series'] = round(np.std(ts), 2)
-    metadata['minimum of this specific series'] = round(min(ts), 2)
-    metadata['maximum of this specific series'] = round(max(ts), 2)
+        metadata['mean of this specific series'] = round(np.mean(ts), 2)
+        metadata['standard deviation of this specific series'] = round(np.std(ts), 2)
+        metadata['minimum of this specific series'] = round(min(ts), 2)
+        metadata['maximum of this specific series'] = round(max(ts), 2)
+        break
+      
+      except Exception as e:
+        print(f"{e}")
+        series_len = None
+        start_idx = None
+        continue
 
 
   elif dataset_name == "road injuries":
-    location = random.choice(list(json_data.keys()))
-    mode = random.choice(list(json_data[location]['data'].keys()))
-    severity = random.choice(list(json_data[location]['data'][mode].keys()))
+    while True:
+      try:
+        location = random.choice(list(json_data.keys()))
+        mode = random.choice(list(json_data[location]['data'].keys()))
+        severity = random.choice(list(json_data[location]['data'][mode].keys()))
 
-    while len(json_data[location]['data'][mode][severity]) < 5: # if the series is too short, draw again
-      location = random.choice(list(json_data.keys()))
-      mode = random.choice(list(json_data[location]['data'].keys()))
-      severity = random.choice(list(json_data[location]['data'][mode].keys()))
+        while len(json_data[location]['data'][mode][severity]) < 3: # if the series is too short, draw again
+          location = random.choice(list(json_data.keys()))
+          mode = random.choice(list(json_data[location]['data'].keys()))
+          severity = random.choice(list(json_data[location]['data'][mode].keys()))
 
+        tot_ts_len = len(json_data[location]['data'][mode][severity])
+        train_ts_len = int(0.8 * tot_ts_len)
+        #print(f"tot {tot_ts_len}, train_ts {train_ts_len}, series len {series_len}, start_idx {start_idx}")
+        
+        if series_len is None:
+          series_len = random.randint(3, tot_ts_len - train_ts_len)
+        if start_idx is None:
+          if is_train:
+            start_idx = random.randint(0, train_ts_len - series_len)
+          else:
+            start_idx = random.randint(train_ts_len, tot_ts_len - series_len)
 
-    if series_len is None:
-      series_len = random.randint(5, len(json_data[location]['data'][mode][severity]))
-    if start_idx is None:
-      start_idx = random.randint(0, len(json_data[location]['data'][mode][severity]) - series_len)
+        
+        metadata = {}
 
-    metadata = {}
+        metadata['location'] = location
+        metadata['mode'] = mode
+        metadata['severity'] = severity
+        metadata['geotype'] = json_data[location]["metadata"]['geotype']
+        
+        metadata['starting year'] = json_data[location]["metadata"]['start year of the series'] + start_idx
+        metadata['end year'] = metadata['starting year'] + series_len - 1
+        metadata['total population'] = json_data[location]['metadata']['totalpop']
+        metadata['sampling frequency'] = "yearly"
+        
+        
+        ts = json_data[location]['data'][mode][severity][start_idx:start_idx+series_len]
+        ts = [round(x, 2) for x in ts]
+        
+        sum_series = np.zeros(series_len)
+        count_series = np.zeros(series_len)
+        for loc in json_data:
+            if json_data[loc]["metadata"]["geotype"] == metadata["geotype"]:
+                if mode in json_data[loc]['data'] and severity in json_data[loc]['data'][mode]:
+                    series = json_data[loc]['data'][mode][severity]
+                    for i, value in enumerate(series[:series_len]):  # Only consider existing values
+                        sum_series[i] += value
+                        count_series[i] += 1  # Count only non-padded values
 
-    metadata['location'] = location
-    metadata['mode'] = mode
-    metadata['severity'] = severity
-    metadata['geotype'] = json_data[location]["metadata"]['geotype']
-    
-    metadata['starting year'] = json_data[location]["metadata"]['start year of the series'] + start_idx
-    metadata['end year'] = metadata['starting year'] + series_len - 1
-    metadata['total population'] = json_data[location]['metadata']['totalpop']
-    metadata['sampling frequency'] = "yearly"
-    
-    
-    ts = json_data[location]['data'][mode][severity][start_idx:start_idx+series_len]
-    ts = [round(x, 2) for x in ts]
-    
-    sum_series = np.zeros(series_len)
-    count_series = np.zeros(series_len)
-    for loc in json_data:
-        if json_data[loc]["metadata"]["geotype"] == metadata["geotype"]:
-            if mode in json_data[loc]['data'] and severity in json_data[loc]['data'][mode]:
-                series = json_data[loc]['data'][mode][severity]
-                for i, value in enumerate(series[:series_len]):  # Only consider existing values
-                    sum_series[i] += value
-                    count_series[i] += 1  # Count only non-padded values
+        # Avoid division by zero by using np.where
+        average_ts = np.where(count_series > 0, sum_series / count_series, np.nan)
 
-    # Avoid division by zero by using np.where
-    average_ts = np.where(count_series > 0, sum_series / count_series, np.nan)
+        metadata['average time series of this type of location'] = [float(round(x, 2)) for x in average_ts]
+        metadata['standard deviation of this type of location'] = float(round(np.std(metadata['average time series of this type of location']), 2))
 
-    metadata['average time series of this type of location'] = [float(round(x, 2)) for x in average_ts]
-    metadata['standard deviation of this type of location'] = float(round(np.std(metadata['average time series of this type of location']), 2))
-
-    metadata['mean of this specific series'] = float(round(np.mean(ts), 2))
-    metadata['standard deviation of this specific series'] = float(round(np.std(ts), 2))
-    metadata['minimum of this specific series'] = float(round(min(ts), 2))
-    metadata['maximum of this specific series'] = float(round(max(ts), 2))
+        metadata['mean of this specific series'] = float(round(np.mean(ts), 2))
+        metadata['standard deviation of this specific series'] = float(round(np.std(ts), 2))
+        metadata['minimum of this specific series'] = float(round(min(ts), 2))
+        metadata['maximum of this specific series'] = float(round(max(ts), 2))
+        break
+      except Exception as e:
+        print(f"{e}")
+        series_len = None
+        start_idx = None
+        continue
 
   if dataset_name == "covid":
-    country_ID = random.choice(list(json_data.keys()))
-    country = json_data[country_ID]['metadata']['country_name']
-    attribute = random.choice(list(json_data[country_ID].keys())) # daily_cases, dauly_deaths
-    while attribute == "metadata":
-      attribute = random.choice(list(json_data[country_ID].keys()))
-      
-    if series_len is None:
-      series_len = random.randint(5, min(150, 5+int(len(json_data[country_ID][attribute])/5)))
-    if start_idx is None:
-      start_idx = random.randint(0, len(json_data[country_ID][attribute]) - series_len)
-    ts = json_data[country_ID][attribute][start_idx:start_idx+series_len]
-    ts = [round(x, 2) for x in ts]
-    
-    while (ts.count(0) / len(ts)) * 100 >= 20: # if there are at last 20% zeros, reject it and resample
-      country_ID = random.choice(list(json_data.keys()))
-      country = json_data[country_ID]['metadata']['country_name']
-      attribute = random.choice(list(json_data[country_ID].keys())) # daily_cases, dauly_deaths
-      while attribute == "metadata":
-        attribute = random.choice(list(json_data[country_ID].keys()))
+    while True:
+      try:
+        country_ID = random.choice(list(json_data.keys()))
+        country = json_data[country_ID]['metadata']['country_name']
+        attribute = random.choice(list(json_data[country_ID].keys())) # daily_cases, daily_deaths
+        while attribute == "metadata":
+          attribute = random.choice(list(json_data[country_ID].keys()))
         
-      if series_len is None:
-        series_len = random.randint(5, min(150, 5+int(len(json_data[country_ID][attribute])/5)))
-      if start_idx is None:
-        start_idx = random.randint(0, len(json_data[country_ID][attribute]) - series_len)
-      ts = json_data[country_ID][attribute][start_idx:start_idx+series_len]
-      ts = [round(x, 2) for x in ts]
-      series_len = random.randint(5, min(150, 5+int(len(json_data[country_ID][attribute])/8))) 
-      start_idx = random.randint(0, len(json_data[country_ID][attribute]) - series_len)
-      ts = json_data[country_ID][attribute][start_idx:start_idx+series_len]
-      ts = [round(x, 2) for x in ts]
-    
-    start_date = pd.to_datetime(json_data[country_ID]['metadata']['start_date']) + pd.DateOffset(days=start_idx)
-    end_date = pd.to_datetime(json_data[country_ID]['metadata']['start_date']) + pd.DateOffset(days=start_idx+series_len-1)
-    start_date = start_date.strftime('%Y-%m-%d')
-    end_date = end_date.strftime('%Y-%m-%d')
+        tot_ts_len = len(json_data[country_ID][attribute])
+        train_ts_len = int(0.8 * tot_ts_len)
+          
+        if series_len is None:
+          series_len = random.randint(5, min(150, 5+int(train_ts_len/5)))
+        if start_idx is None:
+          if is_train:
+            start_idx = random.randint(0, train_ts_len - series_len)
+          else:
+            start_idx = random.randint(train_ts_len, tot_ts_len - series_len)
+        
+        #print(f"tot len {tot_ts_len}, train len {train_ts_len}, series len {series_len}, start idx {start_idx}")
+        ts = json_data[country_ID][attribute][start_idx:start_idx+series_len]
+        ts = [round(x, 2) for x in ts]
+        
+        while (ts.count(0) / len(ts)) * 100 >= 20: # if there are at last 20% zeros, reject it and resample
+          country_ID = random.choice(list(json_data.keys()))
+          country = json_data[country_ID]['metadata']['country_name']
+          attribute = random.choice(list(json_data[country_ID].keys())) # daily_cases, dauly_deaths
+          while attribute == "metadata":
+            attribute = random.choice(list(json_data[country_ID].keys()))
+          
+          tot_ts_len = len(json_data[country_ID][attribute])
+          train_ts_len = int(0.8 * tot_ts_len)
+            
+          
+          series_len = random.randint(5, min(150, 5+int(train_ts_len/5)))
+          if is_train:
+            start_idx = random.randint(0, train_ts_len - series_len)
+          else:
+            start_idx = random.randint(train_ts_len, tot_ts_len - series_len)
+          ts = json_data[country_ID][attribute][start_idx:start_idx+series_len]
+          ts = [round(x, 2) for x in ts]
+        
+        start_date = pd.to_datetime(json_data[country_ID]['metadata']['start_date']) + pd.DateOffset(days=start_idx)
+        end_date = pd.to_datetime(json_data[country_ID]['metadata']['start_date']) + pd.DateOffset(days=start_idx+series_len-1)
+        start_date = start_date.strftime('%Y-%m-%d')
+        end_date = end_date.strftime('%Y-%m-%d')
+        break
+      except Exception as e:
+        print(f"{e}...")
+        series_len = None
+        start_idx = None
+        continue
     
     metadata = {}
     metadata['country'] = country
@@ -683,45 +762,59 @@ def get_sample(dataset_name: str, json_data, series_len = None, start_idx = None
     
     
   if dataset_name == "co2":
-    country_ID = random.choice(list(json_data.keys()))
-    country = json_data[country_ID]['metadata']['country_name']
-    attribute = "co2_emissions"
-      
     while True:
       try:
-        if series_len is None:
-          series_len = random.randint(5, min(150, 5 + int(len(json_data[country_ID][attribute]) / 8)))
-        if start_idx is None:
-          start_idx = random.randint(0, len(json_data[country_ID][attribute]) - series_len)
-        ts = json_data[country_ID][attribute][start_idx:start_idx + series_len]
-        ts = [round(x, 2) for x in ts]
+        country_ID = random.choice(list(json_data.keys()))
+        country = json_data[country_ID]['metadata']['country_name']
+        attribute = "co2_emissions"
+          
+        while True:
+          try:
+            tot_ts_len = len(json_data[country_ID][attribute])
+            train_ts_len = int(0.8 * tot_ts_len)
+            
+            if series_len is None:
+              series_len = random.randint(5, min(150, 5 + int(train_ts_len / 8)))
+            if start_idx is None:
+              if is_train:
+                start_idx = random.randint(0, train_ts_len - series_len)
+              else:
+                start_idx = random.randint(train_ts_len, tot_ts_len - series_len)
+            ts = json_data[country_ID][attribute][start_idx:start_idx + series_len]
+            ts = [round(x, 2) for x in ts]
+            break
+          except Exception as e:
+            print(f"Error occurred: {e}. Retrying...")
+        
+        start_year = json_data[country_ID]['metadata']['years'][start_idx]
+        end_year = json_data[country_ID]['metadata']['years'][start_idx+series_len-1]
+        
+        metadata = {}
+        metadata['country'] = country
+        metadata['attribute'] = attribute
+        metadata['sampling frequency'] = "yearly"
+        metadata['start year of this series'] = start_year
+        metadata['end year of this series'] = end_year
+        metadata['region'] = json_data[country_ID]['metadata']['region'] # south asia
+
+        metadata['population at the start year'] = json_data[country_ID]['population'][start_idx]
+        metadata['population at the end year'] = json_data[country_ID]['population'][start_idx+series_len-1]
+        
+        #metadata['historical minimum in this country'] = float(round(json_data[country_ID]['metadata']['stats']['min'][attribute]))
+        #metadata['historical maximum in this country'] = float(round(json_data[country_ID]['metadata']['stats']['max'][attribute]))
+        #metadata['historical mean in this country'] = float(round(json_data[country_ID]['metadata']['stats']['mean'][attribute]))
+        #metadata['historical standard deviation in this country'] = float(round(json_data[country_ID]['metadata']['stats']['std'][attribute]))
+        
+        metadata['mean of this specific series'] = float(round(np.mean(ts), 2))
+        metadata['standard deviation of this specific series'] = float(round(np.std(ts), 2))
+        metadata['minimum of this specific series'] = float(round(min(ts), 2))
+        metadata['maximum of this specific series'] = float(round(max(ts), 2))
         break
       except Exception as e:
-        print(f"Error occurred: {e}. Retrying...")
-    
-    start_year = json_data[country_ID]['metadata']['years'][start_idx]
-    end_year = json_data[country_ID]['metadata']['years'][start_idx+series_len-1]
-    
-    metadata = {}
-    metadata['country'] = country
-    metadata['attribute'] = attribute
-    metadata['sampling frequency'] = "yearly"
-    metadata['start year of this series'] = start_year
-    metadata['end year of this series'] = end_year
-    metadata['region'] = json_data[country_ID]['metadata']['region'] # south asia
-
-    metadata['population at the start year'] = json_data[country_ID]['population'][start_idx]
-    metadata['population at the end year'] = json_data[country_ID]['population'][start_idx+series_len-1]
-    
-    #metadata['historical minimum in this country'] = float(round(json_data[country_ID]['metadata']['stats']['min'][attribute]))
-    #metadata['historical maximum in this country'] = float(round(json_data[country_ID]['metadata']['stats']['max'][attribute]))
-    #metadata['historical mean in this country'] = float(round(json_data[country_ID]['metadata']['stats']['mean'][attribute]))
-    #metadata['historical standard deviation in this country'] = float(round(json_data[country_ID]['metadata']['stats']['std'][attribute]))
-    
-    metadata['mean of this specific series'] = float(round(np.mean(ts), 2))
-    metadata['standard deviation of this specific series'] = float(round(np.std(ts), 2))
-    metadata['minimum of this specific series'] = float(round(min(ts), 2))
-    metadata['maximum of this specific series'] = float(round(max(ts), 2))
+        print(f"{e}")
+        series_len = None
+        start_idx = None
+        continue
 
 
   if dataset_name == "diet":
@@ -742,16 +835,36 @@ def get_sample(dataset_name: str, json_data, series_len = None, start_idx = None
             for attribute in attributes:
                 series = country_data["time_series"][attribute]
                 series_length = len(series)
+                
+                # Calculate train/test split
+                train_ts_len = int(0.8 * series_length)
 
                 # We need at least 15 data points to allow min series_len of 5 and margin of 10
-                if series_length >= 15:
+                if is_train == False:
+                  min_len = 5
+                else:
+                  min_len=10 
+                  
+                if series_length >= min_len:
                     if series_len is None:
-                        series_len = random.randint(5, series_length - 10)
+                      if is_train==False:
+                        series_len = random.randint(5, min(6, series_length-train_ts_len))
+                      else:
+                        series_len = random.randint(5, min(20, train_ts_len))
                     if start_idx is None:
-                        max_start = series_length - series_len
-                        if max_start <= 0:
+                        if is_train:
+                            max_start = train_ts_len - series_len
+                        else:
+                            max_start = series_length - series_len
+                            min_start = train_ts_len
+                            
+                        if max_start <= 0 or (not is_train and train_ts_len >= series_length - series_len):
                             continue  # Not enough room to sample
-                        start_idx = random.randint(0, max_start)
+                            
+                        if is_train:
+                            start_idx = random.randint(0, max_start)
+                        else:
+                            start_idx = random.randint(min_start, max_start)
 
                     ts = series[start_idx:start_idx + series_len]
                     start_year = country_data['metadata']['years'][start_idx]
@@ -787,7 +900,7 @@ def get_sample(dataset_name: str, json_data, series_len = None, start_idx = None
         'mean of this specific series': float(round(np.mean(ts), 2)),
         'minimum of this specific series': float(round(min(ts), 2)),
         'maximum of this specific series': float(round(max(ts), 2))
-  }
+    }
  
     
     
@@ -802,16 +915,25 @@ def get_sample(dataset_name: str, json_data, series_len = None, start_idx = None
         while attribute == "dates": # redraw a sample if "dates" has been picked
           attribute = random.choice(list(json_data[transaction_ID]["time_series"]))
           
+        tot_ts_len = len(json_data[transaction_ID]["time_series"][attribute])
+        train_ts_len = int(0.8 * tot_ts_len)
+          
         if series_len is None:
-          series_len = random.randint(5, len(json_data[transaction_ID]["time_series"][attribute]))
+          if is_train:
+            series_len = random.randint(5, train_ts_len)
+          else:
+            series_len = random.randint(5, tot_ts_len-train_ts_len)
         if start_idx is None:
-          start_idx = random.randint(0, len(json_data[transaction_ID]["time_series"][attribute]) - series_len)
+          if is_train:
+            start_idx = random.randint(0, train_ts_len - series_len)
+          else:
+            start_idx = random.randint(train_ts_len, tot_ts_len - series_len)
         ts = json_data[transaction_ID]['time_series'][attribute][start_idx:start_idx+series_len]
         ts = [round(x, 2) for x in ts]
         break
       except Exception as e:
         print(f"Error occurred: {e}. Retrying...")
-    
+        
     start_week = json_data[transaction_ID]['time_series']['dates'][start_idx]
     end_week = json_data[transaction_ID]['time_series']['dates'][start_idx+series_len-1]
     
@@ -828,107 +950,114 @@ def get_sample(dataset_name: str, json_data, series_len = None, start_idx = None
 
     metadata['mean of this specific series'] = float(round(np.mean(ts), 2))
     metadata['minimum of this specific series'] = float(round(min(ts), 2))
-    metadata['maximum of this specific series'] = float(round(max(ts), 2))   
-    
+    metadata['maximum of this specific series'] = float(round(max(ts), 2))
   
   if dataset_name == "walmart":  
-    ID = random.choice(list(json_data.keys()))
-    sampling_frequency = json_data[ID]['metadata']['sampling_frequency']
-    attribute = "weekly_sales"
-    if series_len is None:
-      series_len = random.randint(5, len(json_data[ID]["time_series"][attribute]))
-    if start_idx is None:
-      start_idx = random.randint(0, len(json_data[ID]["time_series"][attribute]) - series_len)
-    ts = json_data[ID]['time_series'][attribute][start_idx:start_idx+series_len]
-    ts = [round(x, 2) for x in ts]
-    while True:
-      try:
-        ID = random.choice(list(json_data.keys()))
-        sampling_frequency = json_data[ID]['metadata']['sampling_frequency']
-        attribute = "weekly_sales"
-        if series_len is None:
-          series_len = random.randint(5, len(json_data[ID]["time_series"][attribute]))
-        if start_idx is None:
-          start_idx = random.randint(0, len(json_data[ID]["time_series"][attribute]) - series_len)
-        ts = json_data[ID]['time_series'][attribute][start_idx:start_idx+series_len]
-        ts = [round(x, 2) for x in ts]
-        break
-      except Exception as e:
-        print(f"Error occurred: {e}. Retrying...")
-    
-    start_week = json_data[ID]['time_series']['dates'][start_idx]
-    end_week = json_data[ID]['time_series']['dates'][start_idx+series_len-1]
-    
-    metadata = {}
-    metadata['attribute'] = attribute
-    metadata['sampling frequency'] = sampling_frequency
-    metadata['start week of this series'] = start_week
-    metadata['end week of this series'] = end_week
-    
-    metadata['best week sales'] = json_data[ID]['metadata']['stats']['sales']['best_week_sales']
-    metadata['best week'] = json_data[ID]['metadata']['stats']['sales']['best_week']
-    metadata['worst week sales'] = json_data[ID]['metadata']['stats']['sales']['worst_week_sales']
-    metadata['worst week'] = json_data[ID]['metadata']['stats']['sales']['worst_week']
-    metadata['mean sales'] = round(float(json_data[ID]['metadata']['stats']['sales']['mean']),2)
+      while True:
+          try:
+              ID = random.choice(list(json_data.keys()))
+              sampling_frequency = json_data[ID]['metadata']['sampling_frequency']
+              attribute = "weekly_sales"
 
-    metadata['mean of this specific series'] = float(round(np.mean(ts), 2))
-    metadata['minimum of this specific series'] = float(round(min(ts), 2))
-    metadata['maximum of this specific series'] = float(round(max(ts), 2))   
-    
-  if dataset_name == "agriculture":     
-    while True:
-      try:
-        country = random.choice(list(json_data.keys()))
-        sampling_frequency = "yearly"
-        attribute = random.choice(list(json_data[country]))
-        while attribute == "metadata" or attribute == "years" or attribute == "Output quantity": # redraw the attribtue
-          attribute = random.choice(list(json_data[country]))
-      
-        if series_len is None:
-          series_len = random.randint(5, len(json_data[country][attribute]))
-        if start_idx is None:
-          start_idx = random.randint(0, len(json_data[country][attribute]) - series_len)
-        ts = json_data[country][attribute][start_idx:start_idx+series_len]
-        ts = [round(x, 2) for x in ts]
-        break
-      except Exception as e:
-        print(f"Error occurred: {e}. Retrying...")
-    
-    start_year = json_data[country]['years'][start_idx]
-    end_year = json_data[country]['years'][start_idx+series_len-1]
-    
-    metadata = {}
-    metadata['country'] = country
-    metadata['attribute'] = attribute
-    metadata['sampling frequency'] = sampling_frequency
-    metadata['start year of this series'] = start_year
-    metadata['end year of this series'] = end_year
-    
-    metrics_info = json_data[country]['metadata']['metrics_definition'][attribute]
-    if "components" in metrics_info:
-      info = f"The {attribute} comprises the following components: {", ".join(metrics_info['components'])}."
-    elif "calculation" in metrics_info:
-      info = f"The {attribute} is computed as the {metrics_info['calculation']}."
-    
-    metadata['metrics info'] = info
-    metadata['historical max'] = round(float(max(json_data[country][attribute])), 2)
-    metadata['historical min'] = round(float(min(json_data[country][attribute])), 2)
-    metadata['historical mean'] = round(float(min(json_data[country][attribute])), 2)
+              tot_ts_len = len(json_data[ID]["time_series"][attribute])
+              train_ts_len = int(0.8 * tot_ts_len)
 
-    metadata['mean of this specific series'] = float(round(np.mean(ts), 2))
-    metadata['minimum of this specific series'] = float(round(min(ts), 2))
-    metadata['maximum of this specific series'] = float(round(max(ts), 2))
-    
-      
+              if series_len is None:
+                  series_len = random.randint(5, min(150, 5 + int(train_ts_len / 8)))
+
+              if start_idx is None:
+                  if is_train:
+                      start_idx = random.randint(0, train_ts_len - series_len)
+                  else:
+                      start_idx = random.randint(train_ts_len, tot_ts_len - series_len)
+
+              ts = json_data[ID]['time_series'][attribute][start_idx:start_idx + series_len]
+              ts = [round(x, 2) for x in ts]
+              break
+          except Exception as e:
+              print(f"Error occurred: {e}. Retrying...")
+
+      start_week = json_data[ID]['time_series']['dates'][start_idx]
+      end_week = json_data[ID]['time_series']['dates'][start_idx + series_len - 1]
+
+      metadata = {}
+      metadata['attribute'] = attribute
+      metadata['sampling frequency'] = sampling_frequency
+      metadata['start week of this series'] = start_week
+      metadata['end week of this series'] = end_week
+
+      metadata['best week sales'] = json_data[ID]['metadata']['stats']['sales']['best_week_sales']
+      metadata['best week'] = json_data[ID]['metadata']['stats']['sales']['best_week']
+      metadata['worst week sales'] = json_data[ID]['metadata']['stats']['sales']['worst_week_sales']
+      metadata['worst week'] = json_data[ID]['metadata']['stats']['sales']['worst_week']
+      metadata['mean sales'] = round(float(json_data[ID]['metadata']['stats']['sales']['mean']), 2)
+
+      metadata['mean of this specific series'] = float(round(np.mean(ts), 2))
+      metadata['minimum of this specific series'] = float(round(min(ts), 2))
+      metadata['maximum of this specific series'] = float(round(max(ts), 2))
+
+  if dataset_name == "agriculture":
+      while True:
+          try:
+              country = random.choice(list(json_data.keys()))
+              sampling_frequency = "yearly"
+              attribute = random.choice(list(json_data[country]))
+              while attribute in ["metadata", "years", "Output quantity"]:
+                  attribute = random.choice(list(json_data[country]))
+
+              tot_ts_len = len(json_data[country][attribute])
+              train_ts_len = int(0.8 * tot_ts_len)
+
+              if series_len is None:
+                  series_len = random.randint(5, min(150, 5 + int(train_ts_len / 8)))
+
+              if start_idx is None:
+                  if is_train:
+                      start_idx = random.randint(0, train_ts_len - series_len)
+                  else:
+                      start_idx = random.randint(train_ts_len, tot_ts_len - series_len)
+
+              ts = json_data[country][attribute][start_idx:start_idx + series_len]
+              ts = [round(x, 2) for x in ts]
+              break
+          except Exception as e:
+              print(f"Error occurred: {e}. Retrying...")
+
+      start_year = json_data[country]['years'][start_idx]
+      end_year = json_data[country]['years'][start_idx + series_len - 1]
+
+      metadata = {}
+      metadata['country'] = country
+      metadata['attribute'] = attribute
+      metadata['sampling frequency'] = sampling_frequency
+      metadata['start year of this series'] = start_year
+      metadata['end year of this series'] = end_year
+
+      metrics_info = json_data[country]['metadata']['metrics_definition'][attribute]
+      if "components" in metrics_info:
+          info = f"The {attribute} comprises the following components: {', '.join(metrics_info['components'])}."
+      elif "calculation" in metrics_info:
+          info = f"The {attribute} is computed as the {metrics_info['calculation']}."
+
+      metadata['metrics info'] = info
+      metadata['historical max'] = round(float(max(json_data[country][attribute])), 2)
+      metadata['historical min'] = round(float(min(json_data[country][attribute])), 2)
+      metadata['historical mean'] = round(float(np.mean(json_data[country][attribute])), 2)
+
+      metadata['mean of this specific series'] = float(round(np.mean(ts), 2))
+      metadata['minimum of this specific series'] = float(round(min(ts), 2))
+      metadata['maximum of this specific series'] = float(round(max(ts), 2))
+
   return metadata, ts
-
+  
+  
 # the following function does not preclude that no sample is duplicated, there's a very slim chance that it occurs
-def get_samples(dataset_name, json_data, n, series_len=None) -> list: # returns a list of tuples (metadata, ts) of the specified dataset
+def get_samples(dataset_name, json_data, n, is_train, series_len=None) -> list: # returns a list of tuples (metadata, ts) of the specified dataset
   samples = []
   if n is not None: # this fixes the number of samples
     i = 0
     while i < n:
-      metadata, ts = get_sample(dataset_name, json_data, series_len=None)
+      metadata, ts = get_sample(dataset_name, json_data, is_train, series_len=None)
       if not np.isnan(ts).any() and not any(isinstance(x, str) and x.lower() == 'nan' for x in ts):
         zero_percentage = (ts.count(0) / len(ts)) * 100
         if zero_percentage <= 10:
@@ -1372,10 +1501,11 @@ def generate_line_plot(
     plt.title(title)
     plt.grid(grid)
     
+    fs = random.randint(7, 12)
     if show_nums_on_line:
       if len(ts) < 25:
         for i, val in enumerate(ts):
-          plt.text(i, val, f'{val}', ha='center', va='bottom', fontsize=random.randint(7, 12))
+          plt.text(i, val, f'{val}', ha='center', va='bottom', fontsize=fs)
 
     # Save and close the plot
     plt.tight_layout()
@@ -2791,6 +2921,22 @@ def main():
 
   random.seed(config['general']['random_seed'])
   
+  """for what in ["gt_captions", "metadata", "plots", "time series"]:
+    folder_path = f"/home/ubuntu/thesis/data/samples/new samples with overlap/all/{what}"
+    train_path = f"/home/ubuntu/thesis/data/samples/new samples no overlap/train/{what}"
+    test_path = f"/home/ubuntu/thesis/data/samples/new samples no overlap/test/{what}"
+    
+    for filename in os.listdir(folder_path):
+      if "train" in filename:
+        os.remove(os.path.join(folder_path, filename))
+        #shutil.copy(os.path.join(folder_path, filename), os.path.join(train_path, filename))
+      elif "test" in filename:
+        os.remove(os.path.join(folder_path, filename))
+        #shutil.copy(os.path.join(folder_path, filename), os.path.join(test_path, filename))
+    print(f"\nDone for {what}.")
+        """
+        
+  
   """directory = "/home/ubuntu/thesis/data/samples/test/gt_captions"
   dataset_counts = Counter()
 
@@ -2922,7 +3068,7 @@ def main():
   print(f"{timesteps_dict}")"""
   
   
-  """directory = "/home/ubuntu/thesis/data/samples/time series"
+  directory = "/home/ubuntu/thesis/data/samples/new samples no overlap/train/time series"
 
   dataset_names = []
   for filename in os.listdir(directory):
@@ -2949,7 +3095,7 @@ def main():
     else:
       avg_lens[dataset_name] = 0
 
-  print("Average time series lengths:", avg_lens)"""
+  print("Average time series lengths:", avg_lens)
      
   
   """

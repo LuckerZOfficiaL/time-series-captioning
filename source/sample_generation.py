@@ -58,10 +58,15 @@ BIN_PERIOD = 10 # the size of the bins. Each bin represents one period of time""
 def main():
     config = load_config()
     random.seed(config['general']['random_seed'])
+    is_train = config['general']['is_train']
     
-    with open("/home/ubuntu/thesis/data/samples/data_sizes.json", 'r') as f:
-        data_sizes = json.load(f)
-
+    if is_train: 
+        with open("/home/ubuntu/thesis/data/samples/train_data_sizes.json", 'r') as f:
+            data_sizes = json.load(f)
+    else:
+         with open("/home/ubuntu/thesis/data/samples/test_data_sizes.json", 'r') as f:
+            data_sizes = json.load(f)
+            
     dataset_names = config['data']['dataset_names']
     request_augmentations = config['data']['request_augmentations']
     #n_samples = config['data']['n_samples']
@@ -81,16 +86,16 @@ def main():
     for dataset_name in dataset_names:
         n_samples = data_sizes[dataset_name]
         
-        print(f"\nGenerating{" RAG " if use_rag else " "}samples for", dataset_name)
+        print(f"\nGenerating{" RAG " if use_rag else " "} {n_samples} samples for", dataset_name)
         filepath = f"/home/ubuntu/thesis/data/processed/{FILE_MAPPING[dataset_name]}"
         with open(filepath) as f:
             json_data = json.load(f)
         
         idx = 0
 
-        samples = get_samples(dataset_name, json_data=json_data, n=n_samples)
+        samples = get_samples(dataset_name, json_data=json_data, n=n_samples, is_train=is_train)
 
-        print(f"{dataset_name} has {len(samples)} samples.\nNow generating {len(used_models)*len(samples)} captions out of them using {len(used_models)} oracles...")
+        print(f"{dataset_name} has {len(samples)} samples.\nNow generating {len(used_models)*len(samples)} {"train" if is_train else "test"} captions out of them using {len(used_models)} oracles...")
         requests = []
         for i in range(len(samples)): 
             metadata, ts = samples[i]
@@ -175,7 +180,7 @@ def main():
         if use_rag:
             save_folder = "/home/ubuntu/thesis/data/samples/captions/rag"
         elif config['data']['external_knowledge'] == False:
-            save_folder = "/home/ubuntu/thesis/data/samples/new/gt_captions"
+            save_folder = "/home/ubuntu/thesis/data/samples/new samples with overlap/all/gt_captions"
         else: save_folder = "/home/ubuntu/thesis/data/samples/captions/raw"
 
 
@@ -196,13 +201,13 @@ def main():
                 idx += 1
         else: # just save all responses without ranking and without selecting top-k
             for i in range(len(responses)):
-                caption_filepath = f"{save_folder}/{dataset_name}_{idx}.txt" 
+                caption_filepath = f"{save_folder}/{dataset_name}_{idx}_{"train" if is_train else "test"}.txt" 
                 save_file(responses[i], caption_filepath)
 
-                metadata_filepath = f"/home/ubuntu/thesis/data/samples/new/metadata/{dataset_name}_{idx}.json" 
+                metadata_filepath = f"/home/ubuntu/thesis/data/samples/new samples with overlap/all/metadata/{dataset_name}_{idx}_{"train" if is_train else "test"}.json" 
                 save_file([meta_and_ts[0] for meta_and_ts in samples][i%len(samples)], metadata_filepath)   
 
-                series_filepath = f"/home/ubuntu/thesis/data/samples/new/time series/{dataset_name}_{idx}.txt" 
+                series_filepath = f"/home/ubuntu/thesis/data/samples/new samples with overlap/all/time series/{dataset_name}_{idx}_{"train" if is_train else "test"}.txt" 
                 save_file([meta_and_ts[1] for meta_and_ts in samples][i%len(samples)], series_filepath) 
 
                 idx += 1
