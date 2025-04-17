@@ -10,8 +10,8 @@ import requests
 from PIL import Image
 from qwen_omni_utils import process_mm_info
 import torch
-from transformers import Qwen2_5OmniForConditionalGeneration, Qwen2_5OmniProcessor
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import Qwen2_5OmniThinkerForConditionalGeneration, Qwen2_5OmniProcessor
+from transformers import AutoModelForCausalLM, AutoModelForImageTextToText, AutoTokenizer
 from trl import SFTConfig, SFTTrainer
 
 from helpers import generate_prompt_for_baseline
@@ -24,9 +24,16 @@ OUT_DIR = "/home/ubuntu/time-series-captioning/qwen_fine_tune_training"
 @lru_cache
 def _load_batch_qwen_model(model_name, device):
     torch.manual_seed(314)
-    model = Qwen2_5OmniForConditionalGeneration.from_pretrained("Qwen/Qwen2.5-Omni-7B", torch_dtype=torch.float16,
-                                                                _attn_implementation='flash_attention_2',
-                                                                low_cpu_mem_usage=True)
+#    model = Qwen2_5OmniForConditionalGeneration.from_pretrained(model_name,
+#                                                                torch_dtype="auto",
+##                                                                _attn_implementation='flash_attention_2',
+#                                                                trust_remote_code=True)
+    model = Qwen2_5OmniThinkerForConditionalGeneration.from_pretrained(
+        "Qwen/Qwen2.5-Omni-7B",
+        torch_dtype="auto",
+        device_map=device,
+        trust_remote_code=True,        # now picks up the patched forward()
+    )
     model.to(device)
     processor = Qwen2_5OmniProcessor.from_pretrained(model_name)
     return model, processor
@@ -35,8 +42,8 @@ def format_conversation(prompt, image_file, label, processor):
     conversation = [
         {
             "role": "system",
-            "content": ("You are Qwen, a virtual human developed by the Qwen Team, Alibaba Group,"
-                       " capable of perceiving auditory and visual inputs, as well as generating text and speech."),
+            "content": [{"type": "text", "text": ("You are Qwen, a virtual human developed by the Qwen Team, Alibaba Group,"
+                       " capable of perceiving auditory and visual inputs, as well as generating text and speech.")}]
         },
         {
             "role": "user",
@@ -53,6 +60,7 @@ def format_conversation(prompt, image_file, label, processor):
 def get_train_dataset(data_dir, processor):
     ts_dir = os.path.join(data_dir, "time series")
     ts_names = [Path(fn).stem for fn in os.listdir(ts_dir)]
+    ts_names = ts_names[:100]  # for testing
     prompts = []
     image_files = []
     labels = []
@@ -73,7 +81,7 @@ def get_train_dataset(data_dir, processor):
         prompts.append(prompt)
         image_files.append(image_file)
     conversations = [format_conversation(p, i, l, processor) for p, i, l in zip(prompts, image_files, labels)]
-    conversations = [processor.apply_chat_template(c, add_generation_prompt=True, tokenize=False)[0] for c in conversations] 
+    conversations = processor.apply_chat_template(conversations, add_generation_prompt=True, tokenize=False)
     return [{"chat": c, "image": i} for c, i in zip(conversations, image_files)]
 
 def eval_batch_qwen(prompts, image_files, device, use_image): 
@@ -91,8 +99,10 @@ def eval_batch_qwen(prompts, image_files, device, use_image):
     captions = processor.batch_decode(trimmed_generated_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)
     return captions
 
+DEVICE = 'cuda:0'
+
 def collate_fn(examples):
-    _, processor = _load_batch_qwen_model(MODEL_PATH, 'cuda')
+    _, processor = _load_batch_qwen_model(MODEL_PATH, DEVICE)
     text = [ex["chat"] for ex in examples]
     #text = [processor.apply_chat_template(c, add_generation_prompt=True, tokenize=False)[0] for c in examples] 
 #    _, images, _ = process_mm_info(examples)
@@ -116,19 +126,22 @@ def collate_fn(examples):
     return batch  # Return the prepared batch
 
 def main(model_eval, data_dir, out_dir, use_image=True):
-    device = 'cuda'
-    model, processor = _load_batch_qwen_model(MODEL_PATH, device)
+    model, processor = _load_batch_qwen_model(MODEL_PATH, DEVICE)
     training_data = get_train_dataset(data_dir, processor)
     train_dataset = Dataset.from_list(training_data)
-
+#    collate_fn(train_dataset)
+    
     training_args = SFTConfig(
         output_dir=out_dir,
         num_train_epochs=1,
         learning_rate=1e-4,
         optim="adamw_torch_fused",
         remove_unused_columns=False,
+        logging_dir="qwen_ft_logs",
+        logging_steps=10, 
     )
     training_args.dataset_kwargs = {"skip_prepare_dataset": True}
+
     trainer = SFTTrainer(
         model=model,
         args=training_args,
