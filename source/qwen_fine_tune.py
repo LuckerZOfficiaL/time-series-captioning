@@ -3,15 +3,18 @@ import json
 import os
 from pathlib import Path
 import re
+import pickle
 import time
 
 from datasets import Dataset
+import numpy as np
+from numpy.core.multiarray import _reconstruct
 import requests
 from PIL import Image
 from qwen_omni_utils import process_mm_info
 import torch
 from transformers import Qwen2_5OmniThinkerForConditionalGeneration, Qwen2_5OmniProcessor
-from transformers import AutoModelForCausalLM, AutoModelForImageTextToText, AutoTokenizer
+from transformers import AutoModelForCausalLM, AutoModelForImageTextToText, AutoTokenizer, TrainingArguments
 from trl import SFTConfig, SFTTrainer
 
 from helpers import generate_prompt_for_baseline
@@ -24,16 +27,14 @@ OUT_DIR = "/home/ubuntu/time-series-captioning/qwen_fine_tune_training"
 @lru_cache
 def _load_batch_qwen_model(model_name, device):
     torch.manual_seed(314)
-#    model = Qwen2_5OmniForConditionalGeneration.from_pretrained(model_name,
-#                                                                torch_dtype="auto",
-##                                                                _attn_implementation='flash_attention_2',
-#                                                                trust_remote_code=True)
     model = Qwen2_5OmniThinkerForConditionalGeneration.from_pretrained(
-        "Qwen/Qwen2.5-Omni-7B",
-        torch_dtype="auto",
-        device_map=device,
+        #"Qwen/Qwen2.5-Omni-7B",
+        "qwen_fine_tune_training/checkpoint-1250",
+        torch_dtype=torch.float16,
+        low_cpu_mem_usage=True,
         trust_remote_code=True,        # now picks up the patched forward()
     )
+    model.config.vocab_size = model.config.text_config.vocab_size  # hacky patch
     model.to(device)
     processor = Qwen2_5OmniProcessor.from_pretrained(model_name)
     return model, processor
@@ -60,7 +61,7 @@ def format_conversation(prompt, image_file, label, processor):
 def get_train_dataset(data_dir, processor):
     ts_dir = os.path.join(data_dir, "time series")
     ts_names = [Path(fn).stem for fn in os.listdir(ts_dir)]
-    ts_names = ts_names[:100]  # for testing
+#    ts_names = ts_names[:100]   # testing
     prompts = []
     image_files = []
     labels = []
@@ -99,13 +100,12 @@ def eval_batch_qwen(prompts, image_files, device, use_image):
     captions = processor.batch_decode(trimmed_generated_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)
     return captions
 
-DEVICE = 'cuda:0'
+DEVICE = 'cuda'
 
 def collate_fn(examples):
     _, processor = _load_batch_qwen_model(MODEL_PATH, DEVICE)
     text = [ex["chat"] for ex in examples]
-    #text = [processor.apply_chat_template(c, add_generation_prompt=True, tokenize=False)[0] for c in examples] 
-#    _, images, _ = process_mm_info(examples)
+    #_, images, _ = process_mm_info(examples)
     images = [Image.open(ex["image"]) for ex in examples]
     # Tokenize the texts and process the images
     batch = processor(
@@ -114,7 +114,6 @@ def collate_fn(examples):
     # The labels are the input_ids, and we mask the padding tokens in the loss computation
     labels = batch["input_ids"].clone()  # Clone input IDs for labels
     labels[labels == processor.tokenizer.pad_token_id] = -100  # Mask padding tokens in labels
-    # TODO: Make sure this image token masking is correct
     # Ignore the image token index in the loss computation 
     # Mask image token IDs in the labels
     image_tokens = [processor.tokenizer.convert_tokens_to_ids(processor.image_token)]  # Convert image token to ID
@@ -125,33 +124,75 @@ def collate_fn(examples):
 
     return batch  # Return the prepared batch
 
+def debug_batch(batch):
+    # gpt test stuff
+    labels = batch["labels"]
+    valid_tokens = (labels != -100).sum()
+    print(f"  Valid label tokens in this batch: {valid_tokens.item()}")
+    # After forward:
+    outputs = model(**batch)
+    logits = outputs.logits
+    print("  Any NaNs in logits? ", torch.isnan(logits).any().item())
+    loss = loss_fn(logits=logits, labels=labels, vocab_size=model.config.vocab_size)
+    print("  Raw loss:", loss.item(), "NaN?", torch.isnan(loss).item())
+    loss.backward()
+    gn = torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+    print("  Grad‑norm (clipped):", gn)
+
+
 def main(model_eval, data_dir, out_dir, use_image=True):
     model, processor = _load_batch_qwen_model(MODEL_PATH, DEVICE)
-    training_data = get_train_dataset(data_dir, processor)
+    model.gradient_checkpointing_enable()  # decrease GPU mem usage
+    #training_data = get_train_dataset(data_dir, processor)
+    with open("training_data.pkl", "rb") as fh:
+        training_data = pickle.load(fh)
+
     train_dataset = Dataset.from_list(training_data)
-#    collate_fn(train_dataset)
     
+    torch.autograd.set_detect_anomaly(True) 
+
     training_args = SFTConfig(
         output_dir=out_dir,
         num_train_epochs=1,
-        learning_rate=1e-4,
+        learning_rate=1e-7,
+        warmup_steps=100,
+        max_grad_norm=1.0,
+        lr_scheduler_type="inverse_sqrt",
         optim="adamw_torch_fused",
         remove_unused_columns=False,
-        logging_dir="qwen_ft_logs",
-        logging_steps=10, 
+        per_device_train_batch_size=1, # decrease GPU mem usage
+        #gradient_accumulation_steps=4, # decrease GPU mem usage 
+        logging_strategy="steps",
+        logging_steps=1,
+        report_to="wandb",
+        log_level="info",
+        dataset_text_field="",
+        save_strategy="steps",
+        save_steps=250,
+        save_total_limit=1,
     )
     training_args.dataset_kwargs = {"skip_prepare_dataset": True}
+    import wandb 
+    wandb.init(
+        project="qwen25-fine-tuning",  # change this
+        name="qwen25-fine-tuning",  # change this
+        config=training_args,
+    )
 
     trainer = SFTTrainer(
         model=model,
         args=training_args,
         train_dataset=train_dataset,
-#        eval_dataset=eval_dataset,
         data_collator=collate_fn,
-#        peft_config=peft_config,
-#        tokenizer=processor.tokenizer,
     )
+
+    # allow the RNG file’s NumPy functions to be unpickled, for loading from checkpoint
+    torch.serialization.add_safe_globals([_reconstruct])
+    torch.serialization.add_safe_globals([np.ndarray]) 
+    
     print("Now training model")
+#    trainer.train(resume_from_checkpoint=True)
+    # NOTE: iters is +600 because we started training from a checkpoint at 500.
     trainer.train()
     print("Model training complete, now saving")
     trainer.save_model(training_args.output_dir)
