@@ -165,7 +165,7 @@ def main():
         ################################# ORACLE SCORE ###############################################
         
         oracle_sc = get_batch_score(generated_captions=gen_capts, gt_captions=gt_capts, score_function=oracle_score)
-        
+        oracle_sc = round(oracle_sc/100, 3)
         print(f"ORACLE SCORE: {round(oracle_sc, 3)}")
         
         result_dict[dataset]['oracle score'] = round(oracle_sc, 3)

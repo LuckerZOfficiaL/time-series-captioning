@@ -2918,6 +2918,87 @@ def main():
 
   random.seed(config['general']['random_seed'])
   
+
+  """metric_groups = [
+      "BERT F1", "BERT Precision", "BERT Recall", "Numeric Score",
+      "BLEU", "ROUGE-L", "METEOR", "Oracle Score"
+  ]
+
+  # Columns (categories)
+  columns = [
+      "Average", "Air Quality", "Border Crossing", "Crime", "Demography",
+      "Road Injuries", "Covid", "Co2", "Diet", "Walmart", "Online Retail", "Agriculture"
+  ]
+
+  # Raw data for two experiments (first 9 rows are Experiment 1, next 9 are Experiment 2)
+  experiment1 = [
+      [0.655, 0.633, 0.641, 0.625, 0.672, 0.651, 0.642, 0.69, 0.656, 0.633, 0.674, 0.689],  # BERT F1
+      [0.651, 0.635, 0.644, 0.63, 0.66, 0.651, 0.637, 0.673, 0.654, 0.629, 0.666, 0.677],
+      [0.661, 0.632, 0.64, 0.621, 0.685, 0.652, 0.649, 0.709, 0.659, 0.638, 0.682, 0.703],
+      [0.594, 0.455, 0.479, 0.589, 0.68, 0.711, 0.588, 0.736, 0.659, 0.326, 0.578, 0.731],
+      [0.088, 0.044, 0.071, 0.056, 0.112, 0.114, 0.07, 0.158, 0.065, 0.032, 0.11, 0.136],
+      [0.259, 0.21, 0.243, 0.219, 0.296, 0.276, 0.229, 0.305, 0.26, 0.212, 0.291, 0.31],
+      [0.282, 0.224, 0.268, 0.252, 0.323, 0.289, 0.265, 0.361, 0.274, 0.217, 0.306, 0.321],
+      [round(val/100, 3) for val in [56.84, 53.42, 44.46, 41.03, 72.83, 60.9, 47.26, 71.76, 65.6, 35.32, 66.14, 66.56]],
+  ]
+
+  experiment2 = [
+      [0.637, 0.615, 0.62, 0.608, 0.652, 0.633, 0.627, 0.676, 0.644, 0.615, 0.643, 0.671],  # BERT F1
+      [0.628, 0.611, 0.616, 0.604, 0.64, 0.628, 0.617, 0.656, 0.637, 0.605, 0.635, 0.659],
+      [0.646, 0.619, 0.624, 0.613, 0.664, 0.639, 0.637, 0.697, 0.652, 0.625, 0.653, 0.685],
+      [0.551, 0.41, 0.414, 0.488, 0.657, 0.659, 0.547, 0.693, 0.636, 0.282, 0.563, 0.707],
+      [0.067, 0.03, 0.051, 0.047, 0.085, 0.082, 0.053, 0.121, 0.063, 0.028, 0.068, 0.107],
+      [0.23, 0.184, 0.213, 0.198, 0.263, 0.244, 0.208, 0.278, 0.237, 0.19, 0.244, 0.269],
+      [0.259, 0.208, 0.241, 0.24, 0.287, 0.271, 0.249, 0.331, 0.261, 0.206, 0.259, 0.294],
+      [round(val/100, 3) for val in [52.24, 40.96, 40.81, 39.29, 69.19, 56.38, 43.75, 63.27, 62.08, 37.47, 61.01, 60.43]],
+  ]
+
+  # Create grouped bar plots
+  for col_idx, col_name in enumerate(columns):
+      x = np.arange(len(metric_groups))  # positions for metric groups
+      width = 0.35
+
+      fig, ax = plt.subplots(figsize=(10, 5))
+      exp1_vals = [row[col_idx] for row in experiment1]
+      exp2_vals = [row[col_idx] for row in experiment2]
+      
+      ax.bar(x - width/2, [row[col_idx] for row in experiment1], width, label='Finetuned', color="red")
+      ax.bar(x + width/2, [row[col_idx] for row in experiment2], width, label='Pretrained', color='blue')
+
+      # Compute dynamic y-limit to leave space for annotations
+      max_val = max(max(exp1_vals), max(exp2_vals))
+      ax.set_ylim(0, max_val * 1.15)  # 15% headroom
+    
+      for i, (v1, v2) in enumerate(zip(exp1_vals, exp2_vals)):
+        if v2 != 0:
+            rel_improvement = ((v1 - v2) / v2) * 100
+            label = f"{rel_improvement:+.1f}%"
+        else:
+            label = "N/A"
+        mid_x = x[i]
+        top = max(v1, v2)
+        offset = 0.02 * max_val if max_val > 1 else 0.02
+        ax.text(mid_x, top + offset, label, ha='center', va='bottom', fontsize=8, color='black')
+        
+      """# Annotate delta above bar group
+      for i, (v1, v2) in enumerate(zip(exp1_vals, exp2_vals)):
+          delta = v1 - v2
+          mid_x = x[i]
+          top = max(v1, v2)
+          ax.text(mid_x, top + 0.02 * (1 if top < 1 else top), f"{delta:+.3f}", ha='center', va='bottom', fontsize=8, color='black')"""
+        
+      ax.set_ylabel('Score')
+      ax.set_title(f'InternVL Metrics Comparison - {col_name}')
+      ax.set_xticks(x)
+      ax.set_xticklabels(metric_groups, rotation=45, ha='right')
+      ax.legend()
+      plt.tight_layout()
+      plt.grid(True)
+      plt.savefig(f"/home/ubuntu/thesis/source/figs/{col_name}_metrics.png")
+      plt.show()"""
+
+  
+  
   """for what in ["gt_captions", "metadata", "plots", "time series"]:
     folder_path = f"/home/ubuntu/thesis/data/samples/new samples with overlap/all/{what}"
     train_path = f"/home/ubuntu/thesis/data/samples/new samples no overlap/train/{what}"
@@ -3065,7 +3146,7 @@ def main():
   print(f"{timesteps_dict}")"""
   
   
-  directory = "/home/ubuntu/thesis/data/samples/new samples no overlap/train/time series"
+  """directory = "/home/ubuntu/thesis/data/samples/new samples no overlap/train/time series"
 
   dataset_names = []
   for filename in os.listdir(directory):
@@ -3092,7 +3173,7 @@ def main():
     else:
       avg_lens[dataset_name] = 0
 
-  print("Average time series lengths:", avg_lens)
+  print("Average time series lengths:", avg_lens)"""
      
   
   """
