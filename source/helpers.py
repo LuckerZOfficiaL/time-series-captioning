@@ -2912,7 +2912,67 @@ def meteor_score(generated_caption, gt_caption):
     
     return score
  
+def create_metric_comparisons(data_ft, data_base, save_path="/home/ubuntu/thesis/source/figs/", label="percentage"):
+    import numpy as np
+    import matplotlib.pyplot as plt
     
+    # Metrics and columns from the data
+    metric_groups = [
+        "BERT F1", "BERT Precision", "BERT Recall", "Numeric Score",
+        "BLEU", "ROUGE-L", "METEOR", "Oracle Score", "simCSE"
+    ]
+
+    # Columns (categories)
+    columns = [
+        "Average", "Air Quality", "Border Crossing", "Crime", "Demography",
+        "Road Injuries", "Covid", "Co2", "Diet", "Walmart", "Online Retail", "Agriculture"
+    ]
+
+    # Create grouped bar plots
+    for col_idx, col_name in enumerate(columns):
+        x = np.arange(len(metric_groups))  # positions for metric groups
+        width = 0.35
+
+        fig, ax = plt.subplots(figsize=(10, 5))
+        exp1_vals = [data_ft[i][col_idx] for i in range(len(metric_groups))]
+        exp2_vals = [data_base[i][col_idx] for i in range(len(metric_groups))]
+        
+        ax.bar(x - width/2, exp1_vals, width, label='Finetuned (LLaVA-v1.6-7B FT)', color="red")
+        ax.bar(x + width/2, exp2_vals, width, label='Pretrained (LLaVA-v1.6-7B)', color='blue')
+
+        # Compute dynamic y-limit to leave space for annotations
+        max_val = max(max(exp1_vals), max(exp2_vals))
+        ax.set_ylim(0, max_val * 1.15)  # 15% headroom
+
+        if label == "percentage":
+          for i, (v1, v2) in enumerate(zip(exp1_vals, exp2_vals)):
+              if v2 != 0:
+                  rel_improvement = ((v1 - v2) / v2) * 100
+                  label = f"{rel_improvement:+.1f}%"
+              else:
+                  label = "N/A"
+              mid_x = x[i]
+              top = max(v1, v2)
+              offset = 0.02 * max_val if max_val > 1 else 0.02
+              ax.text(mid_x, top + offset, label, ha='center', va='bottom', fontsize=8, color='black')
+        
+        elif label == "delta":
+          for i, (v1, v2) in enumerate(zip(exp1_vals, exp2_vals)):
+              delta = v1 - v2
+              mid_x = x[i]
+              top = max(v1, v2)
+              ax.text(mid_x, top + 0.02 * (1 if top < 1 else top), f"{delta:+.3f}", ha='center', va='bottom', fontsize=8, color='black')
+        
+        ax.set_ylabel('Score')
+        ax.set_title(f'LLaVA-v1.6-7B Metrics Comparison - {col_name}')
+        ax.set_xticks(x)
+        ax.set_xticklabels(metric_groups, rotation=45, ha='right')
+        ax.legend()
+        plt.tight_layout()
+        plt.grid(True)
+        plt.savefig(f"{save_path}{col_name}_metrics.jpeg")
+        plt.show()
+
 def main():
   config = load_config()
 
@@ -2920,7 +2980,7 @@ def main():
   
   
   
-  """directory = "/home/ubuntu/thesis/data/samples/new samples no overlap/generated captions/internvl_wo_co2_demography_agriculture"
+  """directory = "/home/ubuntu/thesis/data/samples/new samples no overlap/generated captions/llava-finetune-pratham"
 
   for filename in os.listdir(directory):
     if filename.endswith(".txt"):
@@ -2931,83 +2991,34 @@ def main():
 
   print("Renaming completed.")"""
 
-  """metric_groups = [
-      "BERT F1", "BERT Precision", "BERT Recall", "Numeric Score",
-      "BLEU", "ROUGE-L", "METEOR", "Oracle Score"
+  
+
+  data_ft = [
+      [0.758, 0.763, 0.714, 0.739, 0.768, 0.775, 0.764, 0.775, 0.773, 0.737, 0.759, 0.769],  # BERT F1
+      [0.76, 0.769, 0.715, 0.742, 0.769, 0.775, 0.764, 0.776, 0.773, 0.739, 0.764, 0.769],   # BERT Precision
+      [0.757, 0.759, 0.714, 0.737, 0.768, 0.775, 0.764, 0.775, 0.774, 0.736, 0.754, 0.768],  # BERT Recall
+      [0.732, 0.669, 0.585, 0.693, 0.754, 0.752, 0.747, 0.853, 0.768, 0.695, 0.707, 0.824],  # Numeric Score
+      [0.285, 0.236, 0.205, 0.246, 0.329, 0.359, 0.306, 0.315, 0.358, 0.21, 0.274, 0.295],   # BLEU Score
+      [0.445, 0.409, 0.372, 0.377, 0.473, 0.51, 0.448, 0.476, 0.533, 0.384, 0.44, 0.469],    # ROUGE-L Score
+      [0.441, 0.384, 0.389, 0.413, 0.484, 0.485, 0.465, 0.483, 0.521, 0.361, 0.423, 0.441],  # METEOR Score
+      [0.524, 0.437, 0.379, 0.369, 0.58, 0.488, 0.505, 0.743, 0.555, 0.549, 0.606, 0.548],   # Oracle Score
+      [0.9069, 0.8997, 0.8666, 0.9062, 0.9405, 0.932, 0.9153, 0.9354, 0.9258, 0.8963, 0.9152, 0.9283]  # simCSE
   ]
 
-  # Columns (categories)
-  columns = [
-      "Average", "Air Quality", "Border Crossing", "Crime", "Demography",
-      "Road Injuries", "Covid", "Co2", "Diet", "Walmart", "Online Retail", "Agriculture"
+  data_base = [
+      [0.65, 0.633, 0.634, 0.621, 0.663, 0.671, 0.64, 0.678, 0.656, 0.633, 0.649, 0.675],    # BERT F1
+      [0.641, 0.632, 0.631, 0.622, 0.651, 0.666, 0.632, 0.656, 0.648, 0.623, 0.636, 0.656],   # BERT Precision
+      [0.66, 0.634, 0.637, 0.621, 0.676, 0.676, 0.65, 0.702, 0.664, 0.643, 0.664, 0.696],     # BERT Recall
+      [0.517, 0.419, 0.416, 0.373, 0.615, 0.692, 0.465, 0.676, 0.552, 0.268, 0.525, 0.685],   # Numeric Score
+      [0.086, 0.065, 0.078, 0.072, 0.108, 0.096, 0.063, 0.124, 0.093, 0.048, 0.096, 0.106],   # BLEU
+      [0.259, 0.218, 0.252, 0.222, 0.285, 0.291, 0.242, 0.29, 0.27, 0.234, 0.261, 0.286],     # ROUGE-L
+      [0.287, 0.236, 0.286, 0.255, 0.315, 0.31, 0.257, 0.337, 0.306, 0.253, 0.286, 0.314],    # METEOR
+      [0.551, 0.4939, 0.4557, 0.418, 0.6847, 0.5706, 0.5264, 0.6688, 0.5693, 0.4886, 0.5895, 0.5953],  # Oracle Score
+      [0.8203, 0.8063, 0.8088, 0.8209, 0.898, 0.8713, 0.8092, 0.8813, 0.8266, 0.8153, 0.8054, 0.8516]  # simCSE
   ]
 
-  # Raw data for two experiments (first 9 rows are Experiment 1, next 9 are Experiment 2)
-  experiment1 = [
-      [0.655, 0.633, 0.641, 0.625, 0.672, 0.651, 0.642, 0.69, 0.656, 0.633, 0.674, 0.689],  # BERT F1
-      [0.651, 0.635, 0.644, 0.63, 0.66, 0.651, 0.637, 0.673, 0.654, 0.629, 0.666, 0.677],
-      [0.661, 0.632, 0.64, 0.621, 0.685, 0.652, 0.649, 0.709, 0.659, 0.638, 0.682, 0.703],
-      [0.594, 0.455, 0.479, 0.589, 0.68, 0.711, 0.588, 0.736, 0.659, 0.326, 0.578, 0.731],
-      [0.088, 0.044, 0.071, 0.056, 0.112, 0.114, 0.07, 0.158, 0.065, 0.032, 0.11, 0.136],
-      [0.259, 0.21, 0.243, 0.219, 0.296, 0.276, 0.229, 0.305, 0.26, 0.212, 0.291, 0.31],
-      [0.282, 0.224, 0.268, 0.252, 0.323, 0.289, 0.265, 0.361, 0.274, 0.217, 0.306, 0.321],
-      [round(val/100, 3) for val in [56.84, 53.42, 44.46, 41.03, 72.83, 60.9, 47.26, 71.76, 65.6, 35.32, 66.14, 66.56]],
-  ]
-
-  experiment2 = [
-      [0.637, 0.615, 0.62, 0.608, 0.652, 0.633, 0.627, 0.676, 0.644, 0.615, 0.643, 0.671],  # BERT F1
-      [0.628, 0.611, 0.616, 0.604, 0.64, 0.628, 0.617, 0.656, 0.637, 0.605, 0.635, 0.659],
-      [0.646, 0.619, 0.624, 0.613, 0.664, 0.639, 0.637, 0.697, 0.652, 0.625, 0.653, 0.685],
-      [0.551, 0.41, 0.414, 0.488, 0.657, 0.659, 0.547, 0.693, 0.636, 0.282, 0.563, 0.707],
-      [0.067, 0.03, 0.051, 0.047, 0.085, 0.082, 0.053, 0.121, 0.063, 0.028, 0.068, 0.107],
-      [0.23, 0.184, 0.213, 0.198, 0.263, 0.244, 0.208, 0.278, 0.237, 0.19, 0.244, 0.269],
-      [0.259, 0.208, 0.241, 0.24, 0.287, 0.271, 0.249, 0.331, 0.261, 0.206, 0.259, 0.294],
-      [round(val/100, 3) for val in [52.24, 40.96, 40.81, 39.29, 69.19, 56.38, 43.75, 63.27, 62.08, 37.47, 61.01, 60.43]],
-  ]
-
-  # Create grouped bar plots
-  for col_idx, col_name in enumerate(columns):
-      x = np.arange(len(metric_groups))  # positions for metric groups
-      width = 0.35
-
-      fig, ax = plt.subplots(figsize=(10, 5))
-      exp1_vals = [row[col_idx] for row in experiment1]
-      exp2_vals = [row[col_idx] for row in experiment2]
-      
-      ax.bar(x - width/2, [row[col_idx] for row in experiment1], width, label='Finetuned', color="red")
-      ax.bar(x + width/2, [row[col_idx] for row in experiment2], width, label='Pretrained', color='blue')
-
-      # Compute dynamic y-limit to leave space for annotations
-      max_val = max(max(exp1_vals), max(exp2_vals))
-      ax.set_ylim(0, max_val * 1.15)  # 15% headroom
-    
-      for i, (v1, v2) in enumerate(zip(exp1_vals, exp2_vals)):
-        if v2 != 0:
-            rel_improvement = ((v1 - v2) / v2) * 100
-            label = f"{rel_improvement:+.1f}%"
-        else:
-            label = "N/A"
-        mid_x = x[i]
-        top = max(v1, v2)
-        offset = 0.02 * max_val if max_val > 1 else 0.02
-        ax.text(mid_x, top + offset, label, ha='center', va='bottom', fontsize=8, color='black')
-        
-      # Annotate delta above bar group
-      for i, (v1, v2) in enumerate(zip(exp1_vals, exp2_vals)):
-          delta = v1 - v2
-          mid_x = x[i]
-          top = max(v1, v2)
-          ax.text(mid_x, top + 0.02 * (1 if top < 1 else top), f"{delta:+.3f}", ha='center', va='bottom', fontsize=8, color='black')
-        
-      ax.set_ylabel('Score')
-      ax.set_title(f'InternVL Metrics Comparison - {col_name}')
-      ax.set_xticks(x)
-      ax.set_xticklabels(metric_groups, rotation=45, ha='right')
-      ax.legend()
-      plt.tight_layout()
-      plt.grid(True)
-      plt.savefig(f"/home/ubuntu/thesis/source/figs/{col_name}_metrics.png")
-      plt.show()"""
+  # Call the function
+  create_metric_comparisons(data_ft, data_base, save_path="/home/ubuntu/thesis/source/figs/", label="percentage")
 
   
   
