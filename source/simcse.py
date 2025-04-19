@@ -8,26 +8,37 @@ from collections import defaultdict
 import json
 
 
-
-model_path = "/home/ubuntu/thesis/data/simcse_ts_new"
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
+"""model_path = "/home/ubuntu/thesis/data/simcse_ts_new"
 tokenizer = AutoTokenizer.from_pretrained(model_path)
-model = AutoModel.from_pretrained(model_path).eval().to(device)
+model = AutoModel.from_pretrained(model_path).eval().to(device)"""
+
+
+model_name = "princeton-nlp/sup-simcse-roberta-large"
+tokenizer = AutoTokenizer.from_pretrained(model_name)
+model = AutoModel.from_pretrained(model_name).eval().cuda()
 
 def get_domain(fname):
     return fname.split("_")[0]
 
-domain_similarities = defaultdict(list)
 
 
-generated_folders = [d for d in os.listdir("/home/ubuntu/thesis/data/samples/new samples no overlap/generated captions") if os.path.isdir(os.path.join("/home/ubuntu/thesis/data/samples/new samples no overlap/generated captions", d))]
+
+#generated_folders = [d for d in os.listdir("/home/ubuntu/thesis/data/samples/new samples no overlap/generated captions") if os.path.isdir(os.path.join("/home/ubuntu/thesis/data/samples/new samples no overlap/generated captions", d))]
+generated_folders = ["qwen25-omni-7b"]
 
 for name in generated_folders:
+    domain_similarities = defaultdict(list)
+    
 #try:
-    name = "positive pair example"
-    gt_dir = f"/home/ubuntu/thesis/data/samples/simcse experiment/simcse negative experiment gt"
-    gen_dir = f"/home/ubuntu/thesis/data/samples/simcse experiment/simcse negative experiment gen"
+    #name = "positive pair example"
+    #gt_dir = f"/home/ubuntu/thesis/data/samples/simcse experiment/simcse positive experiment gt"
+    #gen_dir = f"/home/ubuntu/thesis/data/samples/simcse experiment/simcse positive experiment gen"
+    
+    gt_dir = f"/home/ubuntu/thesis/data/samples/new samples no overlap/test/gt_captions"
+    gen_dir = f"/home/ubuntu/thesis/data/samples/new samples no overlap/generated captions/{name}"
+    
 
     gt_all = {f for f in os.listdir(gt_dir) if f.endswith(".txt")}
     gen_all = set(os.listdir(gen_dir))
@@ -73,8 +84,8 @@ for name in generated_folders:
     }
     print(f"global average: {global_avg:.4f}")
 
-    #with open(f"/home/ubuntu/thesis/data/evaluation results/simcse_results/{name}.json", "w") as f:
-    #    json.dump(domain_avg_json, f, indent=2)
+    with open(f"/home/ubuntu/thesis/data/evaluation results/simcse_results/{name}.json", "w") as f:
+        json.dump(domain_avg_json, f, indent=2)
         
 #except Exception as e:
 #    print(e)

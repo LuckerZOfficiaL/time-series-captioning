@@ -2918,6 +2918,18 @@ def main():
 
   random.seed(config['general']['random_seed'])
   
+  
+  
+  """directory = "/home/ubuntu/thesis/data/samples/new samples no overlap/generated captions/internvl_wo_co2_demography_agriculture"
+
+  for filename in os.listdir(directory):
+    if filename.endswith(".txt"):
+      old_path = os.path.join(directory, filename)
+      new_filename = filename.replace(".txt", "_test.txt")
+      new_path = os.path.join(directory, new_filename)
+      os.rename(old_path, new_path)
+
+  print("Renaming completed.")"""
 
   """metric_groups = [
       "BERT F1", "BERT Precision", "BERT Recall", "Numeric Score",
@@ -2980,12 +2992,12 @@ def main():
         offset = 0.02 * max_val if max_val > 1 else 0.02
         ax.text(mid_x, top + offset, label, ha='center', va='bottom', fontsize=8, color='black')
         
-      """# Annotate delta above bar group
+      # Annotate delta above bar group
       for i, (v1, v2) in enumerate(zip(exp1_vals, exp2_vals)):
           delta = v1 - v2
           mid_x = x[i]
           top = max(v1, v2)
-          ax.text(mid_x, top + 0.02 * (1 if top < 1 else top), f"{delta:+.3f}", ha='center', va='bottom', fontsize=8, color='black')"""
+          ax.text(mid_x, top + 0.02 * (1 if top < 1 else top), f"{delta:+.3f}", ha='center', va='bottom', fontsize=8, color='black')
         
       ax.set_ylabel('Score')
       ax.set_title(f'InternVL Metrics Comparison - {col_name}')
