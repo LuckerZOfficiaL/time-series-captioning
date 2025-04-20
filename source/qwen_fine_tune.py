@@ -21,15 +21,14 @@ from helpers import generate_prompt_for_baseline
 
 MODEL_PATH = "Qwen/Qwen2.5-Omni-7B"
 DATA_DIR = "/home/ubuntu/time-series-captioning/data/samples/new samples no overlap/train"
-OUT_DIR = "/home/ubuntu/time-series-captioning/qwen_fine_tune_training"
+OUT_DIR = "/home/ubuntu/time-series-captioning/qwen_fine_tune_2"
 
 
 @lru_cache
 def _load_batch_qwen_model(model_name, device):
     torch.manual_seed(314)
     model = Qwen2_5OmniThinkerForConditionalGeneration.from_pretrained(
-        #"Qwen/Qwen2.5-Omni-7B",
-        "qwen_fine_tune_training/checkpoint-1250",
+        "Qwen/Qwen2.5-Omni-7B",
         torch_dtype=torch.float16,
         low_cpu_mem_usage=True,
         trust_remote_code=True,        # now picks up the patched forward()
@@ -61,7 +60,6 @@ def format_conversation(prompt, image_file, label, processor):
 def get_train_dataset(data_dir, processor):
     ts_dir = os.path.join(data_dir, "time series")
     ts_names = [Path(fn).stem for fn in os.listdir(ts_dir)]
-#    ts_names = ts_names[:100]   # testing
     prompts = []
     image_files = []
     labels = []
@@ -154,7 +152,7 @@ def main(model_eval, data_dir, out_dir, use_image=True):
     training_args = SFTConfig(
         output_dir=out_dir,
         num_train_epochs=1,
-        learning_rate=1e-7,
+        learning_rate=1e-8,
         warmup_steps=100,
         max_grad_norm=1.0,
         lr_scheduler_type="inverse_sqrt",
@@ -168,17 +166,17 @@ def main(model_eval, data_dir, out_dir, use_image=True):
         log_level="info",
         dataset_text_field="",
         save_strategy="steps",
-        save_steps=250,
+        save_steps=500,
         save_total_limit=1,
     )
     training_args.dataset_kwargs = {"skip_prepare_dataset": True}
     import wandb 
     wandb.init(
-        project="qwen25-fine-tuning",  # change this
-        name="qwen25-fine-tuning",  # change this
+        project="qwen25-fine-tuning",  
+        name="qwen25-fine-tuning",  
         config=training_args,
     )
-
+ 
     trainer = SFTTrainer(
         model=model,
         args=training_args,
@@ -186,14 +184,9 @@ def main(model_eval, data_dir, out_dir, use_image=True):
         data_collator=collate_fn,
     )
 
-    # allow the RNG file’s NumPy functions to be unpickled, for loading from checkpoint
-    torch.serialization.add_safe_globals([_reconstruct])
-    torch.serialization.add_safe_globals([np.ndarray]) 
     
     print("Now training model")
-#    trainer.train(resume_from_checkpoint=True)
-    # NOTE: iters is +600 because we started training from a checkpoint at 500.
-    trainer.train()
+    trainer.train(resume_from_checkpoint=True)
     print("Model training complete, now saving")
     trainer.save_model(training_args.output_dir)
 
