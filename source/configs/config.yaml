@@ -52,7 +52,7 @@ path: # paths that have "folder" in its name are folder paths, otherwise they ar
   prototypes_path: /home/ubuntu/thesis/model/prototype_words.txt
   checkpoints_folder_path: /home/ubuntu/thesis/model/checkpoints
   gt_captions_folder_path: /home/ubuntu/thesis/data/samples/new samples no overlap/test/gt_captions
-  generated_captions_folder_path: /home/ubuntu/thesis/data/samples/new samples no overlap/generated captions/llava-finetune-pratham
+  generated_captions_folder_path: /home/ubuntu/thesis/data/samples/new samples no overlap/generated captions/qwen25-omni-7b
   evaluation_results_folder_path: /home/ubuntu/thesis/data/evaluation results
 
 

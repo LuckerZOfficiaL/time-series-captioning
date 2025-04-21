@@ -34,6 +34,7 @@ import nltk
 from rouge_score import rouge_scorer
 import shutil
 from collections import Counter
+import spacy
 
 
 
@@ -2797,7 +2798,7 @@ def numeric_score(generated_caption, gt_caption, tolerance=0.05, acc_coef=0.3, r
     
     # Calculate average accuracy of matches (how close were the matches)
     if matches:
-        avg_accuracy = np.mean([1 - min(diff, tolerance) / tolerance for _, _, diff in matches])
+        avg_accuracy = np.mean([1 - min(rel_diff, tolerance) / tolerance for _, _, rel_diff in matches])
     else:
         avg_accuracy = 0.0
     
@@ -2912,7 +2913,7 @@ def meteor_score(generated_caption, gt_caption):
     
     return score
  
-def create_metric_comparisons(data_ft, data_base, save_path="/home/ubuntu/thesis/source/figs/", label="percentage"):
+def create_metric_comparisons(data_ft, data_base, model_name, save_path="/home/ubuntu/thesis/source/figs/", label="percentage"):
     import numpy as np
     import matplotlib.pyplot as plt
     
@@ -2964,19 +2965,57 @@ def create_metric_comparisons(data_ft, data_base, save_path="/home/ubuntu/thesis
               ax.text(mid_x, top + 0.02 * (1 if top < 1 else top), f"{delta:+.3f}", ha='center', va='bottom', fontsize=8, color='black')
         
         ax.set_ylabel('Score')
-        ax.set_title(f'LLaVA-v1.6-7B Metrics Comparison - {col_name}')
+        ax.set_title(f'{model_name} Metrics Comparison - {col_name}')
         ax.set_xticks(x)
         ax.set_xticklabels(metric_groups, rotation=45, ha='right')
         ax.legend()
         plt.tight_layout()
         plt.grid(True)
-        plt.savefig(f"{save_path}{col_name}_metrics.jpeg")
+        plt.savefig(f"{save_path}{model_name}_{col_name}_metrics.jpeg")
         plt.show()
 
+def extract_numbers_with_semantic_context(text, ignore_dates=True):
+    doc = nlp(text)
+    number_contexts = []
+    
+    for token in doc:
+      if token.like_num and token.is_digit and 1960 <= int(token.text) <= 2025: # skip year numbers
+        continue
+      if token.like_num:
+          # Find the semantic head this number is modifying
+          if token.head != token:
+              context = token.head.text
+              # Expand to include other modifiers of the head
+              for child in token.head.children:
+                  if child.dep_ in ['amod', 'compound', 'nmod']:
+                      context = f"{child.text} {context}"
+              # Perform stemming on the context
+              
+              context = ' '.join([stemmer.stem(word) for word in context.split()])
+              number_contexts.append((token.text, context))
+  
+    return number_contexts
+    
+
+  
 def main():
   config = load_config()
 
   random.seed(config['general']['random_seed'])
+  
+  
+  """nlp = spacy.load("en_core_web_lg")
+  stemmer = nltk.PorterStemmer()
+  
+  gen_text = The Agricultural output index in Upper - middle income from 2011 to 2018 shows a generally upward trend. In 2011, it was 91.29, and by 2018, it reached 105.27. The crop output, animal output, and fish output all contributed to this increase. Compared to global or regional norms, this trend seems to be higher, as the index values are consistently above the base year of 2015 at 100. There are no obvious seasonal patterns in this time series, so it's likely not following typical seasonal trends. Overall, the differences in trends compared to global or regional norms are significant. So, what do you think about this trend? Do you have any other data or thoughts on it?
+  
+  gt_text = From 2011 to 2018, the agricultural output index in this upper-middle income country shows a consistent upward trend, starting at 91.29 in 2011 and reaching 105.27 in 2018. This indicates a steady growth in agricultural output over these years, with a notable increase of approximately 15% from the beginning to the end of the series. Compared to the historical mean of 53.89, the agricultural output index from 2011 to 2018 is significantly higher, suggesting a period of strong performance relative to the country's longer-term agricultural history. Without global or regional context, it's impossible to determine if this growth is higher, lower, or follows expected patterns.
+  
+  
+  print(extract_numbers_with_semantic_context(gen_text))
+  print("\n\n")
+  print(extract_numbers_with_semantic_context(gt_text))
+  """
   
   
   
@@ -2993,32 +3032,38 @@ def main():
 
   
 
-  data_ft = [
-      [0.758, 0.763, 0.714, 0.739, 0.768, 0.775, 0.764, 0.775, 0.773, 0.737, 0.759, 0.769],  # BERT F1
-      [0.76, 0.769, 0.715, 0.742, 0.769, 0.775, 0.764, 0.776, 0.773, 0.739, 0.764, 0.769],   # BERT Precision
-      [0.757, 0.759, 0.714, 0.737, 0.768, 0.775, 0.764, 0.775, 0.774, 0.736, 0.754, 0.768],  # BERT Recall
-      [0.732, 0.669, 0.585, 0.693, 0.754, 0.752, 0.747, 0.853, 0.768, 0.695, 0.707, 0.824],  # Numeric Score
-      [0.285, 0.236, 0.205, 0.246, 0.329, 0.359, 0.306, 0.315, 0.358, 0.21, 0.274, 0.295],   # BLEU Score
-      [0.445, 0.409, 0.372, 0.377, 0.473, 0.51, 0.448, 0.476, 0.533, 0.384, 0.44, 0.469],    # ROUGE-L Score
-      [0.441, 0.384, 0.389, 0.413, 0.484, 0.485, 0.465, 0.483, 0.521, 0.361, 0.423, 0.441],  # METEOR Score
-      [0.524, 0.437, 0.379, 0.369, 0.58, 0.488, 0.505, 0.743, 0.555, 0.549, 0.606, 0.548],   # Oracle Score
-      [0.9069, 0.8997, 0.8666, 0.9062, 0.9405, 0.932, 0.9153, 0.9354, 0.9258, 0.8963, 0.9152, 0.9283]  # simCSE
-  ]
 
-  data_base = [
-      [0.65, 0.633, 0.634, 0.621, 0.663, 0.671, 0.64, 0.678, 0.656, 0.633, 0.649, 0.675],    # BERT F1
-      [0.641, 0.632, 0.631, 0.622, 0.651, 0.666, 0.632, 0.656, 0.648, 0.623, 0.636, 0.656],   # BERT Precision
-      [0.66, 0.634, 0.637, 0.621, 0.676, 0.676, 0.65, 0.702, 0.664, 0.643, 0.664, 0.696],     # BERT Recall
-      [0.517, 0.419, 0.416, 0.373, 0.615, 0.692, 0.465, 0.676, 0.552, 0.268, 0.525, 0.685],   # Numeric Score
-      [0.086, 0.065, 0.078, 0.072, 0.108, 0.096, 0.063, 0.124, 0.093, 0.048, 0.096, 0.106],   # BLEU
-      [0.259, 0.218, 0.252, 0.222, 0.285, 0.291, 0.242, 0.29, 0.27, 0.234, 0.261, 0.286],     # ROUGE-L
-      [0.287, 0.236, 0.286, 0.255, 0.315, 0.31, 0.257, 0.337, 0.306, 0.253, 0.286, 0.314],    # METEOR
-      [0.551, 0.4939, 0.4557, 0.418, 0.6847, 0.5706, 0.5264, 0.6688, 0.5693, 0.4886, 0.5895, 0.5953],  # Oracle Score
-      [0.8203, 0.8063, 0.8088, 0.8209, 0.898, 0.8713, 0.8092, 0.8813, 0.8266, 0.8153, 0.8054, 0.8516]  # simCSE
-  ]
+  data_ft = [
+    [0.655, 0.633, 0.641, 0.625, 0.672, 0.651, 0.642, 0.690, 0.656, 0.633, 0.674, 0.689],
+    [0.651, 0.635, 0.644, 0.630, 0.660, 0.651, 0.637, 0.673, 0.654, 0.629, 0.666, 0.677],
+    [0.661, 0.632, 0.640, 0.621, 0.685, 0.652, 0.649, 0.709, 0.659, 0.638, 0.682, 0.703],
+    [0.594, 0.455, 0.479, 0.589, 0.680, 0.711, 0.588, 0.736, 0.659, 0.326, 0.578, 0.731],
+    [0.088, 0.044, 0.071, 0.056, 0.112, 0.114, 0.070, 0.158, 0.065, 0.032, 0.110, 0.136],
+    [0.259, 0.210, 0.243, 0.219, 0.296, 0.276, 0.229, 0.305, 0.260, 0.212, 0.291, 0.310],
+    [0.282, 0.224, 0.268, 0.252, 0.323, 0.289, 0.265, 0.361, 0.274, 0.217, 0.306, 0.321],
+    [0.5684, 0.5342, 0.4446, 0.4103, 0.7283, 0.6090, 0.4726, 0.7176, 0.6560, 0.3532, 0.6614, 0.6656],
+    [0.8089, 0.7936, 0.8102, 0.8071, 0.8852, 0.8542, 0.7952, 0.8788, 0.7925, 0.7640, 0.8355, 0.8724],
+    [0.655, 0.634, 0.640, 0.625, 0.671, 0.652, 0.642, 0.689, 0.657, 0.632, 0.674, 0.691]
+]
+
+
+
+  data_pre = [
+    [0.637, 0.615, 0.620, 0.608, 0.652, 0.633, 0.627, 0.676, 0.644, 0.615, 0.643, 0.671],
+    [0.628, 0.611, 0.616, 0.604, 0.640, 0.628, 0.617, 0.656, 0.637, 0.605, 0.635, 0.659],
+    [0.646, 0.619, 0.624, 0.613, 0.664, 0.639, 0.637, 0.697, 0.652, 0.625, 0.653, 0.685],
+    [0.551, 0.410, 0.414, 0.488, 0.657, 0.659, 0.547, 0.693, 0.636, 0.282, 0.563, 0.707],
+    [0.067, 0.030, 0.051, 0.047, 0.085, 0.082, 0.053, 0.121, 0.063, 0.028, 0.068, 0.107],
+    [0.230, 0.184, 0.213, 0.198, 0.263, 0.244, 0.208, 0.278, 0.237, 0.190, 0.244, 0.269],
+    [0.259, 0.208, 0.241, 0.240, 0.287, 0.271, 0.249, 0.331, 0.261, 0.206, 0.259, 0.294],
+    [0.5224, 0.4096, 0.4081, 0.3929, 0.6919, 0.5638, 0.4375, 0.6327, 0.6208, 0.3747, 0.6101, 0.6043],
+    [0.7938, 0.7655, 0.7874, 0.8051, 0.8835, 0.8423, 0.7827, 0.8776, 0.7938, 0.7706, 0.7903, 0.8648]
+]
+
+
 
   # Call the function
-  create_metric_comparisons(data_ft, data_base, save_path="/home/ubuntu/thesis/source/figs/", label="percentage")
+  create_metric_comparisons(data_ft, data_pre, model_name="InternVL", save_path="/home/ubuntu/thesis/source/figs/", label="percentage")
 
   
   

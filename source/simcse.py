@@ -26,7 +26,7 @@ def get_domain(fname):
 
 
 #generated_folders = [d for d in os.listdir("/home/ubuntu/thesis/data/samples/new samples no overlap/generated captions") if os.path.isdir(os.path.join("/home/ubuntu/thesis/data/samples/new samples no overlap/generated captions", d))]
-generated_folders = ["llava-finetune-pratham"]
+generated_folders = ["qwen25-finetune"]
 
 for name in generated_folders:
     domain_similarities = defaultdict(list)
