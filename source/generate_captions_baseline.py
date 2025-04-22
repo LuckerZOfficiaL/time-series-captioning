@@ -41,10 +41,10 @@ def main():
     
     model_name = config['eval']['evaluated_model']
     
-    ts_folder_path = "/home/ubuntu/thesis/data/samples/new samples no overlap/test/time series"
-    metadata_folder_path = "/home/ubuntu/thesis/data/samples/new samples no overlap/test/metadata"
-    image_folder_path = "/home/ubuntu/thesis/data/samples/new samples no overlap/test/plots"
-    save_folder_path = f"/home/ubuntu/thesis/data/samples/new samples no overlap/generated captions/{model_name}{"" if use_img_input else "_text"}"
+    ts_folder_path = "/home/ubuntu/thesis/data/samples/len 300/time series"
+    metadata_folder_path = "/home/ubuntu/thesis/data/samples/len 300/metadata"
+    image_folder_path = "/home/ubuntu/thesis/data/samples/len 300/plots"
+    save_folder_path = f"/home/ubuntu/thesis/data/samples/len 300//generated captions/{model_name}{"" if use_img_input else "_text"}"
     
     if not os.path.exists(save_folder_path):
         os.makedirs(save_folder_path)

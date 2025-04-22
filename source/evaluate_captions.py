@@ -23,15 +23,18 @@ def get_batch_score(generated_captions, gt_captions, score_function):
 
 def main():
     config = load_config()
-    eval_model = config['path']['generated_captions_folder_path'].split("/")[-1].replace(" ", "_")
-
+    #eval_model = config['path']['generated_captions_folder_path'].split("/")[-1].replace(" ", "_")
+    eval_model = "gemini-2.0-flash_text" # _text
+    
     print("\nEvaluating captions from: ", eval_model)
 
-    generated_captions_folder_path = config['path']['generated_captions_folder_path']
+    #generated_captions_folder_path = config['path']['generated_captions_folder_path']
+    generated_captions_folder_path = f"/home/ubuntu/thesis/data/samples/len 10/generated captions/{eval_model}"
     generated_caption_paths = [os.path.join(generated_captions_folder_path, filename) for filename in os.listdir(generated_captions_folder_path)]
     generated_caption_paths.sort()
 
-    gt_captions_folder_path = config['path']['gt_captions_folder_path']
+    #gt_captions_folder_path = config['path']['gt_captions_folder_path']
+    gt_captions_folder_path = "/home/ubuntu/thesis/data/samples/len 10/captions"
     gt_caption_paths = [os.path.join(gt_captions_folder_path, filename) for filename in os.listdir(gt_captions_folder_path)]
     gt_caption_paths.sort()
 
@@ -89,7 +92,8 @@ def main():
 
 
     
-    save_path = config['path']['evaluation_results_folder_path'] + "/" + eval_model + ".json"
+    #save_path = config['path']['evaluation_results_folder_path'] + "/" + eval_model + ".json"
+    save_path = f"/home/ubuntu/thesis/data/samples/len 10/evaluation results/{eval_model}.json"
 
     if os.path.exists(save_path):
         print(f"Evaluation results already exist at {save_path}. Loading existing results...")

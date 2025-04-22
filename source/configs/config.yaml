@@ -54,7 +54,7 @@ path: # paths that have "folder" in its name are folder paths, otherwise they ar
   prototypes_path: /home/ubuntu/thesis/model/prototype_words.txt
   checkpoints_folder_path: /home/ubuntu/thesis/model/checkpoints
   gt_captions_folder_path: /home/ubuntu/thesis/data/samples/new samples no overlap/test/gt_captions
-  generated_captions_folder_path: /home/ubuntu/thesis/data/samples/new samples no overlap/generated captions/qwen25-finetune
+  generated_captions_folder_path: /home/ubuntu/thesis/data/samples/new samples no overlap/generated captions/gemini-2.0-flash
   evaluation_results_folder_path: /home/ubuntu/thesis/data/evaluation results
 
 
@@ -71,7 +71,7 @@ train:
   clip_grad_norm: 1.0
 
 eval:
-  evaluated_model: claude-3-haiku #claude-3-haiku  #gemini-2.0-flash
+  evaluated_model: gemini-2.0-flash #claude-3-haiku  #gemini-2.0-flash
   bertscore_model: microsoft/deberta-xlarge-mnli #bert-base-uncased, roberta-large
   batch_size: 32
   val_split: 0.2

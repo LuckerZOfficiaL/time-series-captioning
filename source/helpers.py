@@ -3005,7 +3005,142 @@ def main():
   random.seed(config['general']['random_seed'])
   
   
+  gemini_vl_len300 = [
+    0.674,    # BERT F1
+    0.688,    # BERT Precision
+    0.662,    # BERT Recall
+    0.6,      # Numeric Score
+    0.107,    # BLEU
+    0.293,    # ROUGE-L
+    0.265,    # METEOR
+    0.69,     # Oracle Score
+    0.8609    # simCSE
+  ]
+
+  gemini_l_len300 = [
+      0.698,    # BERT F1
+      0.696,    # BERT Precision
+      0.7,      # BERT Recall
+      0.656,    # Numeric Score
+      0.16,     # BLEU
+      0.312,    # ROUGE-L
+      0.328,    # METEOR
+      0.74,     # Oracle Score
+      0.8824    # simCSE
+  ]
   
+  internvl_vl_len300 =[
+    0.626,    # BERT F1
+    0.619,    # BERT Precision
+    0.634,    # BERT Recall
+    0.589,    # Numeric Score
+    0.122,    # BLEU
+    0.235,    # ROUGE-L
+    0.29,     # METEOR
+    0.376,    # Oracle Score
+    0.7226    # simCSE
+  ]
+  
+  internvl_l_len300 = [
+    0.632,    # BERT F1
+    0.613,    # BERT Precision
+    0.653,    # BERT Recall
+    0.648,    # Numeric Score
+    0.109,    # BLEU
+    0.232,    # ROUGE-L
+    0.306,    # METEOR
+    0.471,    # Oracle Score
+    0.7606    # simCSE
+  ]
+  
+  
+  gemini_vl_len10 = [
+    0.669,    # BERT F1
+    0.679,    # BERT Precision
+    0.659,    # BERT Recall
+    0.733,    # Numeric Score
+    0.118,    # BLEU
+    0.3,      # ROUGE-L
+    0.253,    # METEOR
+    0.708,    # Oracle Score
+    0.8353    # simCSE
+  ]
+  
+  
+  gemini_l_len10 = [
+    0.683,    # BERT F1
+    0.679,    # BERT Precision
+    0.687,    # BERT Recall
+    0.754,    # Numeric Score
+    0.15,     # BLEU
+    0.305,    # ROUGE-L
+    0.302,    # METEOR
+    0.727,    # Oracle Score
+    0.8582    # simCSE
+  ]
+
+ 
+  
+  
+  internvl_vl_len10 = [
+    0.639,    # BERT F1
+    0.623,    # BERT Precision
+    0.656,    # BERT Recall
+    0.681,    # Numeric Score
+    0.091,    # BLEU
+    0.247,    # ROUGE-L
+    0.288,    # METEOR
+    0.532,    # Oracle Score
+    0.7712    # simCSE
+  ]
+  
+  internvl_l_len10 = [
+    0.624,    # BERT F1
+    0.62,     # BERT Precision
+    0.628,    # BERT Recall
+    0.605,    # Numeric Score
+    0.084,    # BLEU
+    0.24,     # ROUGE-L
+    0.248,    # METEOR
+    0.432,    # Oracle Score
+    0.7183    # simCSE
+  ]
+
+
+  metrics = [
+    "BERT F1", "BERT Precision", "BERT Recall", "Numeric",
+    "BLEU", "ROUGE-L", "METEOR", "Oracle", "simCSE"
+  ]
+
+  # Plot setup
+  x = np.arange(len(metrics))  # label locations
+  width = 0.35  # width of the bars
+
+  fig, ax = plt.subplots(figsize=(12, 6))
+  bars1 = ax.bar(x - width/2, gemini_vl_len300, width, label='Text + Image')
+  bars2 = ax.bar(x + width/2, gemini_l_len300, width, label='Text')
+
+  # Labels & formatting
+  ax.set_ylabel('Scores')
+  ax.set_title('Text vs Text + Image')
+  ax.set_xticks(x)
+  ax.set_xticklabels(metrics, rotation=45, ha='right')
+  ax.legend()
+
+  # Optional: add values on top of bars
+  for bar in bars1 + bars2:
+      height = bar.get_height()
+      ax.annotate(f'{height:.2f}',
+                  xy=(bar.get_x() + bar.get_width() / 2, height),
+                  xytext=(0, 3),  # vertical offset
+                  textcoords="offset points",
+                  ha='center', va='bottom', fontsize=8)
+
+  plt.tight_layout()
+  plt.grid(True)
+  plt.show()
+  plt.savefig("/home/ubuntu/thesis/data/samples/len 300/evaluation results/gemini.jpeg")
+
   
   
   """folder_path = "/home/ubuntu/thesis/data/samples/len 10/time series"
