@@ -37,7 +37,7 @@ refinement:
 
 
 path: # paths that have "folder" in its name are folder paths, otherwise they are file paths
-  caption_folder_path: /home/ubuntu/thesis/data/samples/new samples no overlap/train/XXX
+  train_gt_captions_folder_path: /home/ubuntu/thesis/data/samples/new samples no overlap/train/gt_captions
   ts_folder_path: /home/ubuntu/thesis/data/samples/new samples no overlap/train/time series
   plot_folder_path: /home/ubuntu/thesis/data/samples/new samples no overlap/train/plots
   metadata_folder_path: /home/ubuntu/thesis/data/samples/new samples no overlap/train/metadata
@@ -51,15 +51,16 @@ path: # paths that have "folder" in its name are folder paths, otherwise they ar
   all_facts_by_period_folder_path: /home/ubuntu/thesis/data/fact bank/by period #/{BIN_YEARS}/all_facts_by_{BIN_YEARS}years.json
   prototypes_path: /home/ubuntu/thesis/model/prototype_words.txt
   checkpoints_folder_path: /home/ubuntu/thesis/model/checkpoints
-  gt_captions_folder_path: /home/ubuntu/thesis/data/samples/new samples no overlap/train/gt_captions
-  generated_captions_folder_path: /home/ubuntu/thesis/data/samples/new samples no overlap/generated captions/qwen25-omni-7b_text
-  evaluation_results_folder_path: /home/ubuntu/thesis/data/samples/new samples no overlap/evaluation results
+  gt_captions_folder_path: /home/ubuntu/thesis/data/samples/new samples no overlap/test/gt_captions
+  generated_captions_folder_path: /home/ubuntu/thesis/data/samples/new samples no overlap/generated captions/qwen25-omni-7b
+  evaluation_results_folder_path: /home/ubuntu/thesis/data/evaluation results
+
 
 train:
-  lr: 1e-5
-  epochs: 25
-  weight_decay: 1e-4
-  batch_size: 32
+  lr: 1e-6
+  epochs: 1
+  weight_decay: 1e-5
+  batch_size: 24
   loss_fn: cross-entropy # currently still useless
   teacher_forcing: true # if false, the model generates autoregressively during training
   milestones: [5, 10, 20]
@@ -76,7 +77,7 @@ eval:
   
 
 mobtep:
-  mob_checkpoint: Mob2_5-2B_4.945_3eps
+  mob_checkpoint: Mob2_5-2B_6.573_1eps
   chronos_name: amazon/chronos-t5-small
   chronos_pooling: mean # mean, max
   use_chronos: false

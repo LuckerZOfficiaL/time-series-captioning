@@ -34,6 +34,7 @@ import nltk
 from rouge_score import rouge_scorer
 import shutil
 from collections import Counter
+import spacy
 
 
 
@@ -2800,7 +2801,7 @@ def numeric_score(generated_caption, gt_caption, tolerance=0.05, acc_coef=0.3, r
     
     # Calculate average accuracy of matches (how close were the matches)
     if matches:
-        avg_accuracy = np.mean([1 - min(diff, tolerance) / tolerance for _, _, diff in matches])
+        avg_accuracy = np.mean([1 - min(rel_diff, tolerance) / tolerance for _, _, rel_diff in matches])
     else:
         avg_accuracy = 0.0
     
@@ -2915,11 +2916,159 @@ def meteor_score(generated_caption, gt_caption):
     
     return score
  
+def create_metric_comparisons(data_ft, data_base, model_name, save_path="/home/ubuntu/thesis/source/figs/", label="percentage"):
+    import numpy as np
+    import matplotlib.pyplot as plt
     
+    # Metrics and columns from the data
+    metric_groups = [
+        "BERT F1", "BERT Precision", "BERT Recall", "Numeric Score",
+        "BLEU", "ROUGE-L", "METEOR", "Oracle Score", "simCSE"
+    ]
+
+    # Columns (categories)
+    columns = [
+        "Average", "Air Quality", "Border Crossing", "Crime", "Demography",
+        "Road Injuries", "Covid", "Co2", "Diet", "Walmart", "Online Retail", "Agriculture"
+    ]
+
+    # Create grouped bar plots
+    for col_idx, col_name in enumerate(columns):
+        x = np.arange(len(metric_groups))  # positions for metric groups
+        width = 0.35
+
+        fig, ax = plt.subplots(figsize=(10, 5))
+        exp1_vals = [data_ft[i][col_idx] for i in range(len(metric_groups))]
+        exp2_vals = [data_base[i][col_idx] for i in range(len(metric_groups))]
+        
+        ax.bar(x - width/2, exp1_vals, width, label='Finetuned (LLaVA-v1.6-7B FT)', color="red")
+        ax.bar(x + width/2, exp2_vals, width, label='Pretrained (LLaVA-v1.6-7B)', color='blue')
+
+        # Compute dynamic y-limit to leave space for annotations
+        max_val = max(max(exp1_vals), max(exp2_vals))
+        ax.set_ylim(0, max_val * 1.15)  # 15% headroom
+
+        if label == "percentage":
+          for i, (v1, v2) in enumerate(zip(exp1_vals, exp2_vals)):
+              if v2 != 0:
+                  rel_improvement = ((v1 - v2) / v2) * 100
+                  label = f"{rel_improvement:+.1f}%"
+              else:
+                  label = "N/A"
+              mid_x = x[i]
+              top = max(v1, v2)
+              offset = 0.02 * max_val if max_val > 1 else 0.02
+              ax.text(mid_x, top + offset, label, ha='center', va='bottom', fontsize=8, color='black')
+        
+        elif label == "delta":
+          for i, (v1, v2) in enumerate(zip(exp1_vals, exp2_vals)):
+              delta = v1 - v2
+              mid_x = x[i]
+              top = max(v1, v2)
+              ax.text(mid_x, top + 0.02 * (1 if top < 1 else top), f"{delta:+.3f}", ha='center', va='bottom', fontsize=8, color='black')
+        
+        ax.set_ylabel('Score')
+        ax.set_title(f'{model_name} Metrics Comparison - {col_name}')
+        ax.set_xticks(x)
+        ax.set_xticklabels(metric_groups, rotation=45, ha='right')
+        ax.legend()
+        plt.tight_layout()
+        plt.grid(True)
+        plt.savefig(f"{save_path}{model_name}_{col_name}_metrics.jpeg")
+        plt.show()
+
+def extract_numbers_with_semantic_context(text, ignore_dates=True):
+    doc = nlp(text)
+    number_contexts = []
+    
+    for token in doc:
+      if token.like_num and token.is_digit and 1960 <= int(token.text) <= 2025: # skip year numbers
+        continue
+      if token.like_num:
+          # Find the semantic head this number is modifying
+          if token.head != token:
+              context = token.head.text
+              # Expand to include other modifiers of the head
+              for child in token.head.children:
+                  if child.dep_ in ['amod', 'compound', 'nmod']:
+                      context = f"{child.text} {context}"
+              # Perform stemming on the context
+              
+              context = ' '.join([stemmer.stem(word) for word in context.split()])
+              number_contexts.append((token.text, context))
+  
+    return number_contexts
+    
+
+  
 def main():
   config = load_config()
 
   random.seed(config['general']['random_seed'])
+  
+  
+  """nlp = spacy.load("en_core_web_lg")
+  stemmer = nltk.PorterStemmer()
+  
+  gen_text = The Agricultural output index in Upper - middle income from 2011 to 2018 shows a generally upward trend. In 2011, it was 91.29, and by 2018, it reached 105.27. The crop output, animal output, and fish output all contributed to this increase. Compared to global or regional norms, this trend seems to be higher, as the index values are consistently above the base year of 2015 at 100. There are no obvious seasonal patterns in this time series, so it's likely not following typical seasonal trends. Overall, the differences in trends compared to global or regional norms are significant. So, what do you think about this trend? Do you have any other data or thoughts on it?
+  
+  gt_text = From 2011 to 2018, the agricultural output index in this upper-middle income country shows a consistent upward trend, starting at 91.29 in 2011 and reaching 105.27 in 2018. This indicates a steady growth in agricultural output over these years, with a notable increase of approximately 15% from the beginning to the end of the series. Compared to the historical mean of 53.89, the agricultural output index from 2011 to 2018 is significantly higher, suggesting a period of strong performance relative to the country's longer-term agricultural history. Without global or regional context, it's impossible to determine if this growth is higher, lower, or follows expected patterns.
+  
+  
+  print(extract_numbers_with_semantic_context(gen_text))
+  print("\n\n")
+  print(extract_numbers_with_semantic_context(gt_text))
+  """
+  
+  
+  
+  """directory = "/home/ubuntu/thesis/data/samples/new samples no overlap/generated captions/llava-finetune-pratham"
+
+  for filename in os.listdir(directory):
+    if filename.endswith(".txt"):
+      old_path = os.path.join(directory, filename)
+      new_filename = filename.replace(".txt", "_test.txt")
+      new_path = os.path.join(directory, new_filename)
+      os.rename(old_path, new_path)
+
+  print("Renaming completed.")"""
+
+  
+
+
+  data_ft = [
+    [0.655, 0.633, 0.641, 0.625, 0.672, 0.651, 0.642, 0.690, 0.656, 0.633, 0.674, 0.689],
+    [0.651, 0.635, 0.644, 0.630, 0.660, 0.651, 0.637, 0.673, 0.654, 0.629, 0.666, 0.677],
+    [0.661, 0.632, 0.640, 0.621, 0.685, 0.652, 0.649, 0.709, 0.659, 0.638, 0.682, 0.703],
+    [0.594, 0.455, 0.479, 0.589, 0.680, 0.711, 0.588, 0.736, 0.659, 0.326, 0.578, 0.731],
+    [0.088, 0.044, 0.071, 0.056, 0.112, 0.114, 0.070, 0.158, 0.065, 0.032, 0.110, 0.136],
+    [0.259, 0.210, 0.243, 0.219, 0.296, 0.276, 0.229, 0.305, 0.260, 0.212, 0.291, 0.310],
+    [0.282, 0.224, 0.268, 0.252, 0.323, 0.289, 0.265, 0.361, 0.274, 0.217, 0.306, 0.321],
+    [0.5684, 0.5342, 0.4446, 0.4103, 0.7283, 0.6090, 0.4726, 0.7176, 0.6560, 0.3532, 0.6614, 0.6656],
+    [0.8089, 0.7936, 0.8102, 0.8071, 0.8852, 0.8542, 0.7952, 0.8788, 0.7925, 0.7640, 0.8355, 0.8724],
+    [0.655, 0.634, 0.640, 0.625, 0.671, 0.652, 0.642, 0.689, 0.657, 0.632, 0.674, 0.691]
+]
+
+
+
+  data_pre = [
+    [0.637, 0.615, 0.620, 0.608, 0.652, 0.633, 0.627, 0.676, 0.644, 0.615, 0.643, 0.671],
+    [0.628, 0.611, 0.616, 0.604, 0.640, 0.628, 0.617, 0.656, 0.637, 0.605, 0.635, 0.659],
+    [0.646, 0.619, 0.624, 0.613, 0.664, 0.639, 0.637, 0.697, 0.652, 0.625, 0.653, 0.685],
+    [0.551, 0.410, 0.414, 0.488, 0.657, 0.659, 0.547, 0.693, 0.636, 0.282, 0.563, 0.707],
+    [0.067, 0.030, 0.051, 0.047, 0.085, 0.082, 0.053, 0.121, 0.063, 0.028, 0.068, 0.107],
+    [0.230, 0.184, 0.213, 0.198, 0.263, 0.244, 0.208, 0.278, 0.237, 0.190, 0.244, 0.269],
+    [0.259, 0.208, 0.241, 0.240, 0.287, 0.271, 0.249, 0.331, 0.261, 0.206, 0.259, 0.294],
+    [0.5224, 0.4096, 0.4081, 0.3929, 0.6919, 0.5638, 0.4375, 0.6327, 0.6208, 0.3747, 0.6101, 0.6043],
+    [0.7938, 0.7655, 0.7874, 0.8051, 0.8835, 0.8423, 0.7827, 0.8776, 0.7938, 0.7706, 0.7903, 0.8648]
+]
+
+
+
+  # Call the function
+  create_metric_comparisons(data_ft, data_pre, model_name="InternVL", save_path="/home/ubuntu/thesis/source/figs/", label="percentage")
+
+  
   
   """for what in ["gt_captions", "metadata", "plots", "time series"]:
     folder_path = f"/home/ubuntu/thesis/data/samples/new samples with overlap/all/{what}"
@@ -3068,7 +3217,7 @@ def main():
   print(f"{timesteps_dict}")"""
   
   
-  directory = "/home/ubuntu/thesis/data/samples/new samples no overlap/train/time series"
+  """directory = "/home/ubuntu/thesis/data/samples/new samples no overlap/train/time series"
 
   dataset_names = []
   for filename in os.listdir(directory):
@@ -3095,7 +3244,7 @@ def main():
     else:
       avg_lens[dataset_name] = 0
 
-  print("Average time series lengths:", avg_lens)
+  print("Average time series lengths:", avg_lens)"""
      
   
   """

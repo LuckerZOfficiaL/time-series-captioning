@@ -196,7 +196,7 @@ def generate_captions(model, ts_folder_path, metadata_folder_path, image_folder_
         
         #print("stacked shape: ", stacked_ts.shape)
 
-        print(f"Generating captions for batch {batch_start_idx}-{batch_end_idx-1}...")
+        print(f"Generating captions for batch {batch_start_idx+1}-{batch_end_idx}...")
         if use_chronos:
             responses = model.get_responses(prompt_list, image_paths, ts=stacked_ts, sum_ts_emb_to=model.sum_ts_emb_to,
                             pooling=config['mobtep']['chronos_pooling'], 
@@ -291,7 +291,7 @@ def main():
                                                     ts_folder=config['path']['ts_folder_path'], 
                                                     img_folder=config['path']['plot_folder_path'], 
                                                     metadata_folder=config['path']['metadata_folder_path'], 
-                                                    gt_folder=config['path']['gt_captions_folder_path'],
+                                                    gt_folder=config['path']['train_gt_captions_folder_path'],
                                                     max_tokens=config['mobtep']['max_output_tokens'],
                                                     train_batch_size=config['train']['batch_size'],
                                                     val_batch_size=config['eval']['batch_size'],
@@ -375,6 +375,7 @@ if __name__ == "__main__":
     
     if not os.path.exists(save_folder_path):
         os.makedirs(save_folder_path)
+    
     
     
     generate_captions(model, ts_folder_path, metadata_folder_pth, image_folder_path, save_folder_path, batch_size=15, use_chronos=config['mobtep']['use_chronos'])
