@@ -112,7 +112,7 @@ def process_worker(gpu_id, model_eval, ts_names, data_dir, out_dir, use_image=Tr
     print(f"Process on GPU {gpu_id} finished processing {len(ts_names)} time series.")
 
 
-NUM_GPUS_TO_USE = 1
+NUM_GPUS_TO_USE = 4
 
 def main(model_eval, data_dir, out_dir, use_image=True):
     # Retrieve list of time series names yet to be processed.

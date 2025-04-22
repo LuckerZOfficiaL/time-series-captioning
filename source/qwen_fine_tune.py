@@ -140,8 +140,8 @@ def debug_batch(batch):
 
 def main(model_eval, data_dir, out_dir, use_image=True):
     model, processor = _load_batch_qwen_model(MODEL_PATH, DEVICE)
-    #model.gradient_checkpointing_enable()  # decrease GPU mem usage
-    model.gradient_checkpointing_disable()
+    model.gradient_checkpointing_enable()  # decrease GPU mem usage
+    #model.gradient_checkpointing_disable()
     #training_data = get_train_dataset(data_dir, processor)
     with open("training_data.pkl", "rb") as fh:
         training_data = pickle.load(fh)
