@@ -3,7 +3,9 @@ general:
   is_train: false
 
 data:
-  dataset_names: [air quality, border crossing, crime, demography, road injuries, covid, co2, diet, walmart, online retail, agriculture]
+  #dataset_names: [air quality, border crossing, crime, demography, road injuries, covid, co2, diet, walmart, online retail, agriculture]
+  dataset_names: [covid]
+  series_len: 10 # null
   request_augmentations: 0 # how many times to rephrase the original prompt request?
   n_samples: 300 # how many window samples to extract per dataset? i.e. how many time series to sample? Note that this is just the number of real samples and not the number of captions because each model in used_models generates its version of the caption. So, the number of captions generated will be n_samples*len(used_models).
   save_top_k: 0 # save the top k best captions based on the ranking, if it's 0 or negative, don't do top-k. If top-k is on, caption ranking is invoked
@@ -52,7 +54,7 @@ path: # paths that have "folder" in its name are folder paths, otherwise they ar
   prototypes_path: /home/ubuntu/thesis/model/prototype_words.txt
   checkpoints_folder_path: /home/ubuntu/thesis/model/checkpoints
   gt_captions_folder_path: /home/ubuntu/thesis/data/samples/new samples no overlap/test/gt_captions
-  generated_captions_folder_path: /home/ubuntu/thesis/data/samples/new samples no overlap/generated captions/qwen25-omni-7b
+  generated_captions_folder_path: /home/ubuntu/thesis/data/samples/new samples no overlap/generated captions/qwen25-finetune
   evaluation_results_folder_path: /home/ubuntu/thesis/data/evaluation results
 
 
@@ -73,7 +75,7 @@ eval:
   bertscore_model: microsoft/deberta-xlarge-mnli #bert-base-uncased, roberta-large
   batch_size: 32
   val_split: 0.2
-  use_img_input: false
+  use_img_input: true
   
 
 mobtep:

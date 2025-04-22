@@ -340,6 +340,7 @@ def rank_responses(responses_list: list, model="GPT-4o") -> list: # takes a list
 
 
 def get_sample(dataset_name: str, json_data, is_train, series_len = None, start_idx = None): # returns the metadata and the time series
+  original_series_len = series_len
   if dataset_name == "air quality":
     id = random.choice(list(json_data.keys()))
     #print("\nID: ", id)
@@ -712,8 +713,8 @@ def get_sample(dataset_name: str, json_data, is_train, series_len = None, start_
           tot_ts_len = len(json_data[country_ID][attribute])
           train_ts_len = int(0.8 * tot_ts_len)
             
-          
-          series_len = random.randint(5, min(150, 5+int(train_ts_len/5)))
+          if series_len is None:
+            series_len = random.randint(5, min(150, 5+int(train_ts_len/5)))
           if is_train:
             start_idx = random.randint(0, train_ts_len - series_len)
           else:
@@ -728,7 +729,7 @@ def get_sample(dataset_name: str, json_data, is_train, series_len = None, start_
         break
       except Exception as e:
         print(f"{e}...")
-        series_len = None
+        series_len = original_series_len
         start_idx = None
         continue
     
@@ -1058,7 +1059,7 @@ def get_samples(dataset_name, json_data, n, is_train, series_len=None) -> list: 
   if n is not None: # this fixes the number of samples
     i = 0
     while i < n:
-      metadata, ts = get_sample(dataset_name, json_data, is_train, series_len=None)
+      metadata, ts = get_sample(dataset_name, json_data, is_train, series_len=series_len)
       if not np.isnan(ts).any() and not any(isinstance(x, str) and x.lower() == 'nan' for x in ts):
         zero_percentage = (ts.count(0) / len(ts)) * 100
         if zero_percentage <= 10:
@@ -3004,6 +3005,19 @@ def main():
   random.seed(config['general']['random_seed'])
   
   
+  
+  
+  
+  """folder_path = "/home/ubuntu/thesis/data/samples/len 10/time series"
+
+  for filename in os.listdir(folder_path):
+    file_path = os.path.join(folder_path, filename)
+    if filename.endswith(".txt"):
+      ts = read_txt_to_num_list(file_path)
+      if len(ts) != 300:
+        os.remove(file_path)
+        print(f"Removed: {file_path}")"""
+  
   """nlp = spacy.load("en_core_web_lg")
   stemmer = nltk.PorterStemmer()
   
@@ -3019,7 +3033,7 @@ def main():
   
   
   
-  """directory = "/home/ubuntu/thesis/data/samples/new samples no overlap/generated captions/llava-finetune-pratham"
+  """directory = "/home/ubuntu/thesis/data/samples/new samples no overlap/generated captions/llava-finetune-filter"
 
   for filename in os.listdir(directory):
     if filename.endswith(".txt"):
@@ -3033,7 +3047,7 @@ def main():
   
 
 
-  data_ft = [
+  """data_ft = [
     [0.655, 0.633, 0.641, 0.625, 0.672, 0.651, 0.642, 0.690, 0.656, 0.633, 0.674, 0.689],
     [0.651, 0.635, 0.644, 0.630, 0.660, 0.651, 0.637, 0.673, 0.654, 0.629, 0.666, 0.677],
     [0.661, 0.632, 0.640, 0.621, 0.685, 0.652, 0.649, 0.709, 0.659, 0.638, 0.682, 0.703],
@@ -3061,9 +3075,7 @@ def main():
 ]
 
 
-
-  # Call the function
-  create_metric_comparisons(data_ft, data_pre, model_name="InternVL", save_path="/home/ubuntu/thesis/source/figs/", label="percentage")
+  create_metric_comparisons(data_ft, data_pre, model_name="InternVL", save_path="/home/ubuntu/thesis/source/figs/", label="percentage")"""
 
   
   

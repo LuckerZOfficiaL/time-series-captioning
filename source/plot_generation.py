@@ -63,9 +63,9 @@ def main():
     #plot_height = config['plot']['height']
     #plot_width = config['plot']['width']
     
-    ts_folder_path = "/home/ubuntu/thesis/data/samples/new samples no overlap/train/time series"
-    metadata_folder_path = "/home/ubuntu/thesis/data/samples/new samples no overlap/train/metadata"
-    save_folder_path = "/home/ubuntu/thesis/data/samples/new samples no overlap/train/plots"
+    ts_folder_path = "/home/ubuntu/thesis/data/samples/len 300/time series"
+    metadata_folder_path = "/home/ubuntu/thesis/data/samples/len 300/metadata"
+    save_folder_path = "/home/ubuntu/thesis/data/samples/len 300/plots"
     
 
     
