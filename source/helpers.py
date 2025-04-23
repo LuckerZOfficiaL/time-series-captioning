@@ -3004,7 +3004,7 @@ def main():
 
   random.seed(config['general']['random_seed'])
   
-  
+  """
   gemini_vl_len300 = [
     0.674,    # BERT F1
     0.688,    # BERT Precision
@@ -3140,7 +3140,7 @@ def main():
   plt.grid(True)
   plt.show()
   plt.savefig("/home/ubuntu/thesis/data/samples/len 300/evaluation results/gemini.jpeg")
-
+  """
   
   
   """folder_path = "/home/ubuntu/thesis/data/samples/len 10/time series"
