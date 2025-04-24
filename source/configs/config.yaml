@@ -55,18 +55,19 @@ path: # paths that have "folder" in its name are folder paths, otherwise they ar
   checkpoints_folder_path: /home/ubuntu/thesis/model/checkpoints
   gt_metadata_folder_path: /home/ubuntu/thesis/data/samples/new samples no overlap/test/metadata
   gt_captions_folder_path: /home/ubuntu/thesis/data/samples/new samples no overlap/test/gt_captions
-  generated_captions_folder_path: /home/ubuntu/thesis/data/samples/new samples no overlap/generated captions/internvl-finetune-pratham
+  generated_captions_folder_path: /home/ubuntu/thesis/data/samples/new samples no overlap/generated captions/internvl_chronos_Mob2_5-2B_5.621_5eps
   evaluation_results_folder_path: /home/ubuntu/thesis/data/evaluation results
 
 
 train:
-  lr: 1e-7
+  lr_for_pretrained: 1e-6
+  lr_for_new: 1e-3
   epochs: 3
-  weight_decay: 1e-4
+  weight_decay: 1e-2
   batch_size: 24
   loss_fn: cross-entropy # currently still useless
   teacher_forcing: true # if false, the model generates autoregressively during training
-  milestones: [5, 10, 20]
+  milestones: [2, 10, 20]
   early_stopping: false
   patience: 5 # used only if early_stoping=true
   clip_grad_norm: 1.0
@@ -80,7 +81,7 @@ eval:
   
 
 mobtep:
-  mob_checkpoint: chronos_Mob2_5-2B_5.758_5eps
+  mob_checkpoint: chronos_Mob2_5-2B_5.848_5eps
   chronos_name: amazon/chronos-t5-small
   chronos_pooling: mean # mean, max
   use_chronos: true
