@@ -10,7 +10,7 @@ def custom_forward(
             self,
             pixel_values: torch.FloatTensor,
             ts_emb = None, # (B, 2048), the ts embedding from chronos and followed by a projector
-            sum_ts_emb_to = "all",
+            sum_ts_emb_to = "first",
             input_ids: torch.LongTensor = None,
             attention_mask: Optional[torch.Tensor] = None,
             position_ids: Optional[torch.LongTensor] = None,

@@ -26,7 +26,8 @@ def get_domain(fname):
 
 
 #generated_folders = [d for d in os.listdir("/home/ubuntu/thesis/data/samples/new samples no overlap/generated captions") if os.path.isdir(os.path.join("/home/ubuntu/thesis/data/samples/new samples no overlap/generated captions", d))]
-generated_folders = ["qwen25-finetune"]
+#generated_folders = ["InternVL2-2B","InternVL2-2B_text", "gemini-2.0-flash_text", "gemini-2.0-flash"]
+generated_folders = ["gemini-2.0-flash_text"]
 
 for name in generated_folders:
     domain_similarities = defaultdict(list)
@@ -38,7 +39,8 @@ for name in generated_folders:
     
     gt_dir = f"/home/ubuntu/thesis/data/samples/new samples no overlap/test/gt_captions"
     gen_dir = f"/home/ubuntu/thesis/data/samples/new samples no overlap/generated captions/{name}"
-    
+    #gt_dir = f"/home/ubuntu/thesis/data/samples/len 300/captions"
+    #gen_dir = f"/home/ubuntu/thesis/data/samples/len 300/generated captions/{name}"
 
     gt_all = {f for f in os.listdir(gt_dir) if f.endswith(".txt")}
     gen_all = set(os.listdir(gen_dir))
@@ -84,6 +86,7 @@ for name in generated_folders:
     }
     print(f"global average: {global_avg:.4f}")
 
+    #with open(f"/home/ubuntu/thesis/data/samples/len 300/evaluation results/simcse_results/{name}.json", "w") as f:
     with open(f"/home/ubuntu/thesis/data/evaluation results/simcse_results/{name}.json", "w") as f:
         json.dump(domain_avg_json, f, indent=2)
         

@@ -1,2 +1,1 @@
-import spacy
-nlp = spacy.load("en_core_web_lg")
+file_paths_per_domain

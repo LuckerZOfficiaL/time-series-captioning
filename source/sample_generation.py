@@ -93,7 +93,8 @@ def main():
         
         idx = 0
 
-        samples = get_samples(dataset_name, json_data=json_data, n=n_samples, is_train=is_train)
+        series_len = config['data']['series_len']
+        samples = get_samples(dataset_name, json_data=json_data, n=n_samples, is_train=is_train, series_len=series_len)
 
         print(f"{dataset_name} has {len(samples)} samples.\nNow generating {len(used_models)*len(samples)} {"train" if is_train else "test"} captions out of them using {len(used_models)} oracles...")
         requests = []
@@ -180,7 +181,8 @@ def main():
         if use_rag:
             save_folder = "/home/ubuntu/thesis/data/samples/captions/rag"
         elif config['data']['external_knowledge'] == False:
-            save_folder = "/home/ubuntu/thesis/data/samples/new samples with overlap/all/gt_captions"
+            #save_folder = "/home/ubuntu/thesis/data/samples/new samples with overlap/all/gt_captions"
+            save_folder = "/home/ubuntu/thesis/data/samples/len 10/captions"
         else: save_folder = "/home/ubuntu/thesis/data/samples/captions/raw"
 
 
@@ -204,10 +206,11 @@ def main():
                 caption_filepath = f"{save_folder}/{dataset_name}_{idx}_{"train" if is_train else "test"}.txt" 
                 save_file(responses[i], caption_filepath)
 
-                metadata_filepath = f"/home/ubuntu/thesis/data/samples/new samples with overlap/all/metadata/{dataset_name}_{idx}_{"train" if is_train else "test"}.json" 
+                    
+                metadata_filepath = f"/home/ubuntu/thesis/data/samples/len 10/metadata/{dataset_name}_{idx}_{"train" if is_train else "test"}.json" 
                 save_file([meta_and_ts[0] for meta_and_ts in samples][i%len(samples)], metadata_filepath)   
 
-                series_filepath = f"/home/ubuntu/thesis/data/samples/new samples with overlap/all/time series/{dataset_name}_{idx}_{"train" if is_train else "test"}.txt" 
+                series_filepath = f"/home/ubuntu/thesis/data/samples/len 10/time series/{dataset_name}_{idx}_{"train" if is_train else "test"}.txt" 
                 save_file([meta_and_ts[1] for meta_and_ts in samples][i%len(samples)], series_filepath) 
 
                 idx += 1

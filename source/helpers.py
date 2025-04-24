@@ -340,6 +340,7 @@ def rank_responses(responses_list: list, model="GPT-4o") -> list: # takes a list
 
 
 def get_sample(dataset_name: str, json_data, is_train, series_len = None, start_idx = None): # returns the metadata and the time series
+  original_series_len = series_len
   if dataset_name == "air quality":
     id = random.choice(list(json_data.keys()))
     #print("\nID: ", id)
@@ -712,8 +713,8 @@ def get_sample(dataset_name: str, json_data, is_train, series_len = None, start_
           tot_ts_len = len(json_data[country_ID][attribute])
           train_ts_len = int(0.8 * tot_ts_len)
             
-          
-          series_len = random.randint(5, min(150, 5+int(train_ts_len/5)))
+          if series_len is None:
+            series_len = random.randint(5, min(150, 5+int(train_ts_len/5)))
           if is_train:
             start_idx = random.randint(0, train_ts_len - series_len)
           else:
@@ -728,7 +729,7 @@ def get_sample(dataset_name: str, json_data, is_train, series_len = None, start_
         break
       except Exception as e:
         print(f"{e}...")
-        series_len = None
+        series_len = original_series_len
         start_idx = None
         continue
     
@@ -1058,7 +1059,7 @@ def get_samples(dataset_name, json_data, n, is_train, series_len=None) -> list: 
   if n is not None: # this fixes the number of samples
     i = 0
     while i < n:
-      metadata, ts = get_sample(dataset_name, json_data, is_train, series_len=None)
+      metadata, ts = get_sample(dataset_name, json_data, is_train, series_len=series_len)
       if not np.isnan(ts).any() and not any(isinstance(x, str) and x.lower() == 'nan' for x in ts):
         zero_percentage = (ts.count(0) / len(ts)) * 100
         if zero_percentage <= 10:
@@ -2998,7 +2999,84 @@ def extract_numbers_with_semantic_context(text, ignore_dates=True):
               number_contexts.append((token.text, context))
   
     return number_contexts
+
+def extract_num_dict_from_text(caption, model="Google Gemini-2.0-Flash"):
+  prompt = f"""
+    I will provide you with a paragraph of text, which described a time series. Your job is to extract important numbers from it. Specifically, you have to extract minimum, maximum, mean, and standard deviation of this specific time series (not historical statistics) from the text if the text mentions them.
     
+    Here's the text:
+    \n
+    {caption}
+    \n
+    
+    Provide your answer in a json format as follows:
+   {{
+      "minimum": A,
+      "maximum": B,
+      "mean": X,
+      "std": Y
+    
+   }}
+   If you cannot find some variables in the text because they are not mentioned, just put null instead. Provide your answer in a json format and do not say anything more and don't give any explanation. Start your answer directly by opening a brace.
+  
+  """
+  response = get_response(prompt=prompt, model=model, temperature=0.25)
+  response = response[response.find("{"):response.rfind("}") + 1]
+  try:
+    response_dict = json.loads(response)
+    return response_dict
+  except Exception as e:
+    print(e)
+    print(f"Cannot be parsed!\n {response}")
+
+
+def extract_num_dict_from_dict(metadata, model="Google Gemini-2.0-Flash"):
+  prompt = f"""
+    I will provide you with a json dictionary consisting of some metadata of a time series. Your job is to extract some numbers from it. Specifically, you have to extract minimum, maximum, mean, and standard deviation of this specific time series.
+    
+    Here's the dictionary:
+    \n
+    {metadata}
+    \n
+    
+    Provide your answer in a json format as follows:
+   {{
+      "minimum": A,
+      "maximum": B,
+      "mean": X,
+      "std": Y
+    
+   }}
+   Provide your answer in a json format and do not say anything more and don't give any explanation. Start your answer directly by opening a brace.
+  
+  """
+  response = get_response(prompt=prompt, model=model, temperature=0.25)
+  response = response[response.find("{"):response.rfind("}") + 1]
+  try:
+    response_dict = json.loads(response)
+    return response_dict
+  except Exception as e:
+    print(e)
+    print(f"Cannot be parsed!\n {response}")
+  
+  
+
+def compare_num_dicts(gen_dict, gt_dict):
+  result = {}
+  for key in gt_dict:
+    try:
+      if gt_dict[key] is None or gen_dict[key] is None:
+          result[key] = None
+      elif key in gen_dict and abs(gen_dict[key] - gt_dict[key]) / max(abs(gt_dict[key]), 1e-10) <= 0.05:
+          result[key] = 1
+      else:
+          result[key] = 0
+    except Exception as e:
+      print(e)
+      #print("gen dict: \n",gen_dict)
+      #print("gt dict: \n",gt_dict)
+  return result
+  # 1 means correct, 0 incorrect, and None is when the GT also doesn't have it
 
   
 def main():
@@ -3006,6 +3084,170 @@ def main():
 
   random.seed(config['general']['random_seed'])
   
+  
+  caption = "From 2011 to 2018, the agricultural output index in this upper-middle income country shows a consistent upward trend, starting at 91.29 in 2011 and reaching 105.27 in 2018. This indicates a steady growth in agricultural output over these years, with a notable increase of approximately 15% from the beginning to the end of the series. Compared to the historical mean of 53.89, the agricultural output index from 2011 to 2018 is significantly higher, suggesting a period of strong performance relative to the country's longer-term agricultural history. Without global or regional context, it's impossible to determine if this growth is higher, lower, or follows expected patterns."
+  
+  gen_dict = extract_num_dict_from_text(caption=caption)
+  print(gen_dict)
+  
+  
+  with open("/home/ubuntu/thesis/data/samples/new samples no overlap/test/metadata/agriculture_0_test.json", "r") as file:
+      metadata = json.load(file)
+  
+  gt_dict = extract_num_dict_from_dict(metadata=metadata)
+  print(gt_dict)
+  
+  print(compare_num_dicts(gen_dict, gt_dict))
+  
+  
+  """
+  gemini_vl_len300 = [
+    0.674,    # BERT F1
+    0.688,    # BERT Precision
+    0.662,    # BERT Recall
+    0.6,      # Numeric Score
+    0.107,    # BLEU
+    0.293,    # ROUGE-L
+    0.265,    # METEOR
+    0.69,     # Oracle Score
+    0.8609    # simCSE
+  ]
+
+  gemini_l_len300 = [
+      0.698,    # BERT F1
+      0.696,    # BERT Precision
+      0.7,      # BERT Recall
+      0.656,    # Numeric Score
+      0.16,     # BLEU
+      0.312,    # ROUGE-L
+      0.328,    # METEOR
+      0.74,     # Oracle Score
+      0.8824    # simCSE
+  ]
+  
+  internvl_vl_len300 =[
+    0.626,    # BERT F1
+    0.619,    # BERT Precision
+    0.634,    # BERT Recall
+    0.589,    # Numeric Score
+    0.122,    # BLEU
+    0.235,    # ROUGE-L
+    0.29,     # METEOR
+    0.376,    # Oracle Score
+    0.7226    # simCSE
+  ]
+  
+  internvl_l_len300 = [
+    0.632,    # BERT F1
+    0.613,    # BERT Precision
+    0.653,    # BERT Recall
+    0.648,    # Numeric Score
+    0.109,    # BLEU
+    0.232,    # ROUGE-L
+    0.306,    # METEOR
+    0.471,    # Oracle Score
+    0.7606    # simCSE
+  ]
+  
+  
+  gemini_vl_len10 = [
+    0.669,    # BERT F1
+    0.679,    # BERT Precision
+    0.659,    # BERT Recall
+    0.733,    # Numeric Score
+    0.118,    # BLEU
+    0.3,      # ROUGE-L
+    0.253,    # METEOR
+    0.708,    # Oracle Score
+    0.8353    # simCSE
+  ]
+  
+  
+  gemini_l_len10 = [
+    0.683,    # BERT F1
+    0.679,    # BERT Precision
+    0.687,    # BERT Recall
+    0.754,    # Numeric Score
+    0.15,     # BLEU
+    0.305,    # ROUGE-L
+    0.302,    # METEOR
+    0.727,    # Oracle Score
+    0.8582    # simCSE
+  ]
+
+ 
+  
+  
+  internvl_vl_len10 = [
+    0.639,    # BERT F1
+    0.623,    # BERT Precision
+    0.656,    # BERT Recall
+    0.681,    # Numeric Score
+    0.091,    # BLEU
+    0.247,    # ROUGE-L
+    0.288,    # METEOR
+    0.532,    # Oracle Score
+    0.7712    # simCSE
+  ]
+  
+  internvl_l_len10 = [
+    0.624,    # BERT F1
+    0.62,     # BERT Precision
+    0.628,    # BERT Recall
+    0.605,    # Numeric Score
+    0.084,    # BLEU
+    0.24,     # ROUGE-L
+    0.248,    # METEOR
+    0.432,    # Oracle Score
+    0.7183    # simCSE
+  ]
+
+
+  metrics = [
+    "BERT F1", "BERT Precision", "BERT Recall", "Numeric",
+    "BLEU", "ROUGE-L", "METEOR", "Oracle", "simCSE"
+  ]
+
+  # Plot setup
+  x = np.arange(len(metrics))  # label locations
+  width = 0.35  # width of the bars
+
+  fig, ax = plt.subplots(figsize=(12, 6))
+  bars1 = ax.bar(x - width/2, gemini_vl_len300, width, label='Text + Image')
+  bars2 = ax.bar(x + width/2, gemini_l_len300, width, label='Text')
+
+  # Labels & formatting
+  ax.set_ylabel('Scores')
+  ax.set_title('Text vs Text + Image')
+  ax.set_xticks(x)
+  ax.set_xticklabels(metrics, rotation=45, ha='right')
+  ax.legend()
+
+  # Optional: add values on top of bars
+  for bar in bars1 + bars2:
+      height = bar.get_height()
+      ax.annotate(f'{height:.2f}',
+                  xy=(bar.get_x() + bar.get_width() / 2, height),
+                  xytext=(0, 3),  # vertical offset
+                  textcoords="offset points",
+                  ha='center', va='bottom', fontsize=8)
+
+  plt.tight_layout()
+  plt.grid(True)
+  plt.show()
+  plt.savefig("/home/ubuntu/thesis/data/samples/len 300/evaluation results/gemini.jpeg")
+  """
+  
+  
+  """folder_path = "/home/ubuntu/thesis/data/samples/len 10/time series"
+
+  for filename in os.listdir(folder_path):
+    file_path = os.path.join(folder_path, filename)
+    if filename.endswith(".txt"):
+      ts = read_txt_to_num_list(file_path)
+      if len(ts) != 300:
+        os.remove(file_path)
+        print(f"Removed: {file_path}")"""
   
   """nlp = spacy.load("en_core_web_lg")
   stemmer = nltk.PorterStemmer()
@@ -3022,7 +3264,7 @@ def main():
   
   
   
-  """directory = "/home/ubuntu/thesis/data/samples/new samples no overlap/generated captions/llava-finetune-pratham"
+  """directory = "/home/ubuntu/thesis/data/samples/new samples no overlap/generated captions/llava-finetune-filter"
 
   for filename in os.listdir(directory):
     if filename.endswith(".txt"):
@@ -3036,7 +3278,7 @@ def main():
   
 
 
-  data_ft = [
+  """data_ft = [
     [0.655, 0.633, 0.641, 0.625, 0.672, 0.651, 0.642, 0.690, 0.656, 0.633, 0.674, 0.689],
     [0.651, 0.635, 0.644, 0.630, 0.660, 0.651, 0.637, 0.673, 0.654, 0.629, 0.666, 0.677],
     [0.661, 0.632, 0.640, 0.621, 0.685, 0.652, 0.649, 0.709, 0.659, 0.638, 0.682, 0.703],
@@ -3064,9 +3306,7 @@ def main():
 ]
 
 
-
-  # Call the function
-  create_metric_comparisons(data_ft, data_pre, model_name="InternVL", save_path="/home/ubuntu/thesis/source/figs/", label="percentage")
+  create_metric_comparisons(data_ft, data_pre, model_name="InternVL", save_path="/home/ubuntu/thesis/source/figs/", label="percentage")"""
 
   
   

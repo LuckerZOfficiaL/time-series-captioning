@@ -131,7 +131,7 @@ class Mob(nn.Module):
                 ts: a tensor of shape (B, seq_len, 1)
                 use_chronos: if chronos ts embedding is used, if False, it's equivalent to running internVL only
         """            
-        responses = mob_batch_inference(model=self, image_paths=image_paths, prompts=prompts, ts=ts, max_output_tokens=max_output_tokens)
+        responses = mob_batch_inference(model=self, image_paths=image_paths, prompts=prompts, ts=ts, max_output_tokens=max_output_tokens, use_chronos=use_chronos)
         return responses
     
     
@@ -198,13 +198,15 @@ def generate_captions(model, ts_folder_path, metadata_folder_path, image_folder_
 
         print(f"Generating captions for batch {batch_start_idx+1}-{batch_end_idx}...")
         if use_chronos:
-            responses = model.get_responses(prompt_list, image_paths, ts=stacked_ts, sum_ts_emb_to=model.sum_ts_emb_to,
-                            pooling=config['mobtep']['chronos_pooling'], 
-                            max_output_tokens=config['mobtep']['max_output_tokens'])
+            responses = model.get_responses(prompt_list, image_paths, ts=stacked_ts,
+                                            use_chronos=use_chronos,
+                                            pooling=config['mobtep']['chronos_pooling'], 
+                                            max_output_tokens=config['mobtep']['max_output_tokens'])
         else:
             responses = model.get_responses(prompt_list, image_paths, ts=None, 
-                            pooling=config['mobtep']['chronos_pooling'], 
-                            max_output_tokens=config['mobtep']['max_output_tokens'])
+                                            use_chronos=use_chronos,
+                                            pooling=config['mobtep']['chronos_pooling'], 
+                                            max_output_tokens=config['mobtep']['max_output_tokens'])
         
         for i in range(batch_start_idx, batch_end_idx):
             response_file = f"{save_folder_path+"/"+ts_files[i]}"
@@ -214,9 +216,8 @@ def generate_captions(model, ts_folder_path, metadata_folder_path, image_folder_
         batch_start_idx = batch_end_idx
 
 
-def train_mob(model, train_loader, optimizer, ignore_id, epochs=5, val_loader=None): # if val_loader is not None, it also does validation
+def train_mob(model, train_loader, optimizer, scheduler, ignore_id, epochs=5, val_loader=None): # if val_loader is not None, it also does validation
     print("\nStart Training...")
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     config=load_config()
     train_losses = []
     val_losses = []
@@ -249,6 +250,7 @@ def train_mob(model, train_loader, optimizer, ignore_id, epochs=5, val_loader=No
 
             total_train_loss += loss.item()
 
+        scheduler.step()
         print(f"Epoch {epoch+1}/{epochs} - Train Loss: {total_train_loss/len(train_loader):.4f}")
         train_losses.append(total_train_loss/len(train_loader))
         
@@ -298,11 +300,21 @@ def main():
                                                     val_split=config['eval']['val_split'],
                                                     seed=config['general']['random_seed'])
 
-    optimizer = AdamW(model.parameters(), lr=float(config['train']['lr']), weight_decay=float(config['train']['weight_decay']))
+    # Define parameter groups with different learning rates
+    param_groups = [
+        {"params": model.projector.parameters(), "lr": float(config['train']['lr_for_new'])},  # Higher learning rate for projector
+        {"params": model.gate_proj.parameters(), "lr": float(config['train']['lr_for_new'])},  # Higher learning rate for gate_proj
+        {"params": model.internvl.parameters(), "lr": float(config['train']['lr_for_pretrained'])},  # Lower learning rate for internVL
+    ]
+
+    optimizer = AdamW(param_groups, weight_decay=float(config['train']['weight_decay']))
+    scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=config['train']['milestones'], gamma=0.1)
+    #optimizer = AdamW(model.parameters(), lr=float(config['train']['lr']), weight_decay=float(config['train']['weight_decay']))
 
     train_losses, val_losses = train_mob(model, 
                             train_loader=train_loader, 
                             optimizer=optimizer, 
+                            scheduler=scheduler,
                             ignore_id=model.internvl_tokenizer.pad_token_id, 
                             epochs=config['train']['epochs'],
                             val_loader=val_loader)
@@ -312,7 +324,7 @@ def main():
     
     
     ######################################## SAVING CHECKPOINT #######################################
-    filepath = f"{config['path']['checkpoints_folder_path']}/Mob2_5-2B_{round(val_losses[-1], 3) if val_losses != [] else ""}_{config['train']['epochs']}eps.pth"
+    filepath = f"{config['path']['checkpoints_folder_path']}/{"chronos_" if config['mobtep']['use_chronos'] else ""}Mob2_5-2B_{round(val_losses[-1], 3) if val_losses != [] else ""}_{config['train']['epochs']}eps.pth"
     torch.save(model.state_dict(), filepath)
 
 
@@ -351,12 +363,36 @@ def main():
     for response in responses:
         print("\n---------------------------------------------------------------------------------------\n", response)
 
+    
+    
+    ####################################### GENERATE CAPTIONS ####################################
+    print("\n\nGenerating Captions with ", filepath)
+    model = Mob(chronos_name=config['mobtep']['chronos_name'], 
+                internvl_name=config['mobtep']['internvl_name'],
+                projector_init=config['mobtep']['projector_init'],
+                sum_ts_emb_to=config['mobtep']['sum_ts_emb_to']).to(device)
+    
+    checkpoint_path = filepath
+    model.load_state_dict(torch.load(checkpoint_path, map_location=device))
+    
+    ts_folder_path = "/home/ubuntu/thesis/data/samples/new samples no overlap/test/time series"
+    metadata_folder_pth = "/home/ubuntu/thesis/data/samples/new samples no overlap/test/metadata"
+    image_folder_path = "/home/ubuntu/thesis/data/samples/new samples no overlap/test/plots"
+    save_folder_path= f"/home/ubuntu/thesis/data/samples/new samples no overlap/generated captions/internvl_{checkpoint_path.split("/")[-1][:-4]}"
+    
+    if not os.path.exists(save_folder_path):
+        os.makedirs(save_folder_path)
+    
+    generate_captions(model, ts_folder_path, metadata_folder_pth, image_folder_path, save_folder_path, batch_size=15, use_chronos=config['mobtep']['use_chronos'])
+    
+    
+    
 # You might neet to run this script many times without any change since there are too many examples to fit into memory for a single run. 
 if __name__ == "__main__":
-    #main()
+    main() # main() does the finetuning/training
     
     ################### GENERATE CAPTION FILES ##################################
-    config = load_config()
+    """config = load_config()
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     
     
@@ -368,6 +404,8 @@ if __name__ == "__main__":
     checkpoint_path = f"/home/ubuntu/thesis/model/checkpoints/{config['mobtep']['mob_checkpoint']}.pth"
     model.load_state_dict(torch.load(checkpoint_path, map_location=device))
     
+        
+    
     ts_folder_path = "/home/ubuntu/thesis/data/samples/new samples no overlap/test/time series"
     metadata_folder_pth = "/home/ubuntu/thesis/data/samples/new samples no overlap/test/metadata"
     image_folder_path = "/home/ubuntu/thesis/data/samples/new samples no overlap/test/plots"
@@ -378,7 +416,7 @@ if __name__ == "__main__":
     
     
     
-    generate_captions(model, ts_folder_path, metadata_folder_pth, image_folder_path, save_folder_path, batch_size=15, use_chronos=config['mobtep']['use_chronos'])
+    generate_captions(model, ts_folder_path, metadata_folder_pth, image_folder_path, save_folder_path, batch_size=15, use_chronos=config['mobtep']['use_chronos'])"""
     
     
     ############################# TOY DEMO ##################################
@@ -390,7 +428,7 @@ if __name__ == "__main__":
     model.load_state_dict(torch.load(checkpoint_path, map_location=device))
     
     ts = torch.randn(2, 20, 1)
-    image_paths = ['/home/ubuntu/thesis/data/samples/plots/air quality_0.jpeg',
+    image_paths = ['/home/ubuntu/thesis/data/samples/plots/air quality_0.jpeg'
                 '/home/ubuntu/thesis/data/samples/plots/demography_0.jpeg']
 
     prompts = ['Describe this line chart about the hourly CO levels in London. Discuss the values you see.', 
