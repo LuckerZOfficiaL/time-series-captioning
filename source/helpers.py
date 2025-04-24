@@ -2996,13 +2996,106 @@ def extract_numbers_with_semantic_context(text, ignore_dates=True):
               number_contexts.append((token.text, context))
   
     return number_contexts
+
+def extract_num_dict_from_text(caption, model="Google Gemini-2.0-Flash"):
+  prompt = f"""
+    I will provide you with a paragraph of text, which described a time series. Your job is to extract important numbers from it. Specifically, you have to extract minimum, maximum, mean, and standard deviation of this specific time series (not historical statistics) from the text if the text mentions them.
     
+    Here's the text:
+    \n
+    {caption}
+    \n
+    
+    Provide your answer in a json format as follows:
+   {{
+      "minimum": A,
+      "maximum": B,
+      "mean": X,
+      "std": Y
+    
+   }}
+   If you cannot find some variables in the text because they are not mentioned, just put null instead. Provide your answer in a json format and do not say anything more and don't give any explanation. Start your answer directly by opening a brace.
+  
+  """
+  response = get_response(prompt=prompt, model=model, temperature=0.25)
+  response = response[response.find("{"):response.rfind("}") + 1]
+  try:
+    response_dict = json.loads(response)
+    return response_dict
+  except Exception as e:
+    print(e)
+    print(f"Cannot be parsed!\n {response}")
+
+
+def extract_num_dict_from_dict(metadata, model="Google Gemini-2.0-Flash"):
+  prompt = f"""
+    I will provide you with a json dictionary consisting of some metadata of a time series. Your job is to extract some numbers from it. Specifically, you have to extract minimum, maximum, mean, and standard deviation of this specific time series.
+    
+    Here's the dictionary:
+    \n
+    {metadata}
+    \n
+    
+    Provide your answer in a json format as follows:
+   {{
+      "minimum": A,
+      "maximum": B,
+      "mean": X,
+      "std": Y
+    
+   }}
+   Provide your answer in a json format and do not say anything more and don't give any explanation. Start your answer directly by opening a brace.
+  
+  """
+  response = get_response(prompt=prompt, model=model, temperature=0.25)
+  response = response[response.find("{"):response.rfind("}") + 1]
+  try:
+    response_dict = json.loads(response)
+    return response_dict
+  except Exception as e:
+    print(e)
+    print(f"Cannot be parsed!\n {response}")
+  
+  
+
+def compare_num_dicts(gen_dict, gt_dict):
+  result = {}
+  for key in gt_dict:
+    try:
+      if gt_dict[key] is None or gen_dict[key] is None:
+          result[key] = None
+      elif key in gen_dict and abs(gen_dict[key] - gt_dict[key]) / max(abs(gt_dict[key]), 1e-10) <= 0.05:
+          result[key] = 1
+      else:
+          result[key] = 0
+    except Exception as e:
+      print(e)
+      #print("gen dict: \n",gen_dict)
+      #print("gt dict: \n",gt_dict)
+  return result
+  # 1 means correct, 0 incorrect, and None is when the GT also doesn't have it
 
   
 def main():
   config = load_config()
 
   random.seed(config['general']['random_seed'])
+  
+  
+  caption = "From 2011 to 2018, the agricultural output index in this upper-middle income country shows a consistent upward trend, starting at 91.29 in 2011 and reaching 105.27 in 2018. This indicates a steady growth in agricultural output over these years, with a notable increase of approximately 15% from the beginning to the end of the series. Compared to the historical mean of 53.89, the agricultural output index from 2011 to 2018 is significantly higher, suggesting a period of strong performance relative to the country's longer-term agricultural history. Without global or regional context, it's impossible to determine if this growth is higher, lower, or follows expected patterns."
+  
+  gen_dict = extract_num_dict_from_text(caption=caption)
+  print(gen_dict)
+  
+  
+  with open("/home/ubuntu/thesis/data/samples/new samples no overlap/test/metadata/agriculture_0_test.json", "r") as file:
+      metadata = json.load(file)
+  
+  gt_dict = extract_num_dict_from_dict(metadata=metadata)
+  print(gt_dict)
+  
+  print(compare_num_dicts(gen_dict, gt_dict))
+  
   
   """
   gemini_vl_len300 = [

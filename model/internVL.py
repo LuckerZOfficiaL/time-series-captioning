@@ -51,7 +51,8 @@ def mob_batch_inference(model, image_paths, prompts, ts, tokenizer=None, max_out
         )
     else:
         responses = model.batch_chat(
-            tokenizer=tokenizer, pixel_values=pixel_values, ts=ts, num_patches_list=num_patches_list, questions=prompts, generation_config={'max_new_tokens': max_output_tokens, 'do_sample': True}
+            tokenizer=tokenizer, pixel_values=pixel_values, ts=ts, num_patches_list=num_patches_list,
+            questions=prompts, generation_config={'max_new_tokens': max_output_tokens, 'do_sample': True}
         )
     return responses
 

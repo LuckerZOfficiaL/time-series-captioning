@@ -198,7 +198,7 @@ def generate_captions(model, ts_folder_path, metadata_folder_path, image_folder_
 
         print(f"Generating captions for batch {batch_start_idx+1}-{batch_end_idx}...")
         if use_chronos:
-            responses = model.get_responses(prompt_list, image_paths, ts=stacked_ts, sum_ts_emb_to=model.sum_ts_emb_to,
+            responses = model.get_responses(prompt_list, image_paths, ts=stacked_ts,
                             pooling=config['mobtep']['chronos_pooling'], 
                             max_output_tokens=config['mobtep']['max_output_tokens'])
         else:
@@ -312,7 +312,7 @@ def main():
     
     
     ######################################## SAVING CHECKPOINT #######################################
-    filepath = f"{config['path']['checkpoints_folder_path']}/Mob2_5-2B_{round(val_losses[-1], 3) if val_losses != [] else ""}_{config['train']['epochs']}eps.pth"
+    filepath = f"{config['path']['checkpoints_folder_path']}/{"chronos_" if config['mobtep']['use_chronos'] else ""}Mob2_5-2B_{round(val_losses[-1], 3) if val_losses != [] else ""}_{config['train']['epochs']}eps.pth"
     torch.save(model.state_dict(), filepath)
 
 

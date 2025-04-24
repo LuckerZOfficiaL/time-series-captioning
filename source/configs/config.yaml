@@ -4,7 +4,7 @@ general:
 
 data:
   #dataset_names: [air quality, border crossing, crime, demography, road injuries, covid, co2, diet, walmart, online retail, agriculture]
-  dataset_names: [covid]
+  dataset_names: [demography]
   series_len: 10 # null
   request_augmentations: 0 # how many times to rephrase the original prompt request?
   n_samples: 300 # how many window samples to extract per dataset? i.e. how many time series to sample? Note that this is just the number of real samples and not the number of captions because each model in used_models generates its version of the caption. So, the number of captions generated will be n_samples*len(used_models).
@@ -53,15 +53,16 @@ path: # paths that have "folder" in its name are folder paths, otherwise they ar
   all_facts_by_period_folder_path: /home/ubuntu/thesis/data/fact bank/by period #/{BIN_YEARS}/all_facts_by_{BIN_YEARS}years.json
   prototypes_path: /home/ubuntu/thesis/model/prototype_words.txt
   checkpoints_folder_path: /home/ubuntu/thesis/model/checkpoints
+  gt_metadata_folder_path: /home/ubuntu/thesis/data/samples/new samples no overlap/test/metadata
   gt_captions_folder_path: /home/ubuntu/thesis/data/samples/new samples no overlap/test/gt_captions
-  generated_captions_folder_path: /home/ubuntu/thesis/data/samples/new samples no overlap/generated captions/gemini-2.0-flash
+  generated_captions_folder_path: /home/ubuntu/thesis/data/samples/new samples no overlap/generated captions/internvl-finetune-pratham
   evaluation_results_folder_path: /home/ubuntu/thesis/data/evaluation results
 
 
 train:
-  lr: 1e-6
-  epochs: 1
-  weight_decay: 1e-5
+  lr: 1e-7
+  epochs: 3
+  weight_decay: 1e-4
   batch_size: 24
   loss_fn: cross-entropy # currently still useless
   teacher_forcing: true # if false, the model generates autoregressively during training
@@ -73,16 +74,16 @@ train:
 eval:
   evaluated_model: gemini-2.0-flash #claude-3-haiku  #gemini-2.0-flash
   bertscore_model: microsoft/deberta-xlarge-mnli #bert-base-uncased, roberta-large
-  batch_size: 32
+  batch_size: 42
   val_split: 0.2
   use_img_input: true
   
 
 mobtep:
-  mob_checkpoint: Mob2_5-2B_6.573_1eps
+  mob_checkpoint: chronos_Mob2_5-2B_5.758_5eps
   chronos_name: amazon/chronos-t5-small
   chronos_pooling: mean # mean, max
-  use_chronos: false
+  use_chronos: true
   internvl_name: OpenGVLab/InternVL2_5-2B
   tcn_emb_size: 128
   generator: gpt-2 # gpt-2, llama 3.2 instruct
