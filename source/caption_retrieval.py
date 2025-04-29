@@ -2,7 +2,7 @@ import json
 import os
 import re
 
-GROUND_TRUTH_DIR = "caption_retrieval_easy/ground_truth"
+GROUND_TRUTH_DIR = "data/samples/new samples no overlap/tasks/caption_retrieval_easy_with_image/ground_truth"
 ANSWER_DIR = "phi_etiology_test_with_image"
 
 def get_caption_retrieval_prompts(data_dir):
@@ -19,18 +19,13 @@ def extract_choice(json_str):
     try:
         data = json.loads(json_str)
     except:
-        import pdb; pdb.set_trace()
-
+        print("INVALID ANSWER:")
+        print(json_str)
+        return ""
+    
     answer = data.get("answer", "").strip()
     m = re.match(r'^\(?\s*([A-Za-z])\s*\)?', answer)
     return m.group(1).upper() if m else None
-
-def get_answer(a):
-    options = ['A', 'B', 'C', 'D']
-    answers = [x for x in options if x in a]
-    if len(answers) != 1:
-        raise ValueError(a)
-    return answers[0]
 
 def eval_score(answer_dir, ground_truth_dir):
     answers = []
@@ -38,7 +33,6 @@ def eval_score(answer_dir, ground_truth_dir):
     for ts_name in os.listdir(answer_dir):
         with open(os.path.join(answer_dir, ts_name)) as fh:
             answer = extract_choice(fh.read())
-            assert answer in {'A', 'B', 'C', 'D'}
             answers.append(answer)
         with open(os.path.join(ground_truth_dir, ts_name)) as fh:
             gt = fh.read()
