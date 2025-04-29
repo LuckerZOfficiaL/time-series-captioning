@@ -13,8 +13,8 @@ import GPUtil  # Make sure to install this package: pip install gputil
 from helpers import generate_prompt_for_baseline
 
 MODEL_PATH = "microsoft/Phi-4-multimodal-instruct"
-DATA_DIR = "/home/ubuntu/time-series-captioning/data/samples/new samples no overlap/test"
-OUT_DIR = "/home/ubuntu/time-series-captioning/phi_etiology_test"
+DATA_DIR = "/home/ubuntu/time-series-captioning/caption_retrieval_easy"
+OUT_DIR = "/home/ubuntu/time-series-captioning/phi_etiology_test_with_image"
 BATCH_SIZE = 2 # Adjust batch size as needed
 
 import torch
@@ -103,33 +103,39 @@ def write_caption(model_eval, ts_names, device: torch.device, data_dir, out_dir,
         with open(out_file, "w+") as fh:
             fh.write(caption)
 
+# TODO: refactor this into existing code
 def write_caption_etiology(model_eval, ts_batch, device: torch.device, data_dir, out_dir):
-    prompts = [x[0] for x in ts_batch]
-    images = [x[1] for x in ts_batch]
-    captions = model_eval(prompts, image_files=images, device=device, use_image=True)
-    #print(f"WRITING TO {out_dir}")
-    for i, caption in enumerate(captions):
-#        out_file = os.path.join(out_dir, f"{i}.txt")
-        out_file = os.path.join(out_dir, "answers.txt")
-        with open(out_file, "a") as fh:
-            fh.write(caption + "\n-----------------------------\n")
+    use_image = True
+    prompts = []
+    images = []
+    for ts_name in ts_batch:
+        with open(os.path.join(data_dir, "prompts", f"{ts_name}.json")) as fh:
+            inputs = json.load(fh)
+            prompts.append(inputs['prompt']) 
+            if use_image: 
+                images.append(inputs['plot_path'])       
+    # TODO: parametrize use_image 
+    captions = model_eval(prompts, image_files=images, device=device, use_image=False)
+    for ts_name, caption in zip(ts_batch, captions):
+        out_file = os.path.join(out_dir, f"{ts_name}.txt")
+        with open(out_file, "w+") as fh:
+            fh.write(caption)
 
 def process_worker(gpu_id, model_eval, ts_names, data_dir, out_dir, use_image=True):
-    import pickle
-    prompts = pickle.load(open("local_prompts_etiological.pkl", "rb"))
     device = torch.device(f"cuda:{gpu_id}")
     print(f"Process started on GPU {gpu_id} for {len(ts_names)} time series.")
-    for i in range(0, len(prompts), BATCH_SIZE):
-        ts_batch = prompts[i:i+BATCH_SIZE]
+    for i in range(0, len(ts_names), BATCH_SIZE):
+        ts_batch = ts_names[i:i+BATCH_SIZE]
         write_caption_etiology(model_eval, ts_batch, device, data_dir, out_dir)
     print(f"Process on GPU {gpu_id} finished processing {len(ts_names)} time series.")
 
 
-NUM_GPUS_TO_USE = 1
+NUM_GPUS_TO_USE = 2
 
 def main(model_eval, data_dir, out_dir, use_image=True):
     # Retrieve list of time series names yet to be processed.
-    ts_dir = os.path.join(data_dir, "time series")
+    in_dir = "prompts"
+    ts_dir = os.path.join(data_dir, in_dir)
     ts_names = [Path(fn).stem for fn in os.listdir(ts_dir)]
     done_names = {Path(fn).stem for fn in os.listdir(out_dir)}
     ts_names = sorted([name for name in ts_names if name not in done_names])
