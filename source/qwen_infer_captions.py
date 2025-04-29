@@ -17,14 +17,14 @@ from phi_parallel_gpu import main
 
 MODEL_PATH = "Qwen/Qwen2.5-Omni-7B"
 DATA_DIR = "/home/ubuntu/time-series-captioning/data/samples/new samples no overlap/test"
-OUT_DIR = "/home/ubuntu/time-series-captioning/qwen_captions_checkpoint_2"
+OUT_DIR = "/home/ubuntu/time-series-captioning/qwen_fine_tune_etiology_test"
 
 
 @lru_cache
 def _load_batch_qwen_model(model_name, device):
     torch.manual_seed(314)
     model = Qwen2_5OmniThinkerForConditionalGeneration.from_pretrained(
-                "qwen_fine_tune_training", 
+                "qwen_fine_tune_2", 
                 torch_dtype=torch.float16,
                 _attn_implementation='flash_attention_2',
                 low_cpu_mem_usage=True
@@ -67,7 +67,7 @@ def eval_batch_qwen(prompts, image_files, device, use_image):
 
     # Batch Inference
     stime = time.time()
-    text_ids = model.generate(**inputs, max_new_tokens=256, temperature=0.3, do_sample=True)
+    text_ids = model.generate(**inputs, max_new_tokens=10, temperature=0.3, do_sample=True)
     print(f"RUNTIME on {device}: {time.time() - stime:.2f} seconds")
     text = processor.batch_decode(text_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)
     captions = [t.split("assistant\n")[1] for t in text]

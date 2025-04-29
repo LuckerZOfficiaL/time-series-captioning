@@ -17,7 +17,7 @@ from phi_parallel_gpu import main
 
 MODEL_PATH = "Qwen/Qwen2.5-Omni-7B"
 DATA_DIR = "/home/ubuntu/time-series-captioning/data/samples/len 300"
-OUT_DIR = "/home/ubuntu/time-series-captioning/long_ts_captions"
+OUT_DIR = "/home/ubuntu/time-series-captioning/qwen_etiology_test"
 
 
 @lru_cache
@@ -64,7 +64,7 @@ def eval_batch_qwen(prompts, image_files, device, use_image):
 
     # Batch Inference
     stime = time.time()
-    text_ids = model.generate(**inputs, max_new_tokens=256, temperature=0.3, do_sample=True, 
+    text_ids = model.generate(**inputs, max_new_tokens=20, temperature=0.3, do_sample=True, 
                               use_audio_in_video=False, return_audio=False)
     print(f"RUNTIME on {device}: {time.time() - stime:.2f} seconds")
     text = processor.batch_decode(text_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)

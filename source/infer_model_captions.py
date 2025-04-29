@@ -13,7 +13,7 @@ from phi_parallel_gpu import main
 
 MODEL_PATH = "llava-hf/llava-v1.6-mistral-7b-hf"
 DATA_DIR = "/home/ubuntu/time-series-captioning/data/samples/new samples no overlap/test"
-OUT_DIR = "/home/ubuntu/time-series-captioning/llava_captions_test_no_image"
+OUT_DIR = "/home/ubuntu/time-series-captioning/llava_etiology_test"
 
 
 import requests
@@ -61,7 +61,7 @@ def eval_batch_llava(prompts, image_files, device, use_image=True):
         inputs = processor(text=prompts, padding=True, return_tensors="pt").to(device)
 
     stime = time.time()
-    generate_ids = model.generate(**inputs, max_new_tokens=256, temperature=0.3, do_sample=True)
+    generate_ids = model.generate(**inputs, max_new_tokens=20, temperature=0.3, do_sample=True)
     print(f"RUNTIME on {device}: {time.time() - stime:.2f} seconds")    
     results = processor.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)
     # Remove original prompt from returned result

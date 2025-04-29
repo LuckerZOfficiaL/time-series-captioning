@@ -14,8 +14,8 @@ from helpers import generate_prompt_for_baseline
 
 MODEL_PATH = "microsoft/Phi-4-multimodal-instruct"
 DATA_DIR = "/home/ubuntu/time-series-captioning/data/samples/new samples no overlap/test"
-OUT_DIR = "/home/ubuntu/time-series-captioning/phi_captions_test_no_image"
-BATCH_SIZE = 10  # Adjust batch size as needed
+OUT_DIR = "/home/ubuntu/time-series-captioning/phi_etiology_test"
+BATCH_SIZE = 2 # Adjust batch size as needed
 
 import torch
 from PIL import Image
@@ -32,6 +32,7 @@ def _load_batch_phi_model(model_name, device: torch.device):
         trust_remote_code=True,
         _attn_implementation='flash_attention_2',
     )
+    model.config = model.model.config
     model.to(device)
     return model, processor
 
@@ -66,7 +67,7 @@ def eval_batch_phi(prompts: list[str], image_files: list[str], device: torch.dev
     stime = time.time()
     generate_ids = model.generate(
         **inputs,
-        max_new_tokens=256,
+        max_new_tokens=20,
         generation_config=generation_config,
         temperature=0.3,
         do_sample=True,
@@ -102,17 +103,29 @@ def write_caption(model_eval, ts_names, device: torch.device, data_dir, out_dir,
         with open(out_file, "w+") as fh:
             fh.write(caption)
 
+def write_caption_etiology(model_eval, ts_batch, device: torch.device, data_dir, out_dir):
+    prompts = [x[0] for x in ts_batch]
+    images = [x[1] for x in ts_batch]
+    captions = model_eval(prompts, image_files=images, device=device, use_image=True)
+    #print(f"WRITING TO {out_dir}")
+    for i, caption in enumerate(captions):
+#        out_file = os.path.join(out_dir, f"{i}.txt")
+        out_file = os.path.join(out_dir, "answers.txt")
+        with open(out_file, "a") as fh:
+            fh.write(caption + "\n-----------------------------\n")
 
 def process_worker(gpu_id, model_eval, ts_names, data_dir, out_dir, use_image=True):
+    import pickle
+    prompts = pickle.load(open("local_prompts_etiological.pkl", "rb"))
     device = torch.device(f"cuda:{gpu_id}")
     print(f"Process started on GPU {gpu_id} for {len(ts_names)} time series.")
-    for i in range(0, len(ts_names), BATCH_SIZE):
-        ts_batch = ts_names[i:i+BATCH_SIZE]
-        write_caption(model_eval, ts_batch, device, data_dir, out_dir, use_image=use_image)
+    for i in range(0, len(prompts), BATCH_SIZE):
+        ts_batch = prompts[i:i+BATCH_SIZE]
+        write_caption_etiology(model_eval, ts_batch, device, data_dir, out_dir)
     print(f"Process on GPU {gpu_id} finished processing {len(ts_names)} time series.")
 
 
-NUM_GPUS_TO_USE = 4
+NUM_GPUS_TO_USE = 1
 
 def main(model_eval, data_dir, out_dir, use_image=True):
     # Retrieve list of time series names yet to be processed.
