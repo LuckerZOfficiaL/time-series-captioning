@@ -28,16 +28,18 @@ def main():
     config = load_config()
     random.seed(config['general']['random_seed'])
     refinement_model = config['model']['refinement_model']
-    checking_model = config['model']['checking_model']
-    caption_folder_path = config['path']['caption_folder_path']
+    #checking_model = config['model']['checking_model']
+    #caption_folder_path = config['path']['caption_folder_path']
     dataset_names = config['data']['dataset_names']
     refinement_types = config['refinement']['refinement_types']
     refinement_type = config['refinement']['refinement_type']
-    desired_style = config['refinement']['desired_style']
-    refinement_look_at_folder = config['refinement']["refinement_target"]
+    #desired_style = config['refinement']['desired_style']
 
-    look_at_captions_path = caption_folder_path + "/" + refinement_look_at_folder
-    print("\nRefining captions from folder", refinement_look_at_folder)
+    look_at_captions_path = config['refinement']["refinement_target_folder"]
+    save_folder = config['path']['refined_captions_folder_path'] #"/home/ubuntu/thesis/data/samples/captions/refined"
+
+    print("\nRefining captions from folder", look_at_captions_path)
+    print("\nSaving captions to", save_folder)
 
 
     if refinement_type not in refinement_types:
@@ -46,7 +48,7 @@ def main():
     for dataset_name in dataset_names:
         # read all caption files from the folder, use the refinement model to add real facts and save them back into the original files
         for filename in os.listdir(look_at_captions_path):
-            if filename.startswith(dataset_name) and filename.endswith(".txt"): # and "refined" not in filename:
+            if filename.startswith(dataset_name) and filename.endswith(".txt") and not any(f.startswith(filename[:-4]) for f in os.listdir(save_folder)): # and "refined" not in filename:
                 filepath = os.path.join(look_at_captions_path, filename)
                 with open(filepath, 'r') as file:
                     caption = file.read()
@@ -60,7 +62,8 @@ def main():
                         refined_caption = remove_source(refined_caption)
                         
                 elif refinement_type == "change style":
-                    refined_caption = change_linguistic_style(caption, model=refinement_model)
+                    style = random.choice(["casual", "academic", "poetic", "journalistic"])
+                    refined_caption = change_linguistic_style(caption, style=style, model=refinement_model)
                 elif refinement_type == "enrich language":
                     refined_caption = enrich_language(caption, model=refinement_model)
                 elif refinement_type == "factual checking":
@@ -70,13 +73,12 @@ def main():
                                         correction_method=config["refinement"]['factual_correction_method'],
                                         skip_numeric=config['refinement']['skip_numeric'])
 
-                save_folder = config['path']['refined_captions_folder_path'] #"/home/ubuntu/thesis/data/samples/captions/refined"
                 if len(refined_caption) > int(0.7 * len(caption)) and caption not in refined_caption: # if the answer is much shorter than the original caption, assume the model has refused to refine the caption, so save only if that doesn't happen
                     if refinement_type == "change style":
-                        folder_path = os.path.join(save_folder, "change style", desired_style)
+                        folder_path = save_folder
                         if not os.path.isdir(folder_path):  # Check if it's not a folder
                             os.makedirs(folder_path)  # Create the folder for that style
-                        postfix = f"_{desired_style}.txt"
+                        postfix = f"_{style}.txt"
                         save_path = folder_path +"/" + filename[:-4] + postfix
                     elif refinement_type == "enrich language":
                         postfix = f"_enriched.txt"

@@ -1418,7 +1418,7 @@ def add_facts_to_caption(caption, model="OpenAI GPT-4o", temperature=0.3, ask_ur
                             top_p=0.85)
     return response
 
-def change_linguistic_style(caption, style="casual", model="OpenAI GPT-4o"):
+def change_linguistic_style(caption, style="casual", model="Google Gemini 2.0 Flash"):
     prompt = f"""
     Here is a time series description. Carefully analyze it:  
     \n
@@ -3056,7 +3056,6 @@ def extract_num_dict_from_dict(metadata, model="Google Gemini-2.0-Flash"):
     print(e)
     print(f"Cannot be parsed!\n {response}")
   
-  
 
 def compare_num_dicts(gen_dict, gt_dict):
   result = {}
@@ -3075,7 +3074,41 @@ def compare_num_dicts(gen_dict, gt_dict):
   return result
   # 1 means correct, 0 incorrect, and None is when the GT also doesn't have it
 
+
+def save_paraphrase_consistency_question(caption_path1, caption_path2, same_phenom, prompt_save_folder, answer_save_folder):
   
+  with open(caption_path1, "r") as file1:
+    caption1 = file1.read()
+  with open(caption_path2, "r") as file1:
+    caption2 = file1.read()  
+    
+  prompt = f"""
+  Given the following two time series descriptions, please tell if they describe the same phenomenon.
+  
+  Answer with "true" if the two describe the same phenomenon, i.e. one can be the paraphrase of the other.
+  Answer with "false" if the two describe different phenomena.
+  
+  Description 1:
+  \n
+  {caption1}
+  \n
+  Description 2:
+  \n
+  {caption2}
+  \n
+  Return your answer either as "true" or "false", do not explain anything and do not add any text beyond that.
+  """
+  
+  file_path = os.path.join(prompt_save_folder, caption_path1.split('/')[-1][:-4]+"_"+caption_path2.split('/')[-1][:-4]+".txt")
+  with open(file_path, "w") as file:
+     file.write(prompt)
+     
+    
+  file_path = os.path.join(answer_save_folder, caption_path1.split('/')[-1][:-4]+"_"+caption_path2.split('/')[-1][:-4]+".txt")
+  with open(file_path, "w") as file:
+     file.write(str(same_phenom))
+
+
 def main():
   config = load_config()
 
