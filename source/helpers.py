@@ -1,4 +1,6 @@
+from ast import Assert
 from attr import attrib
+from click import prompt
 import requests 
 import random 
 import numpy as np 
@@ -1418,7 +1420,7 @@ def add_facts_to_caption(caption, model="OpenAI GPT-4o", temperature=0.3, ask_ur
                             top_p=0.85)
     return response
 
-def change_linguistic_style(caption, style="casual", model="OpenAI GPT-4o"):
+def change_linguistic_style(caption, style="casual", model="Google Gemini 2.0 Flash"):
     prompt = f"""
     Here is a time series description. Carefully analyze it:  
     \n
@@ -3059,7 +3061,6 @@ def extract_num_dict_from_dict(metadata, model="Google Gemini-2.0-Flash"):
     print(e)
     print(f"Cannot be parsed!\n {response}")
   
-  
 
 def compare_num_dicts(gen_dict, gt_dict):
   result = {}
@@ -3078,7 +3079,305 @@ def compare_num_dicts(gen_dict, gt_dict):
   return result
   # 1 means correct, 0 incorrect, and None is when the GT also doesn't have it
 
+
+def create_paraphrase_consistency_question(caption_path1, caption2, same_phenom, prompt_save_folder, answer_save_folder):
+  """
+  caption_path1: filepath of the main anchor caption
+  caption2: a string
+  same_phenom: a boolean indicating whther the two captions describe the same phenomenon
+  """
   
+  with open(caption_path1, "r") as file1:
+    caption1 = file1.read()
+    
+  prompt = f"""
+  Given the following two time series descriptions, please tell if they describe the same phenomenon.
+  
+  Answer with "true" if the two describe the same phenomenon, i.e. one can be the paraphrase of the other.
+  Answer with "false" if the two describe different phenomena.
+  
+  Description 1:
+  \n
+  {caption1}
+  \n
+  Description 2:
+  \n
+  {caption2}
+  \n
+  Return your answer either as "true" or "false", do not explain anything and do not add any text beyond that.
+  """
+  
+  file_path = os.path.join(prompt_save_folder, caption_path1.split('/')[-1])
+  with open(file_path, "w") as file:
+     file.write(prompt)
+     
+    
+  file_path = os.path.join(answer_save_folder, caption_path1.split('/')[-1])
+  with open(file_path, "w") as file:
+     file.write(str(same_phenom))
+
+def perturb_caption(caption, model="Google Gemini-2.0-Flash"):
+  prompt = f"""Your task is to minimally modify a time series description so that it's meaning is altered. 
+    For example, you can switch "increase" with "decrease", "upward" to "downward" a 1 to 2 times, or something more sophisticated. Keep the description structurally identical to the original text, you don't have to alter too much information, altering anywherebetween 1 to 3 parts is enough.
+    
+    Here's the description to alter:
+    \n
+    {caption}
+    \n
+    
+    Give your answer in a paragraph of text as the given description, without any explanation and formatting.
+  
+  """
+  response = get_response(prompt=prompt, model=model, temperature=0.6)
+  return response
+
+def create_volatility_question(ts_path1, ts2, prompt_save_folder, answer_save_folder):
+  ts1 = read_txt_to_num_list(ts_path1)
+  prompt = f"""
+  Given the following two time series A and B, please identify which one has higher volatility.
+  
+  A:
+  {ts1}
+  
+  B:
+  {ts2}
+  
+  You must respond only with valid JSON, and no extra text or markdown.
+  The JSON schema is:
+  {{
+    "answer": "A" or "B"
+  }}
+  Ensure your output parses as JSON with exactly one top-level object containing the answer field.
+  
+  """
+  
+  # this function requires that the std information is available in the metadata dictionary. So, checking if it is available must be done before calling this function.
+  
+  std1 = round(float(np.std(ts1)), 3)
+  std2 = round(float(np.std(ts2)), 3)
+  
+  assert std1 != std2
+  
+  if std1 > std2:
+    answer = "A"
+  else:
+    answer = "B"
+    
+    
+  file_path = os.path.join(prompt_save_folder, ts_path1.split('/')[-1])
+  with open(file_path, "w") as file:
+    file.write(prompt)
+    
+  file_path = os.path.join(answer_save_folder, ts_path1.split('/')[-1])
+  with open(file_path, "w") as file:
+    file.write(str(answer))
+    
+def create_mean_question(ts_path1, ts2, prompt_save_folder, answer_save_folder):
+  ts1 = read_txt_to_num_list(ts_path1)
+  prompt = f"""
+  Given the following two time series A and B, please identify which one has higher overall values.
+  
+  A:
+  {ts1}
+  
+  B:
+  {ts2}
+  
+  You must respond only with valid JSON, and no extra text or markdown.
+  The JSON schema is:
+  {{
+    "answer": "A" or "B"
+  }}
+  Ensure your output parses as JSON with exactly one top-level object containing the answer field.
+  
+  """
+  
+  # this function requires that the std information is available in the metadata dictionary. So, checking if it is available must be done before calling this function.
+  mean1 = round(float(sum(ts1)/len(ts1)), 3)
+  mean2 = round(float(sum(ts2)/len(ts2)), 3)
+  
+  assert mean1 != mean2
+  
+  if mean1 > mean2:
+    answer = "A"
+  else:
+    answer = "B"
+    
+    
+  file_path = os.path.join(prompt_save_folder, ts_path1.split('/')[-1])
+  with open(file_path, "w") as file:
+    file.write(prompt)
+    
+  file_path = os.path.join(answer_save_folder, ts_path1.split('/')[-1])
+  with open(file_path, "w") as file:
+    file.write(str(answer))
+          
+def create_same_phenomenon_question(ts_path1, ts2, same_phenom, prompt_save_folder, answer_save_folder):
+  ts1 = read_txt_to_num_list(ts_path1)
+  if same_phenom: # generate ts2 by adding gaussian noise
+    alpha = 0.01      # Noise scaling factor (tune as needed)
+    gamma = 1.0      # Exponent for controlling nonlinearity
+    epsilon = 1e-3   # Small constant to avoid zero std
+
+    mean = 0  # Mean of the Gaussian noise
+    ts1 = np.array(ts1)  # ensure it's a NumPy array
+    std_dev = alpha * (np.abs(ts1) + epsilon) ** gamma
+    noise = np.random.normal(mean, std_dev)
+    ts2 = [round(float(val + n), 2) for val, n in zip(ts1, noise)]
+  
+  if len(ts1) > len(ts2):
+    ts1 = ts1[:len(ts2)]
+  elif len(ts2) > len(ts1):
+    ts2 = ts2[:len(ts1)]
+      
+  prompt = f"""
+  Your task is to determine whether two time series A and B roughly represent the same phenomenon, tolerating noise.
+  If they do represent the same pheomenon up to noise, answer with "True", otherwise with "False"
+    
+  A:
+  {ts1}
+    
+  B:
+  {ts2}
+    
+  You must respond only with valid JSON, and no extra text or markdown.
+  The JSON schema is:
+  {{
+    "answer": "True" or "False"
+  }}
+  <string> must be an answer string containing only A, B.
+  Ensure your output parses as JSON with exactly one top-level object containing the answer field.  
+  """
+
+  file_path = os.path.join(prompt_save_folder, ts_path1.split('/')[-1])
+  with open(file_path, "w") as file:
+    file.write(prompt)
+      
+  file_path = os.path.join(answer_save_folder, ts_path1.split('/')[-1])
+  with open(file_path, "w") as file:
+   file.write(str(same_phenom))
+    
+def create_peak_earlier_question(ts_path1, ts2, prompt_save_folder, answer_save_folder):
+  ts1 = read_txt_to_num_list(ts_path1)
+
+  prompt = f"""
+  Given two time series A and B, detect which one reaches its maximum earlier.
+    
+  A:
+  {ts1}
+    
+  B:
+  {ts2}
+    
+  You must respond only with valid JSON, and no extra text or markdown.
+  The JSON schema is:
+  {{
+    "answer": "A" or "B"
+  }}
+  <string> must be an answer string containing only A, B.
+  Ensure your output parses as JSON with exactly one top-level object containing the answer field.  
+  """
+  
+  max_idx_ts1 = ts1.index(max(ts1))
+  max_idx_ts2 = ts2.index(max(ts2))
+
+  assert max_idx_ts1 != max_idx_ts2
+
+  if max_idx_ts1 < max_idx_ts2:
+    answer = "A"
+  else:
+    answer = "B"
+
+  file_path = os.path.join(prompt_save_folder, ts_path1.split('/')[-1])
+  with open(file_path, "w") as file:
+    file.write(prompt)
+      
+  file_path = os.path.join(answer_save_folder, ts_path1.split('/')[-1])
+  with open(file_path, "w") as file:
+    file.write(str(answer))
+    
+def create_bottom_earlier_question(ts_path1, ts2, prompt_save_folder, answer_save_folder):
+  ts1 = read_txt_to_num_list(ts_path1)
+
+  prompt = f"""
+  Given two time series A and B, detect which one reaches its minimum earlier.
+    
+  A:
+  {ts1}
+    
+  B:
+  {ts2}
+    
+  You must respond only with valid JSON, and no extra text or markdown.
+  The JSON schema is:
+  {{
+    "answer": "A" or "B"
+  }}
+  <string> must be an answer string containing only A, B.
+  Ensure your output parses as JSON with exactly one top-level object containing the answer field.  
+  """
+  
+  min_idx_ts1 = ts1.index(max(ts1))
+  min_idx_ts2 = ts2.index(max(ts2))
+  
+  assert min_idx_ts1 != min_idx_ts2
+
+  if min_idx_ts1 < min_idx_ts2:
+    answer = "A"
+  else:
+    answer = "B"
+
+  file_path = os.path.join(prompt_save_folder, ts_path1.split('/')[-1])
+  with open(file_path, "w") as file:
+    file.write(prompt)
+      
+  file_path = os.path.join(answer_save_folder, ts_path1.split('/')[-1])
+  with open(file_path, "w") as file:
+    file.write(str(answer))
+           
+def create_amplitude_question(ts_path1, ts2, prompt_save_folder, answer_save_folder):
+  ts1 = read_txt_to_num_list(ts_path1)
+
+  prompt = f"""
+  Given two time series A and B, detect which one has a higher amplitude defined as maximum - minimum.
+    
+  A:
+  {ts1}
+    
+  B:
+  {ts2}
+    
+  You must respond only with valid JSON, and no extra text or markdown.
+  The JSON schema is:
+  {{
+    "answer": "A" or "B"
+  }}
+  <string> must be an answer string containing only A, B.
+  Ensure your output parses as JSON with exactly one top-level object containing the answer field.  
+  """
+  
+  amplitude1 = max(ts1) - min(ts1)
+  amplitude2 = max(ts2) - min(ts2)
+
+  assert amplitude1 != amplitude2
+
+  if amplitude1 < amplitude2:
+    answer = "A"
+  else:
+    answer = "B"
+
+  file_path = os.path.join(prompt_save_folder, ts_path1.split('/')[-1])
+  with open(file_path, "w") as file:
+    file.write(prompt)
+      
+  file_path = os.path.join(answer_save_folder, ts_path1.split('/')[-1])
+  with open(file_path, "w") as file:
+    file.write(str(answer))
+
+      
+    
+    
+    
 def main():
   config = load_config()
 

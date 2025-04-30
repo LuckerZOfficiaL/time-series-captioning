@@ -3,8 +3,7 @@ general:
   is_train: false
 
 data:
-  #dataset_names: [air quality, border crossing, crime, demography, road injuries, covid, co2, diet, walmart, online retail, agriculture]
-  dataset_names: [demography]
+  dataset_names: [air quality, border crossing, crime, demography, road injuries, covid, co2, diet, walmart, online retail, agriculture]
   series_len: 10 # null
   request_augmentations: 0 # how many times to rephrase the original prompt request?
   n_samples: 300 # how many window samples to extract per dataset? i.e. how many time series to sample? Note that this is just the number of real samples and not the number of captions because each model in used_models generates its version of the caption. So, the number of captions generated will be n_samples*len(used_models).
@@ -25,9 +24,9 @@ model:
 
 refinement:
   refinement_types: [add facts, change style, enrich language, factual checking]
-  refinement_type: add facts
+  refinement_type: change style
   desired_style: casual # matters only if refinement_type == change style
-  refinement_target: raw  #raw, rag, refined/add facts ----- What captions to refine?
+  refinement_target_folder: /home/ubuntu/thesis/data/samples/new samples no overlap/test/gt_captions  #what captions to refine?
   batch_size: 5 # how many facts to present to the LLM in each prompt for removing common sense and checking facts?
   factual_correction_method: llm # fill in the gap
   skip_numeric: true # whether to skip numeric statements in factual checking, so that they get all preserved
@@ -43,7 +42,7 @@ path: # paths that have "folder" in its name are folder paths, otherwise they ar
   ts_folder_path: /home/ubuntu/thesis/data/samples/new samples no overlap/train/time series
   plot_folder_path: /home/ubuntu/thesis/data/samples/new samples no overlap/train/plots
   metadata_folder_path: /home/ubuntu/thesis/data/samples/new samples no overlap/train/metadata
-  refined_captions_folder_path: /home/ubuntu/thesis/data/samples/captions/refined
+  refined_captions_folder_path: /home/ubuntu/thesis/data/samples/new samples no overlap/test/gt_captions_paraphrased
   verified_captions_folder_path: /home/ubuntu/thesis/data/samples/captions/verified
   extracted_facts_folder_path: /home/ubuntu/thesis/data/samples/captions/extracted facts
   filtered_facts_folder_path: /home/ubuntu/thesis/data/samples/captions/filtered facts
@@ -55,19 +54,28 @@ path: # paths that have "folder" in its name are folder paths, otherwise they ar
   checkpoints_folder_path: /home/ubuntu/thesis/model/checkpoints
   gt_metadata_folder_path: /home/ubuntu/thesis/data/samples/new samples no overlap/test/metadata
   gt_captions_folder_path: /home/ubuntu/thesis/data/samples/new samples no overlap/test/gt_captions
-  generated_captions_folder_path: /home/ubuntu/thesis/data/samples/new samples no overlap/generated captions/internvl_chronos_Mob2_5-2B_5.621_5eps
+  gt_ts_folder_path: /home/ubuntu/thesis/data/samples/new samples no overlap/test/time series
+  generated_captions_folder_path: /home/ubuntu/thesis/data/samples/new samples no overlap/generated captions/llava-mistral-7b
   evaluation_results_folder_path: /home/ubuntu/thesis/data/evaluation results
+  paraphrase_consistency_folder_path: /home/ubuntu/thesis/data/samples/new samples no overlap/tasks/paraphrase_consistency
+  paraphrased_gt_folder_path: /home/ubuntu/thesis/data/samples/new samples no overlap/test/gt_captions_paraphrased
+  comparison_questions_folder_path: /home/ubuntu/thesis/data/samples/new samples no overlap/tasks/ts_comparison
+
+
+new_tasks:
+  comparison_questions_per_subtask: 500 
+  ts_comparison_tasks: [volatility, mean, same_phenomenon, peak_earlier, bottom_earlier, amplitude] # volatility, mean, same_phenomenon, peak_earlier, bottom_earlier, amplitude
 
 
 train:
-  lr_for_pretrained: 1e-6
+  lr_for_pretrained: 1e-7
   lr_for_new: 1e-3
-  epochs: 3
+  epochs: 5
   weight_decay: 1e-2
-  batch_size: 24
+  batch_size: 40
   loss_fn: cross-entropy # currently still useless
   teacher_forcing: true # if false, the model generates autoregressively during training
-  milestones: [2, 10, 20]
+  milestones: [5, 10, 20]
   early_stopping: false
   patience: 5 # used only if early_stoping=true
   clip_grad_norm: 1.0
@@ -81,7 +89,7 @@ eval:
   
 
 mobtep:
-  mob_checkpoint: chronos_Mob2_5-2B_5.848_5eps
+  mob_checkpoint: chronos_Mob2_5-2B_5.621_5eps
   chronos_name: amazon/chronos-t5-small
   chronos_pooling: mean # mean, max
   use_chronos: true
