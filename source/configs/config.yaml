@@ -54,14 +54,17 @@ path: # paths that have "folder" in its name are folder paths, otherwise they ar
   checkpoints_folder_path: /home/ubuntu/thesis/model/checkpoints
   gt_metadata_folder_path: /home/ubuntu/thesis/data/samples/new samples no overlap/test/metadata
   gt_captions_folder_path: /home/ubuntu/thesis/data/samples/new samples no overlap/test/gt_captions
+  gt_ts_folder_path: /home/ubuntu/thesis/data/samples/new samples no overlap/test/time series
   generated_captions_folder_path: /home/ubuntu/thesis/data/samples/new samples no overlap/generated captions/llava-mistral-7b
   evaluation_results_folder_path: /home/ubuntu/thesis/data/evaluation results
   paraphrase_consistency_folder_path: /home/ubuntu/thesis/data/samples/new samples no overlap/tasks/paraphrase_consistency
   paraphrased_gt_folder_path: /home/ubuntu/thesis/data/samples/new samples no overlap/test/gt_captions_paraphrased
+  comparison_questions_folder_path: /home/ubuntu/thesis/data/samples/new samples no overlap/tasks/ts_comparison
 
 
 new_tasks:
-  paraphrase_consistency_questions: 500
+  comparison_questions_per_subtask: 500 
+  ts_comparison_tasks: [volatility, mean, same_phenomenon, peak_earlier, bottom_earlier, amplitude] # volatility, mean, same_phenomenon, peak_earlier, bottom_earlier, amplitude
 
 
 train:

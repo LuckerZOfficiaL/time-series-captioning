@@ -1,4 +1,6 @@
+from ast import Assert
 from attr import attrib
+from click import prompt
 import requests 
 import random 
 import numpy as np 
@@ -3075,7 +3077,7 @@ def compare_num_dicts(gen_dict, gt_dict):
   # 1 means correct, 0 incorrect, and None is when the GT also doesn't have it
 
 
-def save_paraphrase_consistency_question(caption_path1, caption2, same_phenom, prompt_save_folder, answer_save_folder):
+def create_paraphrase_consistency_question(caption_path1, caption2, same_phenom, prompt_save_folder, answer_save_folder):
   """
   caption_path1: filepath of the main anchor caption
   caption2: a string
@@ -3126,6 +3128,253 @@ def perturb_caption(caption, model="Google Gemini-2.0-Flash"):
   response = get_response(prompt=prompt, model=model, temperature=0.6)
   return response
 
+def create_volatility_question(ts_path1, ts2, prompt_save_folder, answer_save_folder):
+  ts1 = read_txt_to_num_list(ts_path1)
+  prompt = f"""
+  Given the following two time series A and B, please identify which one has higher volatility.
+  
+  A:
+  {ts1}
+  
+  B:
+  {ts2}
+  
+  You must respond only with valid JSON, and no extra text or markdown.
+  The JSON schema is:
+  {{
+    "answer": "A" or "B"
+  }}
+  Ensure your output parses as JSON with exactly one top-level object containing the answer field.
+  
+  """
+  
+  # this function requires that the std information is available in the metadata dictionary. So, checking if it is available must be done before calling this function.
+  
+  std1 = round(float(np.std(ts1)), 3)
+  std2 = round(float(np.std(ts2)), 3)
+  
+  assert std1 != std2
+  
+  if std1 > std2:
+    answer = "A"
+  else:
+    answer = "B"
+    
+    
+  file_path = os.path.join(prompt_save_folder, ts_path1.split('/')[-1])
+  with open(file_path, "w") as file:
+    file.write(prompt)
+    
+  file_path = os.path.join(answer_save_folder, ts_path1.split('/')[-1])
+  with open(file_path, "w") as file:
+    file.write(str(answer))
+    
+def create_mean_question(ts_path1, ts2, prompt_save_folder, answer_save_folder):
+  ts1 = read_txt_to_num_list(ts_path1)
+  prompt = f"""
+  Given the following two time series A and B, please identify which one has higher overall values.
+  
+  A:
+  {ts1}
+  
+  B:
+  {ts2}
+  
+  You must respond only with valid JSON, and no extra text or markdown.
+  The JSON schema is:
+  {{
+    "answer": "A" or "B"
+  }}
+  Ensure your output parses as JSON with exactly one top-level object containing the answer field.
+  
+  """
+  
+  # this function requires that the std information is available in the metadata dictionary. So, checking if it is available must be done before calling this function.
+  mean1 = round(float(sum(ts1)/len(ts1)), 3)
+  mean2 = round(float(sum(ts2)/len(ts2)), 3)
+  
+  assert mean1 != mean2
+  
+  if mean1 > mean2:
+    answer = "A"
+  else:
+    answer = "B"
+    
+    
+  file_path = os.path.join(prompt_save_folder, ts_path1.split('/')[-1])
+  with open(file_path, "w") as file:
+    file.write(prompt)
+    
+  file_path = os.path.join(answer_save_folder, ts_path1.split('/')[-1])
+  with open(file_path, "w") as file:
+    file.write(str(answer))
+          
+def create_same_phenomenon_question(ts_path1, ts2, same_phenom, prompt_save_folder, answer_save_folder):
+  ts1 = read_txt_to_num_list(ts_path1)
+  if same_phenom: # generate ts2 by adding gaussian noise
+    alpha = 0.01      # Noise scaling factor (tune as needed)
+    gamma = 1.0      # Exponent for controlling nonlinearity
+    epsilon = 1e-3   # Small constant to avoid zero std
+
+    mean = 0  # Mean of the Gaussian noise
+    ts1 = np.array(ts1)  # ensure it's a NumPy array
+    std_dev = alpha * (np.abs(ts1) + epsilon) ** gamma
+    noise = np.random.normal(mean, std_dev)
+    ts2 = [round(float(val + n), 2) for val, n in zip(ts1, noise)]
+  
+  if len(ts1) > len(ts2):
+    ts1 = ts1[:len(ts2)]
+  elif len(ts2) > len(ts1):
+    ts2 = ts2[:len(ts1)]
+      
+  prompt = f"""
+  Your task is to determine whether two time series A and B roughly represent the same phenomenon, tolerating noise.
+  If they do represent the same pheomenon up to noise, answer with "True", otherwise with "False"
+    
+  A:
+  {ts1}
+    
+  B:
+  {ts2}
+    
+  You must respond only with valid JSON, and no extra text or markdown.
+  The JSON schema is:
+  {{
+    "answer": "True" or "False"
+  }}
+  <string> must be an answer string containing only A, B.
+  Ensure your output parses as JSON with exactly one top-level object containing the answer field.  
+  """
+
+  file_path = os.path.join(prompt_save_folder, ts_path1.split('/')[-1])
+  with open(file_path, "w") as file:
+    file.write(prompt)
+      
+  file_path = os.path.join(answer_save_folder, ts_path1.split('/')[-1])
+  with open(file_path, "w") as file:
+   file.write(str(same_phenom))
+    
+def create_peak_earlier_question(ts_path1, ts2, prompt_save_folder, answer_save_folder):
+  ts1 = read_txt_to_num_list(ts_path1)
+
+  prompt = f"""
+  Given two time series A and B, detect which one reaches its maximum earlier.
+    
+  A:
+  {ts1}
+    
+  B:
+  {ts2}
+    
+  You must respond only with valid JSON, and no extra text or markdown.
+  The JSON schema is:
+  {{
+    "answer": "A" or "B"
+  }}
+  <string> must be an answer string containing only A, B.
+  Ensure your output parses as JSON with exactly one top-level object containing the answer field.  
+  """
+  
+  max_idx_ts1 = ts1.index(max(ts1))
+  max_idx_ts2 = ts2.index(max(ts2))
+
+  assert max_idx_ts1 != max_idx_ts2
+
+  if max_idx_ts1 < max_idx_ts2:
+    answer = "A"
+  else:
+    answer = "B"
+
+  file_path = os.path.join(prompt_save_folder, ts_path1.split('/')[-1])
+  with open(file_path, "w") as file:
+    file.write(prompt)
+      
+  file_path = os.path.join(answer_save_folder, ts_path1.split('/')[-1])
+  with open(file_path, "w") as file:
+    file.write(str(answer))
+    
+def create_bottom_earlier_question(ts_path1, ts2, prompt_save_folder, answer_save_folder):
+  ts1 = read_txt_to_num_list(ts_path1)
+
+  prompt = f"""
+  Given two time series A and B, detect which one reaches its minimum earlier.
+    
+  A:
+  {ts1}
+    
+  B:
+  {ts2}
+    
+  You must respond only with valid JSON, and no extra text or markdown.
+  The JSON schema is:
+  {{
+    "answer": "A" or "B"
+  }}
+  <string> must be an answer string containing only A, B.
+  Ensure your output parses as JSON with exactly one top-level object containing the answer field.  
+  """
+  
+  min_idx_ts1 = ts1.index(max(ts1))
+  min_idx_ts2 = ts2.index(max(ts2))
+  
+  assert min_idx_ts1 != min_idx_ts2
+
+  if min_idx_ts1 < min_idx_ts2:
+    answer = "A"
+  else:
+    answer = "B"
+
+  file_path = os.path.join(prompt_save_folder, ts_path1.split('/')[-1])
+  with open(file_path, "w") as file:
+    file.write(prompt)
+      
+  file_path = os.path.join(answer_save_folder, ts_path1.split('/')[-1])
+  with open(file_path, "w") as file:
+    file.write(str(answer))
+           
+def create_amplitude_question(ts_path1, ts2, prompt_save_folder, answer_save_folder):
+  ts1 = read_txt_to_num_list(ts_path1)
+
+  prompt = f"""
+  Given two time series A and B, detect which one has a higher amplitude defined as maximum - minimum.
+    
+  A:
+  {ts1}
+    
+  B:
+  {ts2}
+    
+  You must respond only with valid JSON, and no extra text or markdown.
+  The JSON schema is:
+  {{
+    "answer": "A" or "B"
+  }}
+  <string> must be an answer string containing only A, B.
+  Ensure your output parses as JSON with exactly one top-level object containing the answer field.  
+  """
+  
+  amplitude1 = max(ts1) - min(ts1)
+  amplitude2 = max(ts2) - min(ts2)
+
+  assert amplitude1 != amplitude2
+
+  if amplitude1 < amplitude2:
+    answer = "A"
+  else:
+    answer = "B"
+
+  file_path = os.path.join(prompt_save_folder, ts_path1.split('/')[-1])
+  with open(file_path, "w") as file:
+    file.write(prompt)
+      
+  file_path = os.path.join(answer_save_folder, ts_path1.split('/')[-1])
+  with open(file_path, "w") as file:
+    file.write(str(answer))
+
+      
+    
+    
+    
 def main():
   config = load_config()
 
