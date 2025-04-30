@@ -53,7 +53,7 @@ def main():
                 gt_caption = file.read()
             caption2 = perturb_caption(gt_caption, model=config['model']['refinement_model']) # create the second caption as the perturbed version of the gt caption, this makes the task harder
         
-        print(f"{i+1}/{num_questions} - Generating a {str(same_phenom)} pair for {gt_filename}.")
+        print(f"{i+1}/{num_questions-num_existing_files} - Generating a {str(same_phenom)} pair for {gt_filename}.")
         save_paraphrase_consistency_question(caption_path1=gt_caption_path,
                                              caption2=caption2,
                                              same_phenom=same_phenom,
