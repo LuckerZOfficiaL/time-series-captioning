@@ -2,8 +2,8 @@ import json
 import os
 import re
 
-GROUND_TRUTH_DIR = "data/samples/new samples no overlap/tasks/plot_retrieval_cross_domain/ground_truth"
-ANSWER_DIR = "qwen_plot_retrieval_easy"
+GROUND_TRUTH_DIR = "data/samples/new samples no overlap/tasks/caption_retrieval_cross_domain_with_image/ground_truth"
+ANSWER_DIR = "llava_caption_retrieval_with_image_easy"
 
 def get_caption_retrieval_prompts(data_dir):
     prompt_dir = os.path.join(data_dir, 'prompts')

@@ -12,7 +12,7 @@ Here is a time series:
 {ts}
 
 {image_str}
-What description best relates to this time series?
+What caption best describes to this time series?
 (A) {d1}
 (B) {d2}
 (C) {d3}
@@ -71,7 +71,7 @@ def main_local_data(data_path, out_dir, use_image=True):
         prompt_text, plot_path = prompt
         json_entry = {"prompt": prompt_text}
         if use_image:
-            json_entry["plot_path"] = plot_path
+            json_entry["plot_paths"] = [plot_path]
         with open(os.path.join(out_dir, "prompts", name.replace('.txt', '.json')), "w") as fh:
             json.dump(json_entry, fh) 
         with open(os.path.join(out_dir, "ground_truth", name), "w") as fh:
@@ -124,7 +124,7 @@ def main_local_data_hard(data_path, out_dir, use_image=True):
         prompt_text, plot_path = prompt
         json_entry = {"prompt": prompt_text}
         if use_image:
-            json_entry["plot_path"] = plot_path
+            json_entry["plot_paths"] = [plot_path]
         with open(os.path.join(out_dir, "prompts", name.replace('.txt', '.json')), "w") as fh:
             json.dump(json_entry, fh) 
         with open(os.path.join(out_dir, "ground_truth", name), "w") as fh:
@@ -162,5 +162,5 @@ def main_tsandlanguage():
 if __name__ == "__main__":
     np.random.seed(414)
     main_local_data_hard(data_path="data/samples/new samples no overlap/test",
-                    out_dir="caption_retrieval_hard_no_image",
-                    use_image=False)
+                    out_dir="caption_retrieval_same_domain_with_image",
+                    use_image=True)
