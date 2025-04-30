@@ -3113,7 +3113,7 @@ def save_paraphrase_consistency_question(caption_path1, caption2, same_phenom, p
 
 def perturb_caption(caption, model="Google Gemini-2.0-Flash"):
   prompt = f"""Your task is to minimally modify a time series description so that it's meaning is altered. 
-    For example, you can switch "increase" with "decrease", "upward" to "downward" a 1 to 2 times, or something more sophisticated. Keep the description structurally identical to the original text, you don't have to alter too much information, altering anywhere between 1 to 3 parts is enough.
+    For example, you can switch "increase" with "decrease", "upward" to "downward" a 1 to 2 times, or something more sophisticated. Keep the description structurally identical to the original text, you don't have to alter too much information, altering anywherebetween 1 to 3 parts is enough.
     
     Here's the description to alter:
     \n
