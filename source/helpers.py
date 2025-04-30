@@ -3075,12 +3075,15 @@ def compare_num_dicts(gen_dict, gt_dict):
   # 1 means correct, 0 incorrect, and None is when the GT also doesn't have it
 
 
-def save_paraphrase_consistency_question(caption_path1, caption_path2, same_phenom, prompt_save_folder, answer_save_folder):
+def save_paraphrase_consistency_question(caption_path1, caption2, same_phenom, prompt_save_folder, answer_save_folder):
+  """
+  caption_path1: filepath of the main anchor caption
+  caption2: a string
+  same_phenom: a boolean indicating whther the two captions describe the same phenomenon
+  """
   
   with open(caption_path1, "r") as file1:
     caption1 = file1.read()
-  with open(caption_path2, "r") as file1:
-    caption2 = file1.read()  
     
   prompt = f"""
   Given the following two time series descriptions, please tell if they describe the same phenomenon.
@@ -3099,15 +3102,29 @@ def save_paraphrase_consistency_question(caption_path1, caption_path2, same_phen
   Return your answer either as "true" or "false", do not explain anything and do not add any text beyond that.
   """
   
-  file_path = os.path.join(prompt_save_folder, caption_path1.split('/')[-1][:-4]+"_"+caption_path2.split('/')[-1][:-4]+".txt")
+  file_path = os.path.join(prompt_save_folder, caption_path1.split('/')[-1])
   with open(file_path, "w") as file:
      file.write(prompt)
      
     
-  file_path = os.path.join(answer_save_folder, caption_path1.split('/')[-1][:-4]+"_"+caption_path2.split('/')[-1][:-4]+".txt")
+  file_path = os.path.join(answer_save_folder, caption_path1.split('/')[-1])
   with open(file_path, "w") as file:
      file.write(str(same_phenom))
 
+def perturb_caption(caption, model="Google Gemini-2.0-Flash"):
+  prompt = f"""Your task is to minimally modify a time series description so that it's meaning is altered. 
+    For example, you can switch "increase" with "decrease", "upward" to "downward" a 1 to 2 times, or something more sophisticated. Keep the description structurally identical to the original text, you don't have to alter too much information, altering anywhere between 1 to 3 parts is enough.
+    
+    Here's the description to alter:
+    \n
+    {caption}
+    \n
+    
+    Give your answer in a paragraph of text as the given description, without any explanation and formatting.
+  
+  """
+  response = get_response(prompt=prompt, model=model, temperature=0.6)
+  return response
 
 def main():
   config = load_config()
