@@ -16,8 +16,8 @@ from helpers import generate_prompt_for_baseline
 from phi_parallel_gpu import main 
 
 MODEL_PATH = "Qwen/Qwen2.5-Omni-7B"
-DATA_DIR = "/home/ubuntu/time-series-captioning/data/samples/new samples no overlap/test"
-OUT_DIR = "/home/ubuntu/time-series-captioning/qwen_fine_tune_etiology_test"
+DATA_DIR = "data/samples/new samples no overlap/tasks/ts_retrieval_hard"
+OUT_DIR = "/home/ubuntu/time-series-captioning/qw"
 
 
 @lru_cache

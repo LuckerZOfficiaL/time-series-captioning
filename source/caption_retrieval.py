@@ -2,8 +2,8 @@ import json
 import os
 import re
 
-GROUND_TRUTH_DIR = "data/samples/new samples no overlap/tasks/caption_retrieval_easy_with_image/ground_truth"
-ANSWER_DIR = "phi_etiology_test_with_image"
+GROUND_TRUTH_DIR = "data/samples/new samples no overlap/tasks/plot_retrieval_cross_domain/ground_truth"
+ANSWER_DIR = "qwen_plot_retrieval_easy"
 
 def get_caption_retrieval_prompts(data_dir):
     prompt_dir = os.path.join(data_dir, 'prompts')
@@ -41,6 +41,7 @@ def eval_score(answer_dir, ground_truth_dir):
     accuracy_rate = len([i for i, g in enumerate(ground_truths) if g == answers[i]]) / len(answers)
     print(f"Answer dir: {answer_dir}")
     print(f"Ground truth dir: {ground_truth_dir}")
+    print(f"Num answers: {len(answers)}")
     print(f"Accuracy rate: {accuracy_rate:.3f}")
     print("---------------------")
 

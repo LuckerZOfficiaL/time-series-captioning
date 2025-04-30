@@ -13,9 +13,9 @@ import GPUtil  # Make sure to install this package: pip install gputil
 from helpers import generate_prompt_for_baseline
 
 MODEL_PATH = "microsoft/Phi-4-multimodal-instruct"
-DATA_DIR = "/home/ubuntu/time-series-captioning/caption_retrieval_easy"
-OUT_DIR = "/home/ubuntu/time-series-captioning/phi_etiology_test_with_image"
-BATCH_SIZE = 2 # Adjust batch size as needed
+DATA_DIR = "data/samples/new samples no overlap/tasks/caption_retrieval_hard_with_image"
+OUT_DIR = "/home/ubuntu/time-series-captioning/phi_etiology_test_with_image_hard"
+BATCH_SIZE = 1 # Adjust batch size as needed
 
 import torch
 from PIL import Image
@@ -30,9 +30,9 @@ def _load_batch_phi_model(model_name, device: torch.device):
         torch_dtype=torch.float16,
         low_cpu_mem_usage=True,
         trust_remote_code=True,
-        _attn_implementation='flash_attention_2',
+        _attn_implementation="eager"
+#        _attn_implementation='flash_attention_2',
     )
-    model.config = model.model.config
     model.to(device)
     return model, processor
 
@@ -113,9 +113,9 @@ def write_caption_etiology(model_eval, ts_batch, device: torch.device, data_dir,
             inputs = json.load(fh)
             prompts.append(inputs['prompt']) 
             if use_image: 
-                images.append(inputs['plot_path'])       
+                images.append(inputs['plot_paths'])       
     # TODO: parametrize use_image 
-    captions = model_eval(prompts, image_files=images, device=device, use_image=False)
+    captions = model_eval(prompts, image_files=images, device=device, use_image=use_image)
     for ts_name, caption in zip(ts_batch, captions):
         out_file = os.path.join(out_dir, f"{ts_name}.txt")
         with open(out_file, "w+") as fh:
@@ -130,7 +130,7 @@ def process_worker(gpu_id, model_eval, ts_names, data_dir, out_dir, use_image=Tr
     print(f"Process on GPU {gpu_id} finished processing {len(ts_names)} time series.")
 
 
-NUM_GPUS_TO_USE = 2
+NUM_GPUS_TO_USE = 1
 
 def main(model_eval, data_dir, out_dir, use_image=True):
     # Retrieve list of time series names yet to be processed.
