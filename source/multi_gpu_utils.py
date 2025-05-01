@@ -12,7 +12,7 @@ import GPUtil  # Make sure to install this package: pip install gputil
 import torch
 from PIL import Image
 
-from helpers import generate_prompt_for_baseline
+from source.helpers import generate_prompt_for_baseline
 
 # Adjust these as needed for memory constraints
 BATCH_SIZE = 1 

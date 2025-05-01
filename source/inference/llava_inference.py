@@ -8,8 +8,8 @@ import time
 
 from llava.eval.run_llava import image_parser, load_images 
 
-from helpers import generate_prompt_for_baseline
-from multi_gpu_utils import caption_loader, task_loader, run_multi_gpu
+from source.helpers import generate_prompt_for_baseline
+from source.multi_gpu_utils import caption_loader, task_loader, run_multi_gpu
 
 import requests
 from PIL import Image
