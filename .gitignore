@@ -3,7 +3,6 @@ fact bank/
 factcheck/
 samples/
 processed/
-__pycache__/
 
 .aws/
 .credentials/
