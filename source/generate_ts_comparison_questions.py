@@ -51,8 +51,8 @@ def main():
                 
                         if subtask == "volatility":                   
                                     create_volatility_question(ts_path1=ts1_filepath, ts2=ts2, 
-                                                        prompt_save_folder=prompt_save_folder,
-                                                        answer_save_folder=answer_save_folder)
+                                                prompt_save_folder=prompt_save_folder,
+                                                answer_save_folder=answer_save_folder)
 
                                     
                         elif subtask == "mean":
