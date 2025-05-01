@@ -9,3 +9,5 @@ processed/
 checkpoints/
 
 source/claude_api.py
+
+**/__pycache__/
