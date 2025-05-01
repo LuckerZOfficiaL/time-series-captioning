@@ -3371,7 +3371,35 @@ def create_amplitude_question(ts_path1, ts2, prompt_save_folder, answer_save_fol
   with open(file_path, "w") as file:
     file.write(str(answer))
 
-      
+def perturb_semantically(caption, model="Google Gemini-2.0-Flash"):
+  prompt = f"""Your task is to minimally modify a time series description so that it's meaning is altered but the numbers are maintained. 
+    For example, you can switch "increase" with "decrease", "upward" to "downward" or something more sophisticated. Keep the description structurally identical to the original text, you don't have to alter too much information, altering anywherebetween 1 to 3 parts is enough. Do not edit the numbers.
+    
+    Here's the description to modifyy:
+    \n
+    {caption}
+    \n
+    
+    Give your answer in a paragraph of text as the given description, without any explanation and formatting.
+  
+  """
+  response = get_response(prompt=prompt, model=model, temperature=0.6)
+  return response  
+
+def perturb_numerically(caption, model="Google Gemini-2.0-Flash"):
+  prompt = f"""Your task is to slightly modify the numbers in a time series description so that it's semantics remain the same but the numbers are slightly altered. 
+    For example, you can replace "12" with "12.2", "45%" with "46%". Keep the description structurally and semantically identical to the original text, you don't have to alter all numbers but anywhere between 1 to 3 times is enough. Make sure that the altered number still makes sense and fits the scale of the phenomenon.
+    
+    Here's the description to modify:
+    \n
+    {caption}
+    \n
+    
+    Give your answer in a paragraph of text as the given description, without any explanation and formatting.
+  
+  """
+  response = get_response(prompt=prompt, model=model, temperature=0.6)
+  return response  
     
     
     
