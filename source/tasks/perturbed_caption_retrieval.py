@@ -1,4 +1,5 @@
 import numpy as np
+import os
 
 from .task_helpers import run_prompt_creator
 
@@ -23,13 +24,20 @@ Ensure your output parses as JSON with exactly one top-level object containing t
 """
 IMAGE_STR = "I have also attached a line plot image of the time series to support you.\n"
 
+DATA_DIR = "data/samples/new samples no overlap/test"
+
 def make_prompts(data):
     prompts = []
     for i, ts_data in enumerate(data):
-        random_indices = np.random.randint(0, len(data), size=3)
+        random_indices = np.random.randint(0, len(data), size=1)
         while i in random_indices:
-            random_indices = np.random.randint(0, len(data), size=3)
+            random_indices = np.random.randint(0, len(data), size=1)
         captions = [ts_data["caption"]] + [data[z]["caption"] for z in random_indices]
+        with open(os.path.join(DATA_DIR, "gt_captions_numerically_perturbed", ts_data["ts_name"] + ".txt")) as fh:
+            num_perturbed_cap = fh.read()
+        with open(os.path.join(DATA_DIR, "gt_captions_semantically_perturbed", ts_data["ts_name"] + ".txt")) as fh:
+            sem_perturbed_cap = fh.read()
+        captions += [num_perturbed_cap, sem_perturbed_cap]
         np.random.shuffle(captions)
         ground_truth = {0: 'A', 1: 'B', 2: 'C', 3: 'D'}[captions.index(ts_data["caption"])]
         prompt_no_image = PROMPT_TEMPLATE.format(ts=','.join([f"{x:.2f}" for x in ts_data["ts"]]), 
@@ -55,8 +63,5 @@ if __name__ == "__main__":
                 "co2", "diet", "online retail", "walmart", "agriculture"]
     run_prompt_creator(make_prompts=make_prompts,
                        data_path="data/samples/new samples no overlap/test",
-                       out_dir="caption_retrieval_same_domain",
+                       out_dir="perturbed_caption_retrieval",
                        groups=DATASETS)
-    run_prompt_creator(make_prompts=make_prompts,
-                       data_path="data/samples/new samples no overlap/test",
-                       out_dir="caption_retrieval_cross_domain")
