@@ -13,18 +13,17 @@ import torch
 from transformers import Qwen2_5OmniForConditionalGeneration, Qwen2_5OmniProcessor
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-from helpers import generate_prompt_for_baseline
-from phi_parallel_gpu import main 
+from source.multi_gpu_utils import run_multi_gpu
 
 MODEL_PATH = "Qwen/Qwen2.5-Omni-7B"
-DATA_DIR = "test_plot_retrieval"
-OUT_DIR = "/home/ubuntu/time-series-captioning/test_plot_retrieval_out"
+DATA_DIR = "/home/ubuntu/time-series-captioning/data/samples/new samples no overlap/tasks"
+OUT_DIR = "/home/ubuntu/time-series-captioning/qwen_inference_results"
 
 @lru_cache
 def _load_batch_qwen_model(model_name, device):
     torch.manual_seed(314)
-    model = Qwen2_5OmniForConditionalGeneration.from_pretrained("Qwen/Qwen2.5-Omni-7B", torch_dtype=torch.float16,
-                                                                _attn_implementation='eager',
+    model = Qwen2_5OmniForConditionalGeneration.from_pretrained(model_name, torch_dtype=torch.float16,
+                                                                _attn_implementation="sdpa",
                                                                 low_cpu_mem_usage=True)
     model.to(device)
     processor = Qwen2_5OmniProcessor.from_pretrained(model_name)
@@ -89,4 +88,7 @@ def eval_batch_qwen(prompts, image_files, device, use_image):
     return captions
 
 if __name__ == "__main__":
-    main(eval_batch_qwen, DATA_DIR, OUT_DIR, use_image=True)
+    use_image = True
+    task = "caption_retrieval_cross_domain"
+    out_dir_name = task + ("_no_image" if not use_image else "_with_image") 
+    run_multi_gpu(eval_batch_qwen, os.path.join(DATA_DIR, task), os.path.join(OUT_DIR, out_dir_name), use_image=use_image)

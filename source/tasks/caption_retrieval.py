@@ -36,7 +36,7 @@ def make_prompts(data):
                                         image_str="", d1=captions[0], d2=captions[1], d3=captions[2], d4=captions[3])
         prompt_with_image = PROMPT_TEMPLATE.format(ts=','.join([f"{x:.2f}" for x in ts_data["ts"]]), 
                                         image_str=IMAGE_STR, d1=captions[0], d2=captions[1], d3=captions[2], d4=captions[3])
-        image_paths = [ts_data["plot"]] + [data[z]["plot"] for z in random_indices]
+        image_paths = [ts_data["plot"]] 
         prompts.append({
             "ts_name": ts_data["ts_name"],
             "prompt_no_image": prompt_no_image,

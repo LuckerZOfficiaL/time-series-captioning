@@ -2,16 +2,14 @@ import json
 import os
 import re
 
-GROUND_TRUTH_DIR = "data/samples/new samples no overlap/tasks/caption_retrieval_cross_domain_with_image/ground_truth"
-ANSWER_DIR = "llava_caption_retrieval_with_image_easy"
+TASK_DIR = "data/samples/new samples no overlap/tasks/caption_retrieval_cross_domain"
+ANSWER_DIR = "qwen_inference_results/caption_retrieval_cross_domain"
 
-def get_caption_retrieval_prompts(data_dir):
-    prompt_dir = os.path.join(data_dir, 'prompts')
-    all_prompts = []
-    for p in os.listdir(prompt_dir):
-        with open(os.path.join(prompt_dir, p)) as fh:
-            all_prompts.append(json.load(fh))
-    return all_prompts
+
+def load_ground_truth(task_dir):
+    with open(os.path.join(task_dir, "tasks.json")) as fh:
+        tasks = json.load(fh)
+    return {t["ts_name"]: t["ground_truth"] for t in tasks}
 
 def extract_choice(json_str):
     json_str = json_str.replace('```', '').replace('json', '')
@@ -27,23 +25,21 @@ def extract_choice(json_str):
     m = re.match(r'^\(?\s*([A-Za-z])\s*\)?', answer)
     return m.group(1).upper() if m else None
 
-def eval_score(answer_dir, ground_truth_dir):
-    answers = []
-    ground_truths = []
-    for ts_name in os.listdir(answer_dir):
-        with open(os.path.join(answer_dir, ts_name)) as fh:
+def eval_score(answer_dir, task_dir):
+    answers = {}
+    ground_truths = load_ground_truth(task_dir)
+    assert all(v in {'A', 'B', 'C', 'D'} for v in ground_truths.values())
+    for ts_file in os.listdir(answer_dir):
+        ts_name = ts_file.replace(".txt", "")
+        with open(os.path.join(answer_dir, ts_file)) as fh:
             answer = extract_choice(fh.read())
-            answers.append(answer)
-        with open(os.path.join(ground_truth_dir, ts_name)) as fh:
-            gt = fh.read()
-            assert gt in {'A', 'B', 'C', 'D'}
-            ground_truths.append(gt)
-    accuracy_rate = len([i for i, g in enumerate(ground_truths) if g == answers[i]]) / len(answers)
+            answers[ts_name] = answer
+    accuracy_rate = len([k for k, v in answers.items() if v == ground_truths[k]]) / len(answers)
     print(f"Answer dir: {answer_dir}")
-    print(f"Ground truth dir: {ground_truth_dir}")
+    print(f"Ground truth dir: {task_dir}")
     print(f"Num answers: {len(answers)}")
     print(f"Accuracy rate: {accuracy_rate:.3f}")
     print("---------------------")
 
 if __name__ == "__main__":
-    eval_score(ANSWER_DIR, GROUND_TRUTH_DIR)
+    eval_score(ANSWER_DIR, TASK_DIR)

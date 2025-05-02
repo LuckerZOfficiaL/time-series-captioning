@@ -9,7 +9,7 @@ import time
 from llava.eval.run_llava import image_parser, load_images 
 
 from source.helpers import generate_prompt_for_baseline
-from source.multi_gpu_utils import caption_loader, task_loader, run_multi_gpu
+from source.multi_gpu_utils import caption_loader, run_multi_gpu
 
 import requests
 from PIL import Image
@@ -17,9 +17,8 @@ import torch
 from transformers import AutoProcessor, AutoModelForImageTextToText, BitsAndBytesConfig
 
 MODEL_PATH = "llava-hf/llava-v1.6-mistral-7b-hf"
-DATA_DIR = "/home/ubuntu/time-series-captioning/data/samples/new samples no overlap/tasks/caption_retrieval_cross_domain_with_image"
-# TODO: maybe name this out_dir automatically?
-OUT_DIR = "/home/ubuntu/time-series-captioning/llava_caption_retrieval_with_image_easy"
+DATA_DIR = "/home/ubuntu/time-series-captioning/data/samples/new samples no overlap/tasks/"
+OUT_DIR = "/home/ubuntu/time-series-captioning/llava_inference_results/"
 
 
 @lru_cache
@@ -69,4 +68,5 @@ def eval_batch_llava(prompts, image_files, device, use_image=True):
     return captions
 
 if __name__ == "__main__":
-    run_multi_gpu(eval_batch_llava, task_loader, DATA_DIR, OUT_DIR, use_image=True)
+    task = "caption_retrieval_cross_domain"
+    run_multi_gpu(eval_batch_llava, DATA_DIR + task, OUT_DIR + task, use_image=True)
