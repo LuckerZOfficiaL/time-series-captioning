@@ -3358,7 +3358,7 @@ def create_amplitude_question(ts_path1, ts2, prompt_save_folder, answer_save_fol
 
   assert amplitude1 != amplitude2
 
-  if amplitude1 < amplitude2:
+  if amplitude1 > amplitude2:
     answer = "A"
   else:
     answer = "B"
@@ -3373,9 +3373,9 @@ def create_amplitude_question(ts_path1, ts2, prompt_save_folder, answer_save_fol
 
 def perturb_semantically(caption, model="Google Gemini-2.0-Flash"):
   prompt = f"""Your task is to minimally modify a time series description so that it's meaning is altered but the numbers are maintained. 
-    For example, you can switch "increase" with "decrease", "upward" to "downward" or something more sophisticated. Keep the description structurally identical to the original text, you don't have to alter too much information, altering anywherebetween 1 to 3 parts is enough. Do not edit the numbers.
+    For example, you can switch "increase" with "decrease", "upward" to "downward" or something more sophisticated. Keep the description structurally identical to the original text, you don't have to alter too much information, altering anywhere between 1 to 3 parts is enough. Do not edit the numbers.
     
-    Here's the description to modifyy:
+    Here's the description to modify:
     \n
     {caption}
     \n
@@ -3387,8 +3387,8 @@ def perturb_semantically(caption, model="Google Gemini-2.0-Flash"):
   return response  
 
 def perturb_numerically(caption, model="Google Gemini-2.0-Flash"):
-  prompt = f"""Your task is to slightly modify the numbers in a time series description so that it's semantics remain the same but the numbers are slightly altered. 
-    For example, you can replace "12" with "12.2", "45%" with "46%". Keep the description structurally and semantically identical to the original text, you don't have to alter all numbers but anywhere between 1 to 3 times is enough. Make sure that the altered number still makes sense and fits the scale of the phenomenon.
+  prompt = f"""Your task is to slightly modify the numbers in a time series description so that its semantics remain the same but the numbers are slightly altered. 
+    For example, you can replace "12" with "12.2", "45%" with "46%". Keep the description structurally and semantically identical to the original text; you don't have to alter all numbers but anywhere between 1 to 3 times is enough. Make sure that the altered number still makes sense and fits the scale of the phenomenon.
     
     Here's the description to modify:
     \n
@@ -3408,7 +3408,7 @@ def main():
 
   random.seed(config['general']['random_seed'])
   
-  
+  """
   caption = "From 2011 to 2018, the agricultural output index in this upper-middle income country shows a consistent upward trend, starting at 91.29 in 2011 and reaching 105.27 in 2018. This indicates a steady growth in agricultural output over these years, with a notable increase of approximately 15% from the beginning to the end of the series. Compared to the historical mean of 53.89, the agricultural output index from 2011 to 2018 is significantly higher, suggesting a period of strong performance relative to the country's longer-term agricultural history. Without global or regional context, it's impossible to determine if this growth is higher, lower, or follows expected patterns."
   
   gen_dict = extract_num_dict_from_text(caption=caption)
@@ -3422,6 +3422,7 @@ def main():
   print(gt_dict)
   
   print(compare_num_dicts(gen_dict, gt_dict))
+  """
   
   
   """
@@ -3588,7 +3589,7 @@ def main():
   
   
   
-  """directory = "/home/ubuntu/thesis/data/samples/new samples no overlap/generated captions/llava-finetune-filter"
+  """directory = "/home/ubuntu/thesis/data/samples/new samples no overlap/generated captions/internvl_8b_text"
 
   for filename in os.listdir(directory):
     if filename.endswith(".txt"):
