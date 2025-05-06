@@ -15,9 +15,9 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from source.multi_gpu_utils import run_multi_gpu
 
-MODEL_PATH = "Qwen/Qwen2.5-Omni-7B"
+MODEL_PATH = "Qwen/Qwen2.5-Omni-3B"
 DATA_DIR = "/home/ubuntu/time-series-captioning/data/samples/new samples no overlap/tasks"
-OUT_DIR = "/home/ubuntu/time-series-captioning/qwen_inference_results"
+OUT_DIR = "/home/ubuntu/time-series-captioning/qwen3B_inference_results"
 
 @lru_cache
 def _load_batch_qwen_model(model_name, device):
@@ -68,9 +68,7 @@ def eval_batch_qwen(prompts, image_files, device, use_image):
                 "content": content,
             }] for content in content_list 
     ]
-    print(conversations[0])
     text = processor.apply_chat_template(conversations, add_generation_prompt=True, tokenize=False)
-    print(text)
     if use_image:
         _, images, _ = process_mm_info(conversations, use_audio_in_video=False)
         inputs = processor(text=text, images=images, return_tensors="pt", padding=True, use_audio_in_video=False)
@@ -88,7 +86,9 @@ def eval_batch_qwen(prompts, image_files, device, use_image):
     return captions
 
 if __name__ == "__main__":
-    use_image = True
-    task = "caption_retrieval_cross_domain"
-    out_dir_name = task + ("_no_image" if not use_image else "_with_image") 
-    run_multi_gpu(eval_batch_qwen, os.path.join(DATA_DIR, task), os.path.join(OUT_DIR, out_dir_name), use_image=use_image)
+    tasks = ["plot_retrieval_cross_domain"] 
+    for task in tasks:
+        for use_image in [True]:
+            out_dir_name = task + ("_no_image" if not use_image else "_with_image")
+            #out_dir_name = "ts_comparison_" + task
+            run_multi_gpu(eval_batch_qwen, os.path.join(DATA_DIR, task), os.path.join(OUT_DIR, out_dir_name), use_image=use_image)

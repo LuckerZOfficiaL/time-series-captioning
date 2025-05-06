@@ -93,9 +93,10 @@ def eval_score(answer_dir, task_dir, task_name):
     print(f"Accuracy rate: {accuracy_rate:.3f}")
     print("---------------------")
     wrong_answers = [k for k,v in answers.items() if v != ground_truths[k]]
-    if ("perturbed" not in task) and ("ts_comparison") not in task:
+    if ("perturbed" not in task) and ("ts_comparison" not in task) \
+        and ("paraphrase" not in task) and ("plot_retrieval_same_domain" not in task):
         return
-    if "with_image" in answer_dir:
+    if "with_image" in answer_dir and ("plot_retrieval_same_domain" not in task):
         return
     with open(os.path.join("qwen3b_wrong_answers", task + ".json"), "w") as fh:
         json.dump(wrong_answers, fh)
