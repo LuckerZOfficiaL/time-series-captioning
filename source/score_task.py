@@ -3,8 +3,8 @@ import json
 import os
 import re
 
-TASK_DIR = "data/samples/new samples no overlap/tasks"
-ANSWER_DIR = "{model}_inference_results"
+TASK_DIR = "data/samples/new samples no overlap/hard_questions_small"
+ANSWER_DIR = "{model}_inference_results_small"
 _ALLOWED_ANSWERS = {"a", "b", "c", "d", "true", "false"}
 
 
@@ -104,7 +104,7 @@ def eval_score(answer_dir, task_dir, task_name):
 #    score_breakdown(answers, ground_truths)
 
 if __name__ == "__main__":
-    model = "qwen3B"
+    model = "qwen"
     for task_dir in sorted(os.listdir(ANSWER_DIR.format(model=model))):
         task = task_dir.replace("_with_image", "").replace("_no_image", "")
         if "ts_comparison" in task:

@@ -15,9 +15,9 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from source.multi_gpu_utils import run_multi_gpu
 
-MODEL_PATH = "Qwen/Qwen2.5-Omni-3B"
-DATA_DIR = "/home/ubuntu/time-series-captioning/data/samples/new samples no overlap/tasks"
-OUT_DIR = "/home/ubuntu/time-series-captioning/qwen3B_inference_results"
+MODEL_PATH = "Qwen/Qwen2.5-Omni-7B"
+DATA_DIR = "/home/ubuntu/time-series-captioning/data/samples/new samples no overlap/hard_questions_small"
+OUT_DIR = "/home/ubuntu/time-series-captioning/qwen_inference_results_small"
 
 @lru_cache
 def _load_batch_qwen_model(model_name, device):
@@ -85,10 +85,27 @@ def eval_batch_qwen(prompts, image_files, device, use_image):
     captions = [t.split("assistant\n")[1] for t in text]
     return captions
 
+TASK_TO_IMAGE = {
+    "caption_retrieval_perturbed": [False, True],
+    "paraphrase_consistency": [False],
+    "plot_retrieval_same_domain": [True],
+    "ts_comparison_amplitude": [False],
+    "ts_comparison_bottom_earlier": [False],
+    "ts_comparison_mean": [False],
+    "ts_comparison_peak_earlier": [False],
+    "ts_comparison_same_phenomenon": [False],
+    "ts_comparison_volatility": [False],
+    "ts_retrieval_perturbed": [False],
+}
+
 if __name__ == "__main__":
-    tasks = ["plot_retrieval_cross_domain"] 
-    for task in tasks:
-        for use_image in [True]:
-            out_dir_name = task + ("_no_image" if not use_image else "_with_image")
-            #out_dir_name = "ts_comparison_" + task
-            run_multi_gpu(eval_batch_qwen, os.path.join(DATA_DIR, task), os.path.join(OUT_DIR, out_dir_name), use_image=use_image)
+    root_dir = Path(DATA_DIR)
+    filepaths = list(root_dir.rglob("tasks.json"))
+    for task_file in filepaths:
+        task_dir = os.path.dirname(str(task_file))
+        task_name = task_dir.split('/')[-1]
+        if "ts_comparison" in task_dir:
+            task_name = "ts_comparison_" + task_name
+        for use_image in TASK_TO_IMAGE[task_name]:
+            out_dir_name = task_name + ("_no_image" if not use_image else "_with_image")
+            run_multi_gpu(eval_batch_qwen, task_dir, os.path.join(OUT_DIR, out_dir_name), use_image=use_image)

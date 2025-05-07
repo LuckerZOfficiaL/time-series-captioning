@@ -16,7 +16,7 @@ from source.helpers import generate_prompt_for_baseline
 
 # Adjust these as needed for memory constraints
 BATCH_SIZE = 2
-NUM_GPUS_TO_USE = 4
+NUM_GPUS_TO_USE = 1
 
 
 # TODO: Save these caption baseline prompts to disk, then just load them directly
@@ -71,6 +71,9 @@ def run_multi_gpu(model_eval, data_dir, out_dir, use_image=True):
     done_names = {Path(fn).stem for fn in os.listdir(out_dir)}
     remaining_ts = sorted([t for t in tasks if t["ts_name"] not in done_names], 
                           key=lambda t: t["ts_name"])
+    if not remaining_ts:
+        print("Task complete, returning")
+        return
     # Select the top NUM_GPUS_TO_USE GPUs based on available (free) memory.
     gpus = GPUtil.getGPUs()
     if len(gpus) < NUM_GPUS_TO_USE:
