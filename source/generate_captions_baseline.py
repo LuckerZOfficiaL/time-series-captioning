@@ -15,17 +15,22 @@ from claude_api import(
 )
 
 
-def get_vlm_response(model_name, prompt, image_path):
+def get_vlm_response(model_name, prompt, image_paths):
     if model_name == "gemini-2.0-flash":
         with open("/home/ubuntu/thesis/.credentials/google", "r") as file:
-              google_api_key = file.read().strip()
+            google_api_key = file.read().strip()
         client = genai.Client(api_key=google_api_key)
-          
-        image = PIL.Image.open(image_path)
-        
+
+        # Open and store all image objects
+        images = [Image.open(path) for path in image_paths]
+
+        # Construct content with prompt followed by all images
+        contents = [prompt] + images
+
         response = client.models.generate_content(
             model=model_name,
-            contents=[prompt, image])
+            contents=contents
+        )
         return response.text
 
 
@@ -76,7 +81,7 @@ def main():
             if "claude" in model_name:
                 generated_caption = get_claude_image_response(image_path, prompt)
             else:
-                generated_caption = get_vlm_response(model_name=model_name, prompt=prompt, image_path=image_path)
+                generated_caption = get_vlm_response(model_name=model_name, prompt=prompt, image_paths=image_path)
             
         else:
             if "claude" in model_name: 
