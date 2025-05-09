@@ -18,7 +18,11 @@ def main():
     
     gt_caption_filenames = os.listdir(gt_captions_folder_path)
     
+    done_captions = len(os.listdir(numerically_perturbed_folder_path))
+    
     for i, filename in enumerate(gt_caption_filenames):
+        if filename in os.listdir(numerically_perturbed_folder_path):
+            continue
         file_path = os.path.join(gt_captions_folder_path, filename)
         if os.path.isfile(file_path):
             with open(file_path, 'r', encoding='utf-8') as file:
@@ -33,8 +37,8 @@ def main():
             with open(os.path.join(semantically_perturbed_folder_path, filename), 'w', encoding='utf-8') as num_file:
                 num_file.write(sem_perturbed)
                 
-            if i % 20 == 0 and i != 0:
-                print(f"{i}/{len(gt_caption_filenames)} Done.")
+            if i % 20 == 19:
+                print(f"{done_captions+i+1}/{len(gt_caption_filenames)} Done.")
             
 
 if __name__ == "__main__":

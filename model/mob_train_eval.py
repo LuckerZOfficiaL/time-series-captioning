@@ -33,9 +33,9 @@ class Mob(nn.Module):
     def __init__(self, chronos_name="amazon/chronos-t5-small", internvl_name="OpenGVLab/InternVL2_5-2B", projector_init="zero", sum_ts_emb_to="all"):
         super(Mob, self).__init__()
         self.chronos = ChronosEmbedder(model_name=chronos_name)
-        self.projector = nn.Linear(512, 2048) # 512 and 2048 are the embedding sizes of Chronos and InternVL
+        self.projector = nn.Linear(512, 4096) # 512 and 2048 are the embedding sizes of Chronos and InternVL
     
-        self.gate_proj = nn.Linear(2048, 1)
+        self.gate_proj = nn.Linear(4096, 1)
         self.sigmoid = nn.Sigmoid() # the sigmoid outputs a scaling factor between 0 and 1 used to sum the chronos embedding to the internVL input embedding
         
         self.internvl = AutoModel.from_pretrained(
@@ -389,10 +389,10 @@ def main():
     
 # You might neet to run this script many times without any change since there are too many examples to fit into memory for a single run. 
 if __name__ == "__main__":
-    main() # main() does the finetuning/training
+    #main() # main() does the finetuning/training
     
     ################### GENERATE CAPTION FILES ##################################
-    """config = load_config()
+    config = load_config()
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     
     
@@ -401,22 +401,23 @@ if __name__ == "__main__":
                 projector_init=config['mobtep']['projector_init'],
                 sum_ts_emb_to=config['mobtep']['sum_ts_emb_to']).to(device)
     
-    checkpoint_path = f"/home/ubuntu/thesis/model/checkpoints/{config['mobtep']['mob_checkpoint']}.pth"
-    model.load_state_dict(torch.load(checkpoint_path, map_location=device))
+    #checkpoint_path = f"/home/ubuntu/thesis/model/checkpoints/{config['mobtep']['mob_checkpoint']}.pth"
+    #model.load_state_dict(torch.load(checkpoint_path, map_location=device))
     
         
     
     ts_folder_path = "/home/ubuntu/thesis/data/samples/new samples no overlap/test/time series"
     metadata_folder_pth = "/home/ubuntu/thesis/data/samples/new samples no overlap/test/metadata"
     image_folder_path = "/home/ubuntu/thesis/data/samples/new samples no overlap/test/plots"
-    save_folder_path= f"/home/ubuntu/thesis/data/samples/new samples no overlap/generated captions/internvl_{config['mobtep']['mob_checkpoint']}"
+    save_folder_path= f"/home/ubuntu/thesis/data/samples/new samples no overlap/generated captions/internvl_8b"
+    #save_folder_path= f"/home/ubuntu/thesis/data/samples/new samples no overlap/generated captions/internvl_{config['mobtep']['mob_checkpoint']}"
     
     if not os.path.exists(save_folder_path):
         os.makedirs(save_folder_path)
     
     
     
-    generate_captions(model, ts_folder_path, metadata_folder_pth, image_folder_path, save_folder_path, batch_size=15, use_chronos=config['mobtep']['use_chronos'])"""
+    generate_captions(model, ts_folder_path, metadata_folder_pth, image_folder_path, save_folder_path, batch_size=15, use_chronos=config['mobtep']['use_chronos'])
     
     
     ############################# TOY DEMO ##################################

@@ -17,4 +17,4 @@ def run_script(script_path):
             time.sleep(5)
 
 if __name__ == "__main__":
-    run_script(script_path='/home/ubuntu/thesis/source/generate_paraphrase_consistency_questions.py')
+    run_script(script_path='/home/ubuntu/thesis/source/evaluate_qa.py')
