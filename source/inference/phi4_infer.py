@@ -8,14 +8,13 @@ from pathlib import Path
 import time
 from concurrent.futures import ProcessPoolExecutor
 import multiprocessing as mp
-import GPUtil  # Make sure to install this package: pip install gputil
+import re
 
-from helpers import generate_prompt_for_baseline
+from .inference_utils import run_all_tasks
 
 MODEL_PATH = "microsoft/Phi-4-multimodal-instruct"
-DATA_DIR = "data/samples/new samples no overlap/tasks/caption_retrieval_hard_with_image"
-OUT_DIR = "/home/ubuntu/time-series-captioning/phi_etiology_test_with_image_hard"
-BATCH_SIZE = 1 # Adjust batch size as needed
+DATA_DIR = "/home/ubuntu/time-series-captioning/data/samples/new samples no overlap/hard_questions_small/"
+OUT_DIR = "/home/ubuntu/time-series-captioning/phi_inference_results_small"
 
 import torch
 from PIL import Image
@@ -49,11 +48,22 @@ def eval_batch_phi(prompts: list[str], image_files: list[str], device: torch.dev
     # Format each prompt using the input caption prompt from your helper
     if use_image:
         print("Using images as well as text inputs.")
-        images = [Image.open(fn) for fn in image_files]
-        formatted_prompts = [
-            f'{user_prompt}<|image_1|>{caption_prompt}{prompt_suffix}{assistant_prompt}'
-            for caption_prompt in prompts
-        ]
+        # Phi-4 can't handle nested image list; processes through a flat list instead.
+        images = [Image.open(fn) for curr_images in image_files for fn in curr_images] 
+        if "<image" in prompts[0]:
+            # Multi-image prompts
+            for i in range(len(prompts)):
+                prompts[i] = re.sub(r"<image_(\d+)>", r"<|image_\1|>", prompts[i])
+            formatted_prompts = [ 
+                f'{user_prompt}{caption_prompt}{prompt_suffix}{assistant_prompt}'
+                for caption_prompt in prompts
+            ]
+        else:
+            # Single-image prompts
+            formatted_prompts = [
+                f'{user_prompt}<|image_1|>{caption_prompt}{prompt_suffix}{assistant_prompt}'
+                for caption_prompt in prompts
+            ]
         inputs = processor(text=formatted_prompts, images=images, return_tensors='pt').to(device)
     else:
         print("Using only text prompts, no images.")
@@ -65,14 +75,15 @@ def eval_batch_phi(prompts: list[str], image_files: list[str], device: torch.dev
 
 
     stime = time.time()
-    generate_ids = model.generate(
-        **inputs,
-        max_new_tokens=20,
-        generation_config=generation_config,
-        temperature=0.3,
-        do_sample=True,
-        num_logits_to_keep=0,
-    )
+    with torch.no_grad():
+        generate_ids = model.generate(
+            **inputs,
+            max_new_tokens=20,
+            generation_config=generation_config,
+            temperature=0.3,
+            do_sample=True,
+            num_logits_to_keep=0,
+        )
     print(f"RUNTIME on {device}: {time.time() - stime:.2f} seconds")
     # Remove prompt tokens from generated output
     generate_ids = generate_ids[:, inputs['input_ids'].shape[1]:]
@@ -81,7 +92,4 @@ def eval_batch_phi(prompts: list[str], image_files: list[str], device: torch.dev
 
 
 if __name__ == "__main__":
-    mp.set_start_method("spawn", force=True)
-    USE_IMAGE = False
-    main(eval_batch_phi, DATA_DIR, OUT_DIR, use_image=USE_IMAGE)
-
+    run_all_tasks(eval_batch_phi, DATA_DIR, OUT_DIR)
