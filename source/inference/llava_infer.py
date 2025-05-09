@@ -8,8 +8,7 @@ import time
 
 from llava.eval.run_llava import image_parser, load_images 
 
-from source.helpers import generate_prompt_for_baseline
-from source.multi_gpu_utils import caption_loader, run_multi_gpu
+from .inference_utils import run_all_tasks
 
 import requests
 from PIL import Image
@@ -17,8 +16,8 @@ import torch
 from transformers import AutoProcessor, AutoModelForImageTextToText, BitsAndBytesConfig
 
 MODEL_PATH = "llava-hf/llava-v1.6-mistral-7b-hf"
-DATA_DIR = "/home/ubuntu/time-series-captioning/data/samples/new samples no overlap/tasks/"
-OUT_DIR = "/home/ubuntu/time-series-captioning/llava_inference_results/"
+DATA_DIR = "/home/ubuntu/time-series-captioning/data/samples/new samples no overlap/hard_questions_small/"
+OUT_DIR = "/home/ubuntu/time-series-captioning/llava_inference_results_small/"
 
 
 @lru_cache
@@ -36,15 +35,20 @@ def _load_batch_llava_model(model_name, device):
 def eval_batch_llava(prompts, image_files, device, use_image=True):
     model, processor = _load_batch_llava_model(MODEL_PATH, device)
     print(f"use_image={use_image}")
+    for i, p in enumerate(prompts):
+        if "<image" in p:
+            prompts[i] = re.sub(r"<image_(\d+)>", r"<|image_\1|>", p) 
+
     if use_image:
+        images = [[Image.open(fn) for fn in images] for images in image_files]
         conversations = [{
                 "role": "user",
                 "content": [
-                    {"type": "image"},
+                    {"type": "image", "image": img} for img in curr_images 
+                ] + [
                     {"type": "text", "text": f"{prompt}"},
                 ],
-        } for prompt in prompts]
-        images = [Image.open(fn[0]) for fn in image_files]
+        } for prompt, curr_images in zip(prompts, images)]
         prompts = [processor.apply_chat_template([c], add_generation_prompt=True)
                    for c in conversations]
         inputs = processor(images=images, text=prompts, padding=True, return_tensors="pt").to(device)
@@ -60,7 +64,8 @@ def eval_batch_llava(prompts, image_files, device, use_image=True):
         inputs = processor(text=prompts, padding=True, return_tensors="pt").to(device)
 
     stime = time.time()
-    generate_ids = model.generate(**inputs, max_new_tokens=20, temperature=0.3, do_sample=True)
+    with torch.no_grad():
+        generate_ids = model.generate(**inputs, max_new_tokens=20, temperature=0.3, do_sample=True)
     print(f"RUNTIME on {device}: {time.time() - stime:.2f} seconds")    
     results = processor.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)
     # Remove original prompt from returned result
@@ -68,5 +73,4 @@ def eval_batch_llava(prompts, image_files, device, use_image=True):
     return captions
 
 if __name__ == "__main__":
-    task = "caption_retrieval_cross_domain"
-    run_multi_gpu(eval_batch_llava, DATA_DIR + task, OUT_DIR + task, use_image=True)
+    run_all_tasks(eval_batch_llava, DATA_DIR, OUT_DIR)

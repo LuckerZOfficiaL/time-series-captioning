@@ -11,15 +11,13 @@ import torch
 
 from lmdeploy import pipeline, TurbomindEngineConfig
 from lmdeploy.vl import load_image
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from lmdeploy.vl.constants import IMAGE_TOKEN
 
-from helpers import generate_prompt_for_baseline
-from phi_parallel_gpu import main 
+from .inference_utils import run_all_tasks
 
-MODEL_PATH = "OpenGVLab/InternVL2-2B"
-DATA_DIR = "/home/ubuntu/time-series-captioning/data/samples/len 10"
-OUT_DIR = "/home/ubuntu/time-series-captioning/internvl_etiology"
-
+MODEL_PATH = "OpenGVLab/InternVL2_5-8B"
+DATA_DIR = "/home/ubuntu/time-series-captioning/data/samples/new samples no overlap/hard_questions_small/"
+OUT_DIR = "/home/ubuntu/time-series-captioning/internvl25_inference_results_small/"
 
 @lru_cache
 def _load_batch_internVL_model(model_name, device):
@@ -30,9 +28,12 @@ def _load_batch_internVL_model(model_name, device):
 def eval_batch_internVL(prompts, image_files, device, use_image): 
     print(f"use_image={use_image}")
     pipe = _load_batch_internVL_model(MODEL_PATH, device)
+    for i, p in enumerate(prompts):
+        if "<image" in p:
+            prompts[i] = re.sub(r"<image_(\d+)>", IMAGE_TOKEN, p)    
     if use_image:
-        images = [Image.open(fn) for fn in image_files]
-        prompts = [(prompt, image) for prompt, image in zip(prompts, images)]
+        images = [[Image.open(fn) for fn in curr_images] for curr_images in image_files]
+        prompts = [(prompt, curr_images) for prompt, curr_images in zip(prompts, images)]
     
     # Batch Inference
     stime = time.time()
@@ -41,4 +42,4 @@ def eval_batch_internVL(prompts, image_files, device, use_image):
     return [r.text for r in results] 
 
 if __name__ == "__main__":
-    main(eval_batch_internVL, DATA_DIR, OUT_DIR, use_image=True)
+    run_all_tasks(eval_batch_internVL, DATA_DIR, OUT_DIR)

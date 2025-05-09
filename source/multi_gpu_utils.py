@@ -15,7 +15,7 @@ from PIL import Image
 from source.helpers import generate_prompt_for_baseline
 
 # Adjust these as needed for memory constraints
-BATCH_SIZE = 2
+BATCH_SIZE = 1
 NUM_GPUS_TO_USE = 1
 
 
@@ -100,8 +100,8 @@ def run_multi_gpu(model_eval, data_dir, out_dir, use_image=True):
         futures = []
         for gpu_id, assigned_tasks in gpu_assignments.items():
             # Can use for single-process debugging:
-            #process_worker(gpu_id, model_eval, assigned_tasks, data_dir, out_dir, use_image)
-            futures.append(executor.submit(process_worker, gpu_id, model_eval, assigned_tasks, data_dir, out_dir, use_image))
+            process_worker(gpu_id, model_eval, assigned_tasks, data_dir, out_dir, use_image)
+            #futures.append(executor.submit(process_worker, gpu_id, model_eval, assigned_tasks, data_dir, out_dir, use_image))
         for future in futures:
             future.result()
 

@@ -1,7 +1,9 @@
 from collections import defaultdict
 import json
 import os
+from pathlib import Path
 import re
+import sys
 
 TASK_DIR = "data/samples/new samples no overlap/hard_questions_small"
 ANSWER_DIR = "{model}_inference_results_small"
@@ -30,10 +32,12 @@ def _attempt_parse_str(s):
     s = s.lower()
     assert not (("false" in s) and ("true" in s))
     if "false" in s:
-        return False
+        return 'False'
     if "true" in s:
-        return True
-    str_reformat = s.replace('.', '').replace('"', '').replace("'", '').split(' ')
+        return 'True'
+    # Lots of hardcoded reformats necessary from different LLM answers
+    str_reformat = s.replace('.', '').replace('"', '').replace("'", '')
+    str_reformat = s.replace(")", "").replace("(", "").replace("answer:", "").split(' ')
     for x in str_reformat:
         if x in _ALLOWED_ANSWERS:
             return _parse_start(x)
@@ -43,7 +47,9 @@ def _attempt_parse_str(s):
 
 def extract_choice(json_str):
     orig_str = json_str
-    json_str = json_str.replace('```', '').replace('json', '')
+    json_str = json_str.replace('```', '').replace('json', '').replace('.', '')
+    if "{" in json_str and "}" in json_str:
+        json_str = json_str.split('}')[0] + '}'
     json_str = re.sub(r'("answer"\s*:\s*)([A-Za-z])', r'\1"\2"', json_str)
     try:
         data = json.loads(json_str)
@@ -57,7 +63,6 @@ def extract_choice(json_str):
         if type(data) == bool:
             return str(data)
         return _attempt_parse_str(data)
-        import pdb; pdb.set_trace()
 
     return _parse_start(answer)
 
@@ -92,19 +97,22 @@ def eval_score(answer_dir, task_dir, task_name):
     print(f"Num answers: {len(answers)}")
     print(f"Accuracy rate: {accuracy_rate:.3f}")
     print("---------------------")
-    wrong_answers = [k for k,v in answers.items() if v != ground_truths[k]]
-    if ("perturbed" not in task) and ("ts_comparison" not in task) \
-        and ("paraphrase" not in task) and ("plot_retrieval_same_domain" not in task):
-        return
-    if "with_image" in answer_dir and ("plot_retrieval_same_domain" not in task):
-        return
-    with open(os.path.join("qwen3b_wrong_answers", task + ".json"), "w") as fh:
-        json.dump(wrong_answers, fh)
+    return round(accuracy_rate, 3) 
+
+#    wrong_answers = [k for k,v in answers.items() if v != ground_truths[k]]
+#    if ("perturbed" not in task) and ("ts_comparison" not in task) \
+#        and ("paraphrase" not in task) and ("plot_retrieval_same_domain" not in task):
+#        return
+#    if "with_image" in answer_dir and ("plot_retrieval_same_domain" not in task):
+#        return
+#    with open(os.path.join("qwen3b_wrong_answers", task + ".json"), "w") as fh:
+#        json.dump(wrong_answers, fh)
  
 #    score_breakdown(answers, ground_truths)
 
 if __name__ == "__main__":
-    model = "qwen"
+    model = sys.argv[1]
+    accs = {}
     for task_dir in sorted(os.listdir(ANSWER_DIR.format(model=model))):
         task = task_dir.replace("_with_image", "").replace("_no_image", "")
         if "ts_comparison" in task:
@@ -113,6 +121,32 @@ if __name__ == "__main__":
         else:
             answer_dir_abspath = os.path.join(ANSWER_DIR.format(model=model), task_dir)
             task_dir_abspath = os.path.join(TASK_DIR, task)
-        eval_score(answer_dir_abspath,
+        task_acc = eval_score(answer_dir_abspath,
                    task_dir_abspath,
                    task) 
+        accs[task_dir] = task_acc
+    print(accs)
+    with open("qa_results.json", "r") as fh:
+        results = json.load(fh)
+    results[model] = accs
+    # Get results from closed-source models
+    root_dir = Path(TASK_DIR)
+    for model in ["claude-3-haiku", "Google Gemini-2.0-Flash"]:
+        curr_accs = {}
+        filepaths = list(root_dir.rglob(f"{model}.json"))
+        for fp in filepaths:
+            task_name = os.path.dirname(fp).split("/")[-1]
+            if "ts_comparison" in str(fp):
+                task_name = "ts_comparison_" + task_name
+            with open(fp) as fh:
+                z = json.load(fh)
+                if isinstance(z, dict):
+                    accuracy  = z["overall"]["accuracy"]
+                else:
+                    accuracy = z[-1]["overall accuracy"]
+                curr_accs[task_name] = accuracy 
+
+        results[model] = curr_accs
+    with open("qa_results.json", "w") as fh:
+        json.dump(results, fh)
+     

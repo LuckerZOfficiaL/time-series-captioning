@@ -1,3 +1,7 @@
+"""
+NOTE: As of 2025-05-07, requires
+transformers @ git+https://github.com/huggingface/transformers@43bb4c0456ebab67ca6b11fa5fa4c099fb2e6a2c
+"""
 from functools import lru_cache
 from itertools import count
 import json
@@ -14,6 +18,7 @@ from transformers import Qwen2_5OmniForConditionalGeneration, Qwen2_5OmniProcess
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from source.multi_gpu_utils import run_multi_gpu
+from .inference_utils import run_all_tasks 
 
 MODEL_PATH = "Qwen/Qwen2.5-Omni-7B"
 DATA_DIR = "/home/ubuntu/time-series-captioning/data/samples/new samples no overlap/hard_questions_small"
@@ -29,23 +34,12 @@ def _load_batch_qwen_model(model_name, device):
     processor = Qwen2_5OmniProcessor.from_pretrained(model_name)
     return model, processor
 
-def renumber_images(text: str) -> str:
-    """
-    Replace each literal '<image>' in the input text with
-    '<|image_1|>', '<|image_2|>', … in sequential order.
-    """
-    counter = count(1)  # will yield 1, 2, 3, …
-    def _replace(match):
-        i = next(counter)
-        return f"<|image_{i}|>"
-    return re.sub(r"<image>", _replace, text)
-
 
 def eval_batch_qwen(prompts, image_files, device, use_image): 
     print(f"use_image={use_image}")
     for i, p in enumerate(prompts):
-        if "<image>" in p:
-            prompts[i] = renumber_images(p)
+        if "<image" in p:
+            prompts[i] = re.sub(r"<image_(\d+)>", r"<|image_\1|>", p) 
             
     model, processor = _load_batch_qwen_model(MODEL_PATH, device)
     if use_image:
@@ -68,6 +62,7 @@ def eval_batch_qwen(prompts, image_files, device, use_image):
                 "content": content,
             }] for content in content_list 
     ]
+
     text = processor.apply_chat_template(conversations, add_generation_prompt=True, tokenize=False)
     if use_image:
         _, images, _ = process_mm_info(conversations, use_audio_in_video=False)
@@ -78,34 +73,14 @@ def eval_batch_qwen(prompts, image_files, device, use_image):
 
     # Batch Inference
     stime = time.time()
-    text_ids = model.generate(**inputs, max_new_tokens=20, temperature=0.3, do_sample=True, 
-                              use_audio_in_video=False, return_audio=False)
+    with torch.no_grad():
+        text_ids = model.generate(**inputs, max_new_tokens=20, temperature=0.3, do_sample=True, 
+                                  use_audio_in_video=False, return_audio=False)
     print(f"RUNTIME on {device}: {time.time() - stime:.2f} seconds")
     text = processor.batch_decode(text_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)
     captions = [t.split("assistant\n")[1] for t in text]
     return captions
 
-TASK_TO_IMAGE = {
-    "caption_retrieval_perturbed": [False, True],
-    "paraphrase_consistency": [False],
-    "plot_retrieval_same_domain": [True],
-    "ts_comparison_amplitude": [False],
-    "ts_comparison_bottom_earlier": [False],
-    "ts_comparison_mean": [False],
-    "ts_comparison_peak_earlier": [False],
-    "ts_comparison_same_phenomenon": [False],
-    "ts_comparison_volatility": [False],
-    "ts_retrieval_perturbed": [False],
-}
 
 if __name__ == "__main__":
-    root_dir = Path(DATA_DIR)
-    filepaths = list(root_dir.rglob("tasks.json"))
-    for task_file in filepaths:
-        task_dir = os.path.dirname(str(task_file))
-        task_name = task_dir.split('/')[-1]
-        if "ts_comparison" in task_dir:
-            task_name = "ts_comparison_" + task_name
-        for use_image in TASK_TO_IMAGE[task_name]:
-            out_dir_name = task_name + ("_no_image" if not use_image else "_with_image")
-            run_multi_gpu(eval_batch_qwen, task_dir, os.path.join(OUT_DIR, out_dir_name), use_image=use_image)
+    run_all_tasks(eval_batch_qwen, DATA_DIR, OUT_DIR)

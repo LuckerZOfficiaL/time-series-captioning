@@ -4,8 +4,6 @@ import numpy as np
 
 from .task_helpers import run_prompt_creator
 
-DATA_PATH = "/home/ubuntu/reasoning_data/TS_Dataset.jsonl"
-
 PROMPT_TEMPLATE = """
 Here is a time series caption:
 {cap}
@@ -38,7 +36,8 @@ def make_prompts(data):
         np.random.shuffle(shuffled_ts)
         # Round the noised number to the same significant figures as used in the original number
         noised_ts = [round(x + np.random.normal(loc=0, scale=(0.01 * abs(x))), 
-                           len(str(x).split('.')[0].replace('-', '')) + 1) for x in ts] 
+                           len(str(x).split('.')[1].replace('-', '')) + 1) for x in ts] 
+
         time_series = [ts, reversed_ts, shuffled_ts, noised_ts]
         np.random.shuffle(time_series)
         ground_truth = {0: 'A', 1: 'B', 2: 'C', 3: 'D'}[time_series.index(ts_data["ts"])]
@@ -60,4 +59,4 @@ if __name__ == "__main__":
                 "co2", "diet", "online retail", "walmart", "agriculture"]
     run_prompt_creator(make_prompts=make_prompts,
                        data_path="data/samples/new samples no overlap/test",
-                       out_dir="perturbed_ts_retrieval")
+                       out_dir="perturbed_ts_matching")
