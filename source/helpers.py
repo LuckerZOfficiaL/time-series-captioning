@@ -17,7 +17,7 @@ import os
 #from sklearn.conftest import dataset_fetchers
 import torch
 from sklearn.metrics.pairwise import cosine_similarity
-#from sentence_transformers import SentenceTransformer
+from sentence_transformers import SentenceTransformer
 from sklearn.decomposition import PCA
 import re
 import yaml
@@ -41,7 +41,7 @@ import spacy
 
 
 
-def load_config(filepath="/home/ubuntu/time-series-captioning/source/configs/config.yaml"):
+def load_config(filepath="/home/ubuntu/thesis/source/configs/config.yaml"):
     with open(filepath, "r") as file:
         config = yaml.safe_load(file)
     return config
@@ -2530,7 +2530,7 @@ def oracle_score(generated_caption, gt_caption, model="Google Gemini-2.0-Flash")
   }"""
   return overall_score
 
-def generate_prompt_for_baseline(dataset_name, metadata, ts, use_image=True):
+def generate_prompt_for_baseline(dataset_name, metadata, ts):
   config=load_config()
   external_knowledge = config['data']['external_knowledge']
   
@@ -2711,9 +2711,6 @@ def generate_prompt_for_baseline(dataset_name, metadata, ts, use_image=True):
 
     Answer in a single paragraph of four sentences at most, without bullet points or any formatting.
      """
-  if use_image:
-    request = request + "I have also attached the line plot of the time series to support you.\n"
-
   return request
 
 def remove_years(nums):
