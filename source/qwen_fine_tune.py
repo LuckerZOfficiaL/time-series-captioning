@@ -12,39 +12,36 @@ from numpy.core.multiarray import _reconstruct
 import requests
 from PIL import Image
 from qwen_omni_utils import process_mm_info
+from qwen_vl_utils import process_vision_info
 import torch
 from transformers import Qwen2_5OmniThinkerForConditionalGeneration, Qwen2_5OmniProcessor
 from transformers import AutoModelForCausalLM, AutoModelForImageTextToText, AutoTokenizer, TrainingArguments
+from transformers import AutoProcessor, AutoTokenizer, Qwen2_5_VLForConditionalGeneration, Qwen2_5_VLProcessor
 from trl import SFTConfig, SFTTrainer
 
 from helpers import generate_prompt_for_baseline
 
-MODEL_PATH = "Qwen/Qwen2.5-Omni-7B"
+MODEL_PATH = "Qwen/Qwen2.5-VL-7B-Instruct" 
 DATA_DIR = "/home/ubuntu/time-series-captioning/data/samples/new samples no overlap/train"
-OUT_DIR = "/home/ubuntu/time-series-captioning/qwen_fine_tune_2"
+OUT_DIR = "/home/ubuntu/time-series-captioning/qwenVL_fine_tune"
 
 
 @lru_cache
 def _load_batch_qwen_model(model_name, device):
     torch.manual_seed(314)
-    model = Qwen2_5OmniThinkerForConditionalGeneration.from_pretrained(
-        "Qwen/Qwen2.5-Omni-7B",
+    model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
+        model_name,
         torch_dtype=torch.float16,
         low_cpu_mem_usage=True,
-        trust_remote_code=True,        # now picks up the patched forward()
+        trust_remote_code=True, 
     )
-    model.config.vocab_size = model.config.text_config.vocab_size  # hacky patch
+    #model.config.vocab_size = model.config.text_config.vocab_size  # hacky patch
     model.to(device)
-    processor = Qwen2_5OmniProcessor.from_pretrained(model_name)
+    processor = Qwen2_5_VLProcessor.from_pretrained(model_name)
     return model, processor
 
 def format_conversation(prompt, image_file, label, processor):
     conversation = [
-        {
-            "role": "system",
-            "content": [{"type": "text", "text": ("You are Qwen, a virtual human developed by the Qwen Team, Alibaba Group,"
-                       " capable of perceiving auditory and visual inputs, as well as generating text and speech.")}]
-        },
         {
             "role": "user",
             "content": [{"type": "image", "image": image_file},
@@ -85,7 +82,7 @@ def get_train_dataset(data_dir, processor):
 
 def eval_batch_qwen(prompts, image_files, device, use_image): 
     model, processor = _load_batch_qwen_model(MODEL_PATH, device)
-    inputs = processor(text=text, images=images, return_tensors="pt", padding=True, use_audio_in_video=False)
+    inputs = processor(text=text, images=images, return_tensors="pt", detail="low", padding=True, use_audio_in_video=False)
     inputs = inputs.to(model.device).to(model.dtype)
 
     # Batch Inference
@@ -105,9 +102,10 @@ def collate_fn(examples):
     text = [ex["chat"] for ex in examples]
     #_, images, _ = process_mm_info(examples)
     images = [Image.open(ex["image"]) for ex in examples]
+    #image_inputs, _ = process_vision_info(examples)
     # Tokenize the texts and process the images
     batch = processor(
-        text=text, images=images, return_tensors="pt", padding=True
+        text=text, images=images, return_tensors="pt", padding=True 
     ) 
     # The labels are the input_ids, and we mask the padding tokens in the loss computation
     labels = batch["input_ids"].clone()  # Clone input IDs for labels
@@ -143,7 +141,7 @@ def main(model_eval, data_dir, out_dir, use_image=True):
     model.gradient_checkpointing_enable()  # decrease GPU mem usage
     #model.gradient_checkpointing_disable()
     #training_data = get_train_dataset(data_dir, processor)
-    with open("training_data.pkl", "rb") as fh:
+    with open("training_data2.pkl", "rb") as fh:
         training_data = pickle.load(fh)
 
     train_dataset = Dataset.from_list(training_data)
@@ -187,7 +185,7 @@ def main(model_eval, data_dir, out_dir, use_image=True):
 
     
     print("Now training model")
-    trainer.train(resume_from_checkpoint=True)
+    trainer.train(resume_from_checkpoint=False)
     print("Model training complete, now saving")
     trainer.save_model(training_args.output_dir)
 

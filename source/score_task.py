@@ -35,6 +35,10 @@ def _attempt_parse_str(s):
         return 'False'
     if "true" in s:
         return 'True'
+    pattern = re.compile(r'\s*[\'"]answer[\'"]\s*:\s*[\'"]([A-Da-d])[\'"]\s*')
+    match_ = pattern.search(s) 
+    if match_:
+        return _parse_start(match_.group(1).upper())
     # Lots of hardcoded reformats necessary from different LLM answers
     str_reformat = s.replace('.', '').replace('"', '').replace("'", '')
     str_reformat = s.replace(")", "").replace("(", "").replace("answer:", "").split(' ')

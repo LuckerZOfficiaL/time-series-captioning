@@ -15,11 +15,10 @@ from PIL import Image
 from source.helpers import generate_prompt_for_baseline
 
 # Adjust these as needed for memory constraints
-BATCH_SIZE = 1
+BATCH_SIZE = 5
 NUM_GPUS_TO_USE = 1
 
 
-# TODO: Save these caption baseline prompts to disk, then just load them directly
 def caption_loader(ts_names, data_dir):
     prompts = []
     image_files = []

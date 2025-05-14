@@ -13,27 +13,30 @@ from .inference_utils import run_all_tasks
 import requests
 from PIL import Image
 import torch
-from transformers import AutoProcessor, AutoModelForImageTextToText, BitsAndBytesConfig
+from transformers import AutoProcessor, AutoModelForImageTextToText, AutoModelForCausalLM, BitsAndBytesConfig
+from transformers import LlavaNextProcessor, LlavaNextForConditionalGeneration
 
 MODEL_PATH = "llava-hf/llava-v1.6-mistral-7b-hf"
+FINETUNED_MODEL_PATH = "/shared/tsqa/finetuned_models/llava_lora_finetune/"
 DATA_DIR = "/home/ubuntu/time-series-captioning/data/samples/new samples no overlap/hard_questions_small/"
-OUT_DIR = "/home/ubuntu/time-series-captioning/llava_inference_results_small/"
+OUT_DIR = "/home/ubuntu/time-series-captioning/finetuned_llava_inference_results_small/"
 
 
 @lru_cache
 def _load_batch_llava_model(model_name, device):
-    model = AutoModelForImageTextToText.from_pretrained(
+    from peft import AutoPeftModelForCausalLM
+    model = LlavaNextForConditionalGeneration.from_pretrained(
         model_name,
         torch_dtype=torch.float16,
         low_cpu_mem_usage=True,
         _attn_implementation='eager'
     )
     model.to(device)
-    processor = AutoProcessor.from_pretrained(model_name, use_fast=True)
+    processor = LlavaNextProcessor.from_pretrained(MODEL_PATH, use_fast=True)
     return model, processor
 
 def eval_batch_llava(prompts, image_files, device, use_image=True):
-    model, processor = _load_batch_llava_model(MODEL_PATH, device)
+    model, processor = _load_batch_llava_model(FINETUNED_MODEL_PATH, device)
     print(f"use_image={use_image}")
     for i, p in enumerate(prompts):
         if "<image" in p:

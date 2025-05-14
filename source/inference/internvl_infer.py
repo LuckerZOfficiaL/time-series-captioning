@@ -8,6 +8,7 @@ import time
 import requests
 from PIL import Image
 import torch
+from transformers import AutoTokenizer, AutoModel
 
 from lmdeploy import pipeline, TurbomindEngineConfig
 from lmdeploy.vl import load_image

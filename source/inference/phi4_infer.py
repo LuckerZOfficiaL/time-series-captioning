@@ -13,8 +13,9 @@ import re
 from .inference_utils import run_all_tasks
 
 MODEL_PATH = "microsoft/Phi-4-multimodal-instruct"
+FINETUNED_MODEL_PATH = "/shared/tsqa/finetuned_models/phi4"
 DATA_DIR = "/home/ubuntu/time-series-captioning/data/samples/new samples no overlap/hard_questions_small/"
-OUT_DIR = "/home/ubuntu/time-series-captioning/phi_inference_results_small"
+OUT_DIR = "/home/ubuntu/time-series-captioning/finetuned_phi_inference_results_small"
 
 import torch
 from PIL import Image
@@ -23,7 +24,7 @@ from transformers import AutoProcessor, AutoModelForCausalLM, GenerationConfig
 
 @lru_cache(maxsize=None)
 def _load_batch_phi_model(model_name, device: torch.device):
-    processor = AutoProcessor.from_pretrained(model_name, trust_remote_code=True, use_fast=True)
+    processor = AutoProcessor.from_pretrained(MODEL_PATH, trust_remote_code=True, use_fast=True)
     model = AutoModelForCausalLM.from_pretrained(
         model_name,
         torch_dtype=torch.float16,
@@ -38,7 +39,7 @@ def _load_batch_phi_model(model_name, device: torch.device):
 
 def eval_batch_phi(prompts: list[str], image_files: list[str], device: torch.device, use_image: bool):
     generation_config = GenerationConfig.from_pretrained(MODEL_PATH)
-    model, processor = _load_batch_phi_model(MODEL_PATH, device)
+    model, processor = _load_batch_phi_model(FINETUNED_MODEL_PATH, device)
 
     # Define prompt structure
     user_prompt = '<|user|>'
