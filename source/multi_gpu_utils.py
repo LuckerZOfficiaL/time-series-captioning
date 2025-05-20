@@ -15,7 +15,7 @@ from PIL import Image
 from source.helpers import generate_prompt_for_baseline
 
 # Adjust these as needed for memory constraints
-BATCH_SIZE = 5
+BATCH_SIZE = 1
 NUM_GPUS_TO_USE = 1
 
 
@@ -44,6 +44,8 @@ def write_caption(model_eval, tasks, device, data_dir, out_dir, use_image=True):
     assert prompt_name in tasks[0], str(tasks[0]) 
     prompts = [t[prompt_name] for t in tasks]
     image_files = [t["image_paths"] for t in tasks] if use_image else []
+
+#    image_files = [["data/samples/new samples no overlap/test/plots/" + fp for fp in t["image_paths"]] for t in tasks] if use_image else []
     captions = model_eval(prompts, image_files, device, use_image)
     print(f"WRITING TO {out_dir}")
     for ts, caption in zip(tasks, captions):
@@ -52,16 +54,18 @@ def write_caption(model_eval, tasks, device, data_dir, out_dir, use_image=True):
         with open(out_file, "w+") as fh:
             fh.write(caption)
 
-def process_worker(gpu_id, model_eval, tasks, data_dir, out_dir, use_image=True):
+def process_worker(gpu_id, model_eval, tasks, data_dir, out_dir, use_image=True, handler_fn=None):
+    if handler_fn is None:
+        handler_fn = write_caption
     device = torch.device(f"cuda:{gpu_id}")
     print(f"Process started on GPU {gpu_id} for {len(tasks)} time series.")
     for i in range(0, len(tasks), BATCH_SIZE):
         ts_batch = tasks[i:i+BATCH_SIZE]
-        write_caption(model_eval, ts_batch, device, data_dir, out_dir, use_image)
+        handler_fn(model_eval, ts_batch, device, data_dir, out_dir, use_image)
     print(f"Process on GPU {gpu_id} finished processing {len(tasks)} time series.")
 
 
-def run_multi_gpu(model_eval, data_dir, out_dir, use_image=True):
+def run_multi_gpu(model_eval, data_dir, out_dir, use_image=True, handler_fn=None):
     # Retrieve list of time series names yet to be processed.
     os.makedirs(out_dir, exist_ok=True)
     with open(os.path.join(data_dir, "tasks.json")) as fh:
@@ -99,8 +103,8 @@ def run_multi_gpu(model_eval, data_dir, out_dir, use_image=True):
         futures = []
         for gpu_id, assigned_tasks in gpu_assignments.items():
             # Can use for single-process debugging:
-            process_worker(gpu_id, model_eval, assigned_tasks, data_dir, out_dir, use_image)
-            #futures.append(executor.submit(process_worker, gpu_id, model_eval, assigned_tasks, data_dir, out_dir, use_image))
+            #process_worker(gpu_id, model_eval, assigned_tasks, data_dir, out_dir, use_image, handler_fn)
+            futures.append(executor.submit(process_worker, gpu_id, model_eval, assigned_tasks, data_dir, out_dir, use_image, handler_fn))
         for future in futures:
             future.result()
 

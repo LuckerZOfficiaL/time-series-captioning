@@ -95,11 +95,14 @@ def eval_score(answer_dir, task_dir, task_name):
         with open(os.path.join(answer_dir, ts_file)) as fh:
             answer = extract_choice(fh.read())
             answers[ts_name] = answer
-    accuracy_rate = len([k for k, v in answers.items() if v == ground_truths[k]]) / len(answers)
+    if len(answers):
+        accuracy_rate = len([k for k, v in answers.items() if v == ground_truths[k]]) / len(answers)
+    else:
+        accuracy_rate = 0.0
     print(f"Answer dir: {answer_dir}")
     print(f"Ground truth dir: {task_dir}")
     print(f"Num answers: {len(answers)}")
-    print(f"Accuracy rate: {accuracy_rate:.3f}")
+    print(f"Accuracy rate: {accuracy_rate:.5f}")
     print("---------------------")
     return round(accuracy_rate, 3) 
 

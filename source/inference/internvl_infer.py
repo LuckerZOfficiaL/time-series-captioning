@@ -9,21 +9,30 @@ import requests
 from PIL import Image
 import torch
 from transformers import AutoTokenizer, AutoModel
+from transformers import pipeline
 
-from lmdeploy import pipeline, TurbomindEngineConfig
+#from lmdeploy import pipeline, TurbomindEngineConfig
 from lmdeploy.vl import load_image
 from lmdeploy.vl.constants import IMAGE_TOKEN
 
 from .inference_utils import run_all_tasks
 
-MODEL_PATH = "OpenGVLab/InternVL2_5-8B"
+#MODEL_PATH = "OpenGVLab/InternVL2_5-8B"
+MODEL_PATH = "/shared/tsqa/finetuned_models/internvl_8b_finetune"
 DATA_DIR = "/home/ubuntu/time-series-captioning/data/samples/new samples no overlap/hard_questions_small/"
-OUT_DIR = "/home/ubuntu/time-series-captioning/internvl25_inference_results_small/"
+OUT_DIR = "/home/ubuntu/time-series-captioning/latest_internvl25_inference_results_small/"
 
 @lru_cache
 def _load_batch_internVL_model(model_name, device):
     torch.manual_seed(314)
-    pipe = pipeline(model_name, backend_config=TurbomindEngineConfig(session_len=8192))   # orig 8192 
+#    pipe = pipeline(model_name, backend_config=TurbomindEngineConfig(session_len=8192))   # orig 8192 
+    pipe = pipeline(
+    "vqa",
+    model=MODEL_PATH,
+    tokenizer=MODEL_PATH,
+    trust_remote_code=True,
+    device=device,
+    )
     return pipe 
 
 def eval_batch_internVL(prompts, image_files, device, use_image): 
