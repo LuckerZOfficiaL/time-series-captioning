@@ -20,10 +20,11 @@ from transformers import AutoProcessor, AutoTokenizer, Qwen2_5_VLForConditionalG
 from trl import SFTConfig, SFTTrainer
 
 from helpers import generate_prompt_for_baseline
+from .constants import DATA_ROOT
 
 MODEL_PATH = "Qwen/Qwen2.5-VL-7B-Instruct" 
-DATA_DIR = "/home/ubuntu/time-series-captioning/data/samples/new samples no overlap/train"
-OUT_DIR = "/home/ubuntu/time-series-captioning/qwenVL_fine_tune"
+DATA_DIR = f"{DATA_ROOT}/data/samples/new samples no overlap/train"
+OUT_DIR = f"{DATA_ROOT}/qwenVL_fine_tune"
 
 
 @lru_cache

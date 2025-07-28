@@ -13,9 +13,10 @@ from transformers import Qwen2_5OmniThinkerForConditionalGeneration, Qwen2_5Omni
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from .inference_utils import run_all_tasks
+from ..constants import DATA_ROOT
 
 DATA_DIR = "data/samples/new samples no overlap/hard_questions_small"
-OUT_DIR = "/home/ubuntu/time-series-captioning/finetune_qwen_inference_results_small"
+OUT_DIR = f"{DATA_ROOT}/finetune_qwen_inference_results_small"
 
 
 @lru_cache

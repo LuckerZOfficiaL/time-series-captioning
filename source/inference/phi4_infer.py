@@ -11,11 +11,12 @@ import multiprocessing as mp
 import re
 
 from .inference_utils import run_all_tasks
+from ..constants import PROJECT_ROOT, DATA_ROOT
 
 MODEL_PATH = "microsoft/Phi-4-multimodal-instruct"
 #FINETUNED_MODEL_PATH = "/shared/tsqa/finetuned_models/phi4"
-DATA_DIR = "/home/ubuntu/cats-bench/time-series-captioning/easy_subsample"
-OUT_DIR = "/home/ubuntu/time-series-captioning/phi_inference_results_easy"
+DATA_DIR = f"{PROJECT_ROOT}/easy_subsample"
+OUT_DIR = f"{DATA_ROOT}/phi_inference_results_easy"
 
 import torch
 from PIL import Image

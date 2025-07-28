@@ -12,11 +12,12 @@ import torch
 from transformers import MllamaForConditionalGeneration, AutoProcessor
 
 from .inference_utils import run_all_tasks
+from ..constants import PROJECT_ROOT, DATA_ROOT
 
 MODEL_PATH = "meta-llama/Llama-3.2-11B-Vision-Instruct"
 FINETUNED_PATH = "/shared/tsqa/finetuned_models/llama"
-DATA_DIR = "/home/ubuntu/cats-bench/time-series-captioning/easy_subsample"
-OUT_DIR = "/home/ubuntu/time-series-captioning/llama_inference_easy"
+DATA_DIR = f"{PROJECT_ROOT}/easy_subsample"
+OUT_DIR = f"{DATA_ROOT}/llama_inference_easy"
 
 
 @lru_cache

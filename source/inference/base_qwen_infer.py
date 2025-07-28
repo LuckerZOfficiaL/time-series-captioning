@@ -19,10 +19,11 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, AutoProcessor
 
 from source.multi_gpu_utils import run_multi_gpu
 from .inference_utils import run_all_tasks 
+from ..constants import DATA_ROOT
 
 MODEL_PATH = "Qwen/Qwen2.5-Omni-7B"
 DATA_DIR = "/shared/tsqa/CaTSBench/all_questions"
-OUT_DIR = "/home/ubuntu/time-series-captioning/qwen_inference_results_all"
+OUT_DIR = f"{DATA_ROOT}/qwen_inference_results_all"
 
 @lru_cache
 def _load_batch_qwen_model(model_name, device):

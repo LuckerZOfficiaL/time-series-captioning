@@ -12,11 +12,12 @@ import torch
 from transformers import AutoProcessor, AutoModelForVision2Seq
 
 from .inference_utils import run_all_tasks
+from ..constants import DATA_ROOT
 
 MODEL_PATH = "HuggingFaceTB/SmolVLM-Instruct" 
 FINETUNED_PATH = "/shared/tsqa/finetuned_models/smolvlm"
 DATA_DIR = "data/samples/new samples no overlap/hard_questions_small"
-OUT_DIR = "/home/ubuntu/time-series-captioning/finetune_smolvlm_inference_results_small"
+OUT_DIR = f"{DATA_ROOT}/finetune_smolvlm_inference_results_small"
 
 
 @lru_cache

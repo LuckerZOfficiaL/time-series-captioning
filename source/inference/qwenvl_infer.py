@@ -13,13 +13,14 @@ from transformers import AutoProcessor, AutoTokenizer, Qwen2_5_VLForConditionalG
 from qwen_vl_utils import process_vision_info 
 
 from .inference_utils import run_all_tasks, run_PAL_captions
+from ..constants import PROJECT_ROOT, DATA_ROOT
 
 #MODEL_PATH = "Qwen/Qwen2.5-VL-32B-Instruct"
 MODEL_PATH = "Qwen/Qwen2.5-VL-7B-Instruct"
 #FINETUNED_PATH = "/shared/tsqa/finetuned_models/qwenVL_fine_tune"
-#DATA_DIR = "/home/ubuntu/cats-bench/time-series-captioning/easy_subsample" 
+#DATA_DIR = f"{PROJECT_ROOT}/easy_subsample"
 DATA_DIR = "/shared/tsqa/CaTSBench/all_questions"
-OUT_DIR = "/home/ubuntu/time-series-captioning/qwenvl_inference_results_all"
+OUT_DIR = f"{DATA_ROOT}/qwenvl_inference_results_all"
 #DATA_DIR="caption_prompts/"
 #OUT_DIR = "qwen32B_captions"
 

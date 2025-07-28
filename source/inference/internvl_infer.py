@@ -16,11 +16,12 @@ from lmdeploy.vl import load_image
 from lmdeploy.vl.constants import IMAGE_TOKEN
 
 from .inference_utils import run_all_tasks
+from ..constants import PROJECT_ROOT, DATA_ROOT
 
 MODEL_PATH = "OpenGVLab/InternVL2_5-8B"
 #MODEL_PATH = "/shared/tsqa/finetuned_models/internvl_8b_finetune"
-DATA_DIR = "/home/ubuntu/cats-bench/time-series-captioning/easy_subsample" 
-OUT_DIR = "/home/ubuntu/time-series-captioning/internvl_inference_easy" 
+DATA_DIR = f"{PROJECT_ROOT}/easy_subsample"
+OUT_DIR = f"{DATA_ROOT}/internvl_inference_easy" 
 
 @lru_cache
 def _load_batch_internVL_model(model_name, device):

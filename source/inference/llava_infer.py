@@ -9,6 +9,7 @@ import time
 from llava.eval.run_llava import image_parser, load_images 
 
 from .inference_utils import run_all_tasks
+from ..constants import DATA_ROOT
 
 import requests
 from PIL import Image
@@ -18,8 +19,8 @@ from transformers import LlavaNextProcessor, LlavaNextForConditionalGeneration
 
 MODEL_PATH = "llava-hf/llava-v1.6-mistral-7b-hf"
 FINETUNED_MODEL_PATH = "/shared/tsqa/finetuned_models/llava_lora_finetune/"
-DATA_DIR = "/home/ubuntu/time-series-captioning/data/samples/new samples no overlap/hard_questions_small/"
-OUT_DIR = "/home/ubuntu/time-series-captioning/finetuned_llava_inference_results_small/"
+DATA_DIR = f"{DATA_ROOT}/data/samples/new samples no overlap/hard_questions_small/"
+OUT_DIR = f"{DATA_ROOT}/finetuned_llava_inference_results_small/"
 
 
 @lru_cache

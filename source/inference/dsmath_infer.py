@@ -9,10 +9,11 @@ import time
 
 from helpers import generate_prompt_for_baseline
 from phi_parallel_gpu import main
+from ..constants import DATA_ROOT
 
 MODEL_PATH = "deepseek-ai/deepseek-math-7b-instruct"
-DATA_DIR = "/home/ubuntu/time-series-captioning/data/samples/new samples no overlap/test"
-OUT_DIR = "/home/ubuntu/time-series-captioning/deepseek-math-7b_text"
+DATA_DIR = f"{DATA_ROOT}/data/samples/new samples no overlap/test"
+OUT_DIR = f"{DATA_ROOT}/deepseek-math-7b_text"
 
 
 import requests
