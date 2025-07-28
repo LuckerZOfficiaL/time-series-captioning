@@ -15,14 +15,14 @@ from PIL import Image
 from qwen_omni_utils import process_mm_info
 import torch
 from transformers import Qwen2_5OmniForConditionalGeneration, Qwen2_5OmniProcessor
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import AutoModelForCausalLM, AutoTokenizer, AutoProcessor
 
 from source.multi_gpu_utils import run_multi_gpu
 from .inference_utils import run_all_tasks 
 
 MODEL_PATH = "Qwen/Qwen2.5-Omni-7B"
-DATA_DIR = "/home/ubuntu/time-series-captioning/data/samples/new samples no overlap/hard_questions_small"
-OUT_DIR = "/home/ubuntu/time-series-captioning/qwen_inference_results_small"
+DATA_DIR = "/shared/tsqa/CaTSBench/all_questions"
+OUT_DIR = "/home/ubuntu/time-series-captioning/qwen_inference_results_all"
 
 @lru_cache
 def _load_batch_qwen_model(model_name, device):
@@ -30,6 +30,9 @@ def _load_batch_qwen_model(model_name, device):
     model = Qwen2_5OmniForConditionalGeneration.from_pretrained(model_name, torch_dtype=torch.float16,
                                                                 _attn_implementation="sdpa",
                                                                 low_cpu_mem_usage=True)
+    
+    #processor = AutoProcessor.from_pretrained("Qwen/Qwen2.5-Omni-7B")
+    #model     = AutoModelForCausalLM.from_pretrained("Qwen/Qwen2.5-Omni-7B")
     model.to(device)
     processor = Qwen2_5OmniProcessor.from_pretrained(model_name)
     return model, processor

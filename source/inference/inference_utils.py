@@ -21,13 +21,17 @@ TASK_TO_IMAGE = {
 }
 
 def run_all_tasks(eval_model_fn, data_dir, out_dir):
-    root_dir = Path(data_dir)
-    filepaths = list(root_dir.rglob("tasks.json"))
+    filepath = os.path.join(data_dir, "tasks.json") 
+    # Get things running
+    run_multi_gpu(eval_model_fn, data_dir, out_dir, use_image=False)
+    return
+
     for task_file in filepaths:
         task_dir = os.path.dirname(str(task_file))
         task_name = task_dir.split('/')[-1]
         if "ts_comparison" in task_dir:
             task_name = "ts_comparison_" + task_name
+
         for use_image in TASK_TO_IMAGE[task_name]:
             out_dir_name = task_name + ("_no_image" if not use_image else "_with_image")
             run_multi_gpu(eval_model_fn, task_dir, os.path.join(out_dir, out_dir_name), use_image=use_image)
