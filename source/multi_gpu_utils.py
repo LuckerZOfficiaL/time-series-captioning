@@ -15,8 +15,8 @@ from PIL import Image
 from source.helpers import generate_prompt_for_baseline
 
 # Adjust these as needed for memory constraints
-BATCH_SIZE = 1
-NUM_GPUS_TO_USE = 1
+BATCH_SIZE = 10
+NUM_GPUS_TO_USE = 2
 
 
 def caption_loader(ts_names, data_dir):
@@ -38,18 +38,19 @@ def caption_loader(ts_names, data_dir):
 
 
 def write_caption(model_eval, tasks, device, data_dir, out_dir, use_image=True):
-    prompt_name = "prompt_with_image" if use_image else "prompt_no_image"
-    if prompt_name not in tasks[0]:
-        prompt_name = "prompt"
-    assert prompt_name in tasks[0], str(tasks[0]) 
-    prompts = [t[prompt_name] for t in tasks]
+    def _get_prompt(task, use_image):
+        prompt_name = "prompt_with_image" if use_image else "prompt_no_image"
+        if prompt_name not in task:
+            if use_image:
+                raise ValueError
+            prompt_name = "prompt"
+        return task[prompt_name] 
+    prompts = [_get_prompt(t, use_image) for t in tasks]
     image_files = [t["image_paths"] for t in tasks] if use_image else []
 
-#    image_files = [["data/samples/new samples no overlap/test/plots/" + fp for fp in t["image_paths"]] for t in tasks] if use_image else []
     captions = model_eval(prompts, image_files, device, use_image)
-    print(f"WRITING TO {out_dir}")
     for ts, caption in zip(tasks, captions):
-        ts_name = ts["ts_name"]
+        ts_name = ts["task_id"]
         out_file = os.path.join(out_dir, f"{ts_name}.txt")
         with open(out_file, "w+") as fh:
             fh.write(caption)
