@@ -127,8 +127,7 @@ flowchart TD
 
     F --> F1["Generate plots\nplot_generation.py"]
     F1 --> F2["Generate captions\ngenerate_captions_baseline.py"]
-    F2 --> F3["Paraphrase / augment captions\nparaphrase_captions.py · mix_captions.py"]
-    F3 --> F4["Evaluate captions\nevaluate_captions.py"]
+    F2 --> F4["Evaluate captions\nevaluate_captions.py"]
 
     G --> G1["Build MCQ task files\nqa_tasks/caption_retrieval.py\nqa_tasks/ts_retrieval.py\nqa_tasks/plot_retrieval.py"]
     G1 --> G2["Run model inference\ninference/*_infer.py"]
