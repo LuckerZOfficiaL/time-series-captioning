@@ -75,24 +75,65 @@ CaTS-Bench covers 11 diverse real-world time series domains:
 ## Installation
 
 ```bash
-git clone https://github.com/LuckerZOfficiaL/time-series-captioning.git
-cd time-series-captioning
+git clone https://github.com/LuckerZOfficiaL/CaTS-Bench.git
+cd CaTS-Bench
 pip install -r requirements.txt
 ```
 
-Set up API credentials (OpenAI, Google Gemini, Anthropic) in `.credentials/`.
+---
+
+## Setup
+
+### 1. Data
+
+Download the dataset from HuggingFace and place it under a `data/` folder in the repo root:
+
+```
+data/
+├── time series/       # raw .csv time series files
+├── plots/             # generated plot images (.jpeg)
+├── gt_captions/       # ground-truth caption .txt files
+├── generated_captions/ # model-generated caption .txt files (output)
+└── metadata/          # per-series metadata .json files
+```
+
+Update the paths in [`source/configs/config.yaml`](source/configs/config.yaml) to point to your local `data/` subfolders.
+
+### 2. API Credentials
+
+Create a `.credentials/` directory in the repo root. Each file should contain only your API key as plain text (no quotes, no newlines):
+
+```
+.credentials/
+├── openai    # your OpenAI API key
+└── google    # your Google API key
+```
+
+For **Anthropic Claude via AWS Bedrock**, configure your AWS credentials in `~/.aws/credentials` as usual.
 
 ---
 
-## Configuration
+## Workflow
 
-All behavior is controlled by [`source/configs/config.yaml`](source/configs/config.yaml):
+```mermaid
+flowchart TD
+    A[Clone repo & install dependencies] --> B[Download dataset from HuggingFace]
+    B --> C[Place data under data/ and update config.yaml]
+    C --> D[Add API keys to .credentials/]
+    D --> E{Choose workflow}
 
-- `data.dataset_names` — which domains to process
-- `model.used_models` — which models generate captions
-- `path.gt_captions_folder_path` — ground-truth captions for evaluation
-- `path.generated_captions_folder_path` — model-generated captions to evaluate
-- `eval.use_img_input` — whether to pass plot images to the model
+    E --> F[Caption Generation]
+    E --> G[Diagnostic Tasks]
+
+    F --> F1["Generate plots\nplot_generation.py"]
+    F1 --> F2["Generate captions\ngenerate_captions_baseline.py"]
+    F2 --> F3["Paraphrase / augment captions\nparaphrase_captions.py · mix_captions.py"]
+    F3 --> F4["Evaluate captions\nevaluate_captions.py"]
+
+    G --> G1["Build MCQ task files\nqa_tasks/caption_retrieval.py\nqa_tasks/ts_retrieval.py\nqa_tasks/plot_retrieval.py"]
+    G1 --> G2["Run model inference\ninference/*_infer.py"]
+    G2 --> G3["Score results\nscore_task.py"]
+```
 
 ---
 
@@ -101,24 +142,26 @@ All behavior is controlled by [`source/configs/config.yaml`](source/configs/conf
 ### Generate captions
 
 ```bash
-# Using API models (configure model.used_models in config.yaml)
+# Configure model.used_models and paths in source/configs/config.yaml first
 python source/generate_captions_baseline.py
 
-# With automatic retry on failures
+# With automatic retry on API failures
 python source/auto_script.py
 ```
 
 ### Evaluate captions
 
 ```bash
-# Full evaluation (text similarity + numeric accuracy)
+# Full evaluation: text similarity + numeric accuracy
+# Paths can be passed as args or set in config.yaml
 python source/evaluate_captions.py \
-  --generated_captions_folder_path <path> \
-  --gt_captions_folder_path <path>
+  --generated_captions_folder_path data/generated_captions/<model_name> \
+  --gt_captions_folder_path data/gt_captions
 
 # Numeric accuracy only (min/max/mean/std)
 python source/evaluate_captions_stat_inf_only.py \
-  --generated_captions_folder_path <path>
+  --generated_captions_folder_path data/generated_captions/<model_name> \
+  --gt_captions_folder_path data/gt_captions
 
 # Run all models sequentially
 bash run_evaluations_batch.sh
@@ -130,6 +173,7 @@ bash run_evaluations_tmux.sh
 ### Generate diagnostic tasks
 
 ```bash
+# Update data_path inside each script to point to your data/
 python -m source.qa_tasks.caption_retrieval
 python -m source.qa_tasks.ts_retrieval
 python -m source.qa_tasks.plot_retrieval
@@ -151,22 +195,6 @@ python -m source.inference.dsmath_infer
 ```bash
 python source/qwen_fine_tune.py
 ```
-
----
-
-## Supported Models
-
-**Proprietary (via API):**
-- OpenAI GPT-4o / GPT-5
-- Google Gemini 2.0 Flash / 2.5 Pro
-- Anthropic Claude 3.5 / 3.7 (via AWS Bedrock)
-
-**Open-source (local inference):**
-- LLaVA, InternVL 2.5, Qwen-VL, Phi-4, SmolVLM, IDEFICS
-- DeepSeek-Math, Llama 3.2 Vision
-
-**Ollama (local):**
-- Llama, Mixtral, Gemma, Qwen, DeepSeek-R1, Phi-4, and others
 
 ---
 
