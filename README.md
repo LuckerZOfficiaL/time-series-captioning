@@ -200,11 +200,10 @@ python source/qwen_fine_tune.py
 ## Citation
 
 ```bibtex
-@inproceedings{zhou2026cats,
-  title     = {CaTS-Bench: Can Language Models Describe Time Series?},
-  author    = {Zhou, Luca and Yashwante, Pratham and Fisher, Marshall and
-               Sampieri, Alessio and Zhou, Zihao and Galasso, Fabio and Yu, Rose},
-  booktitle = {Findings of the Association for Computational Linguistics: ACL 2026},
-  year      = {2026}
+@article{zhou2025cats,
+  title={CaTS-Bench: Can Language Models Describe Numeric Time Series?},
+  author={Zhou, Luca and Yashwante, Pratham and Fisher, Marshall and Sampieri, Alessio and Zhou, Zihao and Galasso, Fabio and Yu, Rose},
+  journal={arXiv preprint arXiv:2509.20823},
+  year={2025}
 }
 ```
