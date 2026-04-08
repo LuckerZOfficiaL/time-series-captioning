@@ -58,7 +58,7 @@ CaTS-Bench covers 11 diverse real-world time series domains:
 
 | Domain | File |
 |--------|------|
-| Air Quality | `aq.json` |
+| Air Quality | `aq.json` *(available on HuggingFace — too large for GitHub)* |
 | Agricultural Productivity | `agricultural_productivity.json` |
 | Border Crossing | `border_crossing.json` |
 | CO₂ Emissions | `co2.json` |
@@ -140,7 +140,10 @@ python -m source.qa_tasks.plot_retrieval
 ```bash
 CUDA_VISIBLE_DEVICES=0 python -m source.inference.llava_infer
 CUDA_VISIBLE_DEVICES=0 python -m source.inference.internvl_infer
-python -m source.inference.qwenvl_infer
+CUDA_VISIBLE_DEVICES=0 python -m source.inference.phi4_infer
+python -m source.inference.base_qwen_infer
+python -m source.inference.fine_tuned_qwen_infer
+python -m source.inference.dsmath_infer
 ```
 
 ### Fine-tune on synthetic captions
