@@ -1,9 +1,10 @@
-# Data
-data
+# Data (ignore everything except processed source data)
+data/*
+!data/processed/
+data/processed/aq.json
 datasets/
 fact bank/
 samples/
-processed/
 
 # Credentials & Cloud
 .aws/
