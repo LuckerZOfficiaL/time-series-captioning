@@ -1,0 +1,69 @@
+# Data
+data
+datasets/
+fact bank/
+samples/
+processed/
+
+# Credentials & Cloud
+.aws/
+.credentials/
+google-cloud-sdk/
+codedep/
+
+# Models & Checkpoints
+checkpoints/
+model/
+
+# MM subproject (managed separately)
+MM/
+
+# Generated outputs (kept locally)
+factcheck/
+figs/
+domain_embeddings/
+source/datematch copy/
+source/datematch/
+
+# Python
+**/__pycache__/
+*.pyc
+.env
+
+# IDE
+.vscode/
+
+# Dead code / notes / local-only scripts
+source/claude_api.py
+source/tempCodeRunnerFile.py
+source/guide.txt
+source/ollama_commands.txt
+source/tmux_commands.txt
+source/hardware_info.sh
+
+# Not pushed: local analysis & paper scripts
+source/run_mobtep.py
+source/no_prompt_teacher_forcing.py
+source/get_spearman_correlations.py
+source/get_trend_subset.py
+source/create_paper-plots.py
+
+# Not pushed: annotation utilities
+source/json_to_mturk_converter.py
+source/split_human_questions.py
+
+# Not pushed: fact pipeline
+source/fact_bank.py
+source/fact_banks_by_period.py
+source/split_facts_by_period.py
+source/filter_fake_facts.py
+source/remove_common_sense.py
+source/extract_facts.py
+
+# Not pushed: misc one-off scripts
+source/read_h5.py
+source/sample_generation.py
+source/plot_retrieval.py
+
+# Not pushed: notebooks
+source/*.ipynb

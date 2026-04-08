@@ -1,0 +1,220 @@
+general:
+  random_seed: 42
+  is_train: false
+
+data:
+  dataset_names: [air quality, border crossing, crime, demography, road injuries, covid, co2, diet, walmart, online retail, agriculture]
+  series_len: 10 # null
+  request_augmentations: 0 # how many times to rephrase the original prompt request?
+  n_samples: 300 # how many window samples to extract per dataset? i.e. how many time series to sample? Note that this is just the number of real samples and not the number of captions because each model in used_models generates its version of the caption. So, the number of captions generated will be n_samples*len(used_models).
+  save_top_k: 0 # save the top k best captions based on the ranking, if it's 0 or negative, don't do top-k. If top-k is on, caption ranking is invoked
+  external_knowledge: false # if the captions should be generated with oracle's external knowledge
+
+model:
+  all_models: [Google Gemini-2.0-Flash, Online Gemini-2.0-Flash, OpenAI GPT-4o, Anthropic Claude-3.5, Ollama llama3.3, Ollama gemma3, Ollama mixtral 8x7b, Ollama mixtral 8x22b, Ollama qwen2.5-1m:14b, Ollama nemotron, Ollama llama3.2 uncensored, Ollama qwq, Ollama deepseek-r1:14b, Ollama phi4, Ollama lumimaid-v0.2:12b, GPT-4o, Claude-3.5-Haiku, Gemini-1.5-Flash, Gemini-1.5-Pro, DeepSeek-R1-FW] # available model choices, the first two are from official APIs
+  used_models: [OpenAI GPT-4o] # [OpenAI GPT-4o, Anthropic Claude-3.5, Google Gemini-2.0-Flash] # models to use for generating captions
+  refinement_model: Google Gemini-2.0-Flash
+  checking_model: Ollama qwen2.5-1m:14b
+  extraction_model: Google Gemini-2.0-Flash
+  # Google Gemini-2.0-Flash, claude-3-haiku, OpenAI GPT-4o
+  scoring_model: Google Gemini-2.0-Flash
+  ranking_model: OpenAI GPT-4o # the model used to rank the captions
+  embedding_model: all-MiniLM-L6-v2 # the sentence transformer model used for embeddings in RAG
+  remove_common_sense_model: Google Gemini-2.0-Flash #"OpenAI GPT-4o" #"Gemini-2.0-Flash"
+  temperature: null # set this to null to keep default settings. If this is set, the temperature of all calls is forced to be this
+  qa_model: gemini-2.5-pro #bedrock/us.anthropic.claude-3-7-sonnet-20250219-v1:0 #OpenAI GPT-4o # claude-3-haiku #Google Gemini-2.0-Flash
+
+refinement:
+  refinement_types: [add facts, change style, enrich language, factual checking]
+  refinement_type: change style
+  desired_style: casual # matters only if refinement_type == change style
+  refinement_target_folder: /home/ubuntu/thesis/data/samples/new_samples_no_overlap/test/gt_captions  #what captions to refine?
+  batch_size: 5 # how many facts to present to the LLM in each prompt for removing common sense and checking facts?
+  factual_correction_method: llm # fill in the gap
+  skip_numeric: true # whether to skip numeric statements in factual checking, so that they get all preserved
+  words_to_skip: [average, mean, standard deviation, above, below, all-time, increas,declin,decreas, series, fluctuat, half, double, triple]
+  remove_source: true
+  use_confidence_checking: false
+  confidence_thresh: 70
+
+
+
+path: # paths that have "folder" in its name are folder paths, otherwise they are file paths
+  train_gt_captions_folder_path: /home/ubuntu/thesis/data/samples/new_samples_no_overlap/train/gt_captions
+  ts_folder_path: /home/ubuntu/thesis/data/samples/new_samples_no_overlap/train/time series
+  plot_folder_path: /home/ubuntu/thesis/data/samples/new_samples_no_overlap/train/plots
+  metadata_folder_path: /home/ubuntu/thesis/data/samples/new_samples_no_overlap/train/metadata
+  refined_captions_folder_path: /home/ubuntu/thesis/data/samples/new_samples_no_overlap/test/gt_captions_paraphrased
+  verified_captions_folder_path: /home/ubuntu/thesis/data/samples/captions/verified
+  extracted_facts_folder_path: /home/ubuntu/thesis/data/samples/captions/extracted facts
+  filtered_facts_folder_path: /home/ubuntu/thesis/data/samples/captions/filtered facts
+  fact_bank_folder_path: /home/ubuntu/thesis/data/fact bank
+  all_facts_path: /home/ubuntu/thesis/data/fact bank/all_facts.txt
+  all_facts_no_common_sense_path: /home/ubuntu/thesis/data/fact bank/all_facts_no_common_sense.txt
+  all_facts_by_period_folder_path: /home/ubuntu/thesis/data/fact bank/by period #/{BIN_YEARS}/all_facts_by_{BIN_YEARS}years.json
+  prototypes_path: /home/ubuntu/thesis/model/prototype_words.txt
+  checkpoints_folder_path: /home/ubuntu/thesis/model/checkpoints
+  gt_metadata_folder_path: /home/ubuntu/thesis/data/samples/new_samples_no_overlap/test/metadata
+  gt_ts_folder_path: /home/ubuntu/thesis/data/samples/new_samples_no_overlap/test/time series
+  paraphrase_consistency_folder_path: /home/ubuntu/thesis/data/samples/new_samples_no_overlap/tasks/paraphrase_consistency
+  paraphrased_gt_folder_path: /home/ubuntu/thesis/data/samples/new_samples_no_overlap/test/gt_captions_paraphrased
+  comparison_questions_folder_path: /home/ubuntu/thesis/data/samples/new_samples_no_overlap/tasks/ts_comparison
+
+  evaluation_results_folder_path: /home/ubuntu/thesis/data/evaluation_results/ACL_new_prompt_human_GT/no_img
+  gt_captions_folder_path: /home/ubuntu/thesis/data/samples/new_samples_no_overlap/test/human_edited_captions/all #/home/ubuntu/thesis/data/samples/new_samples_no_overlap/test/gt_captions_filteredToMatchHumanSet
+  generated_captions_folder_path: /home/ubuntu/thesis/data/samples/new_samples_no_overlap/generated_captions/new_prompt/gemini-3-flash-preview_text
+
+  # gpt-5.1_text
+  # gpt-5-mini_text
+  # chatts_14b
+  # timeomni1_7b
+
+  #claude-3-haiku_text
+  #OpenAI GPT-4o_text
+  #gemini-2.0-flash_text
+  #smolvlm
+  #llava_7b
+  #internvl2b
+  #llama_vlm_11b
+  #gemma_27b
+  #qwenvl
+  #qwenvl_pal
+  #gemma_12b
+  #internvl38b
+  #internvl8b
+  #idefics2_8b
+  #phi4
+
+  #/home/ubuntu/thesis/data/samples/new_samples_no_overlap/generated_captions/new_prompt/no_ts_captions/nots/qwenvl_nots
+  # gemma_12b_nots idefics2_8b_nots internvl8b_nots llama_vlm_11b_nots llava_7b_nots qwenvl_nots
+
+  #/home/ubuntu/thesis/data/samples/new_samples_no_overlap/generated_captions/new_prompt/no_image_captions/noimg/gemma_12b_text  
+  # idefics2_8b_text  internvl8b_text  llama_vlm_11b_text  llava_7b_text  qwenvl_text
+
+  #/home/ubuntu/thesis/data/samples/new_samples_no_overlap/generated_captions/new_prompt/finetuned_models/idefics2_8b_finetuned  
+  # idefics2_8b_finetuned  llama_11b_finetuned  llava_lora  phi4_finetune  qwen2_5_vl  smolvlm_finetuned
+
+
+STOCK:
+  generative_model: OpenAI GPT-4o #gemini-2.0-flash #GPT-4o #claude-3-haiku
+  ts_path: /home/ubuntu/thesis/data/stock_data/ts
+  save_root_path: /home/ubuntu/thesis/data/stock_data
+
+new_tasks:
+  comparison_questions_per_subtask: 500 
+  ts_comparison_tasks: [volatility, mean, same_phenomenon, peak_earlier, bottom_earlier, amplitude] # volatility, mean, same_phenomenon, peak_earlier, bottom_earlier, amplitude
+  qa_task: ts_retrieval_perturbed
+
+
+train:
+  lr_for_pretrained: 1e-7
+  lr_for_new: 1e-3
+  epochs: 5
+  weight_decay: 1e-2
+  batch_size: 40
+  loss_fn: cross-entropy # currently still useless
+  teacher_forcing: true # if false, the model generates autoregressively during training
+  milestones: [5, 10, 20]
+  early_stopping: false
+  patience: 5 # used only if early_stoping=true
+  clip_grad_norm: 1.0
+
+eval:
+  evaluated_model: gemini-3-pro-preview #OpenAI GPT-4o #gemini-2.5-pro #bedrock/us.anthropic.claude-3-7-sonnet-20250219-v1:0 #claude-3-haiku  #gemini-2.0-flash #gemini-3-pro-preview #gpt-5.1
+  bertscore_model: microsoft/deberta-xlarge-mnli #bert-base-uncased, roberta-large
+  batch_size: 42
+  val_split: 0.2
+  use_img_input: false
+  
+
+mobtep:
+  mob_checkpoint: chronos_Mob2_5-2B_5.621_5eps
+  chronos_name: amazon/chronos-t5-small
+  chronos_pooling: mean # mean, max
+  use_chronos: false
+  internvl_name: OpenGVLab/InternVL2_5-8B
+  tcn_emb_size: 128
+  generator: gpt-2 # gpt-2, llama 3.2 instruct
+  use_linear_proj: true # this is the projector between multi-modal encoder and the generator, it's used to match embedding dimensionalities
+  projector_init: zero
+  sum_ts_emb_to: first # "all": all input embeddings, "first": first token only, "last": last token only
+  generator_dim: 3072 # used only if use_linear_proj=true, 768 for GPT-2, 3070 for Llama3.2
+  max_output_tokens: 256
+  temperature: 70
+  top_k: 50
+  top_p: 0.9
+  anchor_words: [
+    initially increase, initially decrease, initially stay stable, 
+    increase gradually, decrease gradually, remain stable, 
+    increase sharply, decrease sharply, 
+    spike at the beginning, spike in the middle, spike at the end, 
+    drop sharply at the beginning, drop sharply in the middle, drop sharply at the end, 
+    sudden surge, sudden drop, exponential growth, exponential decay, 
+    peak early, peak in the middle, peak late, 
+    trough early, trough in the middle, trough late, 
+    oscillate with high frequency, oscillate with low frequency, 
+    periodic pattern, irregular fluctuations, cyclic behavior, 
+    steady upward trend, steady downward trend, 
+    sudden reversal, trend reversal in the middle, 
+    plateau in the beginning, plateau in the middle, plateau by the end, 
+    recover after drop, dip before rising, rise before falling, 
+    short-term volatility, long-term stability, 
+    accelerate upwards, decelerate downwards, 
+    reach a local maximum, reach a local minimum, 
+    fluctuate around a constant value, oscillate with increasing amplitude, 
+    oscillate with decreasing amplitude, dampened oscillations, 
+    sharp peak followed by decline, gradual decline followed by recovery, 
+    persistent upward trend, persistent downward trend, 
+    drop to a new baseline, rise to a new baseline, 
+    stabilize after fluctuations, destabilize after stability, 
+    slow build-up followed by rapid drop, rapid build-up followed by slow drop, 
+    reach saturation, approach zero asymptotically, 
+    transition from stability to volatility, transition from volatility to stability, 
+    sudden collapse, gradual fade-out, sudden resurgence, 
+    prolonged stagnation, brief interruption, momentary spike, 
+    early acceleration, late deceleration, mid-period volatility, 
+    sustained increase, sustained decrease, 
+    short-lived surge, long-lasting dip, abrupt deviation, 
+    transient fluctuation, slow oscillation, rapid oscillation, 
+    initial instability followed by stabilization, 
+    stable start followed by instability, 
+    smooth transition from increase to decrease, 
+    smooth transition from decrease to increase, 
+    early sharp rise followed by slow decline, 
+    early slow rise followed by sharp decline, 
+    intermittent bursts of activity, sudden collapse to zero, 
+    oscillate with drifting baseline, periodic surges, 
+    slow descent into stability, gradual divergence, 
+    sudden synchronization, out-of-phase oscillations, 
+    drop below previous minimum, rise above previous maximum, 
+    increasing variance, decreasing variance, 
+    volatility spike, stabilization after volatility, 
+    delayed peak, early drop, asymptotic rise, asymptotic decay, 
+    transition from linear to exponential growth, 
+    transition from exponential to linear growth, 
+    drift away from baseline, convergence to equilibrium, 
+    chaotic fluctuations, self-reinforcing trend, 
+    bounded oscillations, unbounded divergence, 
+    burst-like activity, decay towards extinction
+  ]
+
+factcheck:
+  start_from_files: true # If false, the benchmark starts by applying our fake detection method and save the txt files. If true, it starts by reading the txt files instead of re-generating the facts
+  save_files: true # whether to store the facts into files
+
+nlp:
+ synonym_similarity_thresh: 0.7
+
+plot:
+  height: 5
+  width: 7
+
+rag:
+  use_rag: false # whether to apply RAG on caption generation, it will only retrieve the facts that are temporally relevant to the prompt request.
+  rag_top_k: 5 # how many top-relevant facts to retrieve from the bank
+
+bank:
+  save_pca: true # whether to save the 2D PCA of fact embeddings as a jpeg file
+  bin_years: 10 # how long is a single period in years?
+
+  
