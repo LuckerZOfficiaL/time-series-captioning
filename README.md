@@ -1,6 +1,6 @@
 # CaTS-Bench: Can Language Models Describe Time Series?
 
-**Findings of ACL 2026** | [Paper](https://arxiv.org/abs/2509.20823)
+**Findings of ACL 2026** | [Paper](https://arxiv.org/abs/2509.20823) | [Dataset](https://huggingface.co/datasets/mhfisher/CaTSBench)
 
 > *Luca Zhou, Pratham Yashwante, Marshall Fisher, Alessio Sampieri, Zihao Zhou, Fabio Galasso, Rose Yu*
 
